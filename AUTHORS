@@ -1,11 +1,15 @@
 CODE
 ====
 
-Pablo Arias (Author)
+Kent Gauen (Author of the Python bindings to the C++ Video NLBayes code)
+Pablo Arias (Author of the original C++ Video NLBayes)
 Marc Lebrun (Author of the original NLBayes for still image denoising)
 
-NOTE: The code is a largely modified version of the NLBayes image denoising
-algorithm available here:
+NOTE: This code is just python bindings around the code from Pablo Arias, avaiable here:
+
+https://github.com/pariasm/vnlb/
+
+NOTE: [Pablo Arias] The code is a largely modified version of the NLBayes image denoising algorithm available here:
 
 Marc Lebrun, Antoni Buades, and Jean-Michel Morel,
 Implementation of the "Non-Local Bayes" (NL-Bayes) Image Denoising Algorithm,
@@ -29,4 +33,4 @@ Javier Sánchez (TVL1 optical flow)
 David Tschumperlé (command line parsing)
 
 NOTE: If I have forgotten some names, this is an involuntary error.
-Please tell me as soon as possible and I will add the missing names. --pablo
+Please tell me as soon as possible and I will add the missing names. --kent

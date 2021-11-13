@@ -1,44 +1,90 @@
-cmake_minimum_required(VERSION 2.8)
-cmake_policy(SET CMP0048 NEW) # avoid annoing warnings
-project(VideoNLBayes C CXX Fortran)
-message(STATUS "Configuring main project: " ${CMAKE_PROJECT_NAME})
 
-###############################################################################
+cmake_minimum_required(VERSION 3.16 FATAL_ERROR)
+cmake_policy(SET CMP0074 NEW)
+cmake_policy(SET CMP0078 NEW)
+cmake_policy(SET CMP0086 NEW)
 
-set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -ggdb")
-#set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wall -ggdb")
-set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -ggdb")
+project(vnlb
+	DESCRIPTION "Python bindings for vnlmb code."
+	HOMEPAGE_URL "https://github.com/pariasm/vnlb/"
+	LANGUAGES CXX)
 
-set(CMAKE_BUILD_TYPE Release)
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD_REQUIRED on)
 
-###############################################################################
+find_package(SWIG REQUIRED COMPONENTS python)
+# find_package( OpenCV REQUIRED )
+# find_package( OpenCV 4 REQUIRED )
+# include_directories([BEFORE] "/home/gauenk/Documents/packages/opencv")
+find_package(PythonLibs REQUIRED )
 
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${PROJECT_SOURCE_DIR}/cmake/modules/")
-set(CMAKE_VERBOSE_MAKEFILE OFF)
+include(${SWIG_USE_FILE})
+include_directories(${PYTHON_INCLUDE_PATH})
+include_directories(${OpenCV_INCLUDE_DIRS})
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/vnlb/cpp/)
 
-###############################################################################
+set(CMAKE_SWIG_FLAGS "")
+set(SWIG_OUTFILE_DIR ${CMAKE_BINARY_DIR})
+set(HEADER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/vnlb/cpp/)
+set(PYLIB_DIR ${CMAKE_BINARY_DIR}/../pylib/)
 
-include_directories("$ENV{HOME}/local/include/")
-set(CMAKE_PREFIX_PATH "$ENV{HOME}/local/")
-message(STATUS "Setting CMAKE_PREFIX_PATH as " ${CMAKE_PREFIX_PATH} " for local libraries")
-find_package( BLAS REQUIRED )
-find_package( CBLAS REQUIRED )
-find_package( LAPACKE REQUIRED )
+# 
+# -- Gaussian Pyramid --
+#
 
-###############################################################################
+# -- cpp --
+add_library(GaussianPyramidLib SHARED ${CMAKE_BINARY_DIR}/../cflow/cpp/GaussianPyramid.cpp)
 
-FIND_PACKAGE( OpenMP REQUIRED)
-if(OPENMP_FOUND)
-	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
-	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
-endif()
+# -- swig --
+set_property(SOURCE ${CMAKE_BINARY_DIR}/../cflow/python/GaussianPyramid.i
+  PROPERTY CPLUSPLUS ON)
+set_property(SOURCE ${CMAKE_BINARY_DIR}/../cflow/python/GaussianPyramid.i
+  PROPERTY SWIG_MODULE_NAME gpyramid)
+set_property(SOURCE gpyramid PROPERTY SWIG_USE_TARGET_INCLUDE_DIRECTORIES TRUE)
+swig_add_library(gpyramid LANGUAGE python OUTPUT_DIR ${SWIG_OUTFILE_DIR} SOURCES ${CMAKE_BINARY_DIR}/../cflow/python/GaussianPyramid.i ${HEADER_DIR}/GaussianPyramid.h)
+target_include_directories(gpyramid PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}../cflow/cpp/)
+swig_link_libraries(gpyramid GaussianPyramidLib)
+swig_link_libraries(gpyramid ${OpenCV_LIBS})
 
-###############################################################################
+# 
+# -- Optical Flow --
+#
 
-add_subdirectory(lib/iio)
-add_subdirectory(lib/tvl1flow)
-add_subdirectory(src/VidUtils)
-add_subdirectory(src/VNLBayes)
-add_subdirectory(src)
-add_subdirectory(scripts)
+# -- cpp --
+add_library(OpticalFlowLib SHARED ${CMAKE_BINARY_DIR}/../cflow/cpp/OpticalFlow.cpp)
+
+# -- swig --
+set_property(SOURCE ${CMAKE_BINARY_DIR}/../cflow/python/OpticalFlow.i
+  PROPERTY CPLUSPLUS ON)
+set_property(SOURCE ${CMAKE_BINARY_DIR}/../cflow/python/OpticalFlow.i
+  PROPERTY SWIG_MODULE_NAME cflow)
+set_property(SOURCE cflow PROPERTY SWIG_USE_TARGET_INCLUDE_DIRECTORIES TRUE)
+swig_add_library(cflow LANGUAGE python OUTPUT_DIR ${SWIG_OUTFILE_DIR} SOURCES ${CMAKE_BINARY_DIR}/../cflow/python/OpticalFlow.i ${HEADER_DIR}/OpticalFlow.h)
+target_include_directories(cflow PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}../cflow/cpp/)
+swig_link_libraries(cflow OpticalFlowLib)
+swig_link_libraries(cflow GaussianPyramidLib)
+swig_link_libraries(cflow ${OpenCV_LIBS})
+
+
+# 
+# -- Copy "so" files to install location --
+#
+
+macro(copy_to_pylib target file)
+  add_custom_command(
+    TARGET ${target} POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy
+    ${CMAKE_BINARY_DIR}/${file}
+    ${PYLIB_DIR}/${file}
+  )
+endmacro()
+
+copy_to_pylib(gpyramid _gpyramid.so)
+copy_to_pylib(gpyramid gpyramid.py)
+copy_to_pylib(GaussianPyramidLib libGaussianPyramidLib.so)
+copy_to_pylib(OpticalFlowLib libOpticalFlowLib.so)
+copy_to_pylib(cflow _cflow.so)
+copy_to_pylib(cflow cflow.py)
+
+
+
