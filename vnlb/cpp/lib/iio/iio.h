@@ -49,7 +49,7 @@ float (**iio_read_image_float_matrix_2vec(const char *fnam, int *w, int *h))[2];
 float (**iio_read_image_float_matrix_3vec(const char *fnam, int *w, int *h))[3];
 float (**iio_read_image_float_matrix_4vec(const char *fnam, int *w, int *h))[4];
 float (**iio_read_image_float_matrix_rgb(const char *fnam, int *w, int *h))[3];
-float (**iio_read_image_float_matrix_rgba(const char *fnam, int *w, int *h))[4];
+//float (**iio_read_image_float_matrix_rgba(const char *fnam, int *w, int *h))[4];
 // x[j][i][channel]
 // (The "rgb" and "rgba" functions may re-order the channels according to file
 // metadata.  The "vec" functions produce the data in the same order as is
@@ -263,7 +263,6 @@ struct iio_image *iio_image_build(int dimension, int *sizes,
 
 #include <stdint.h>
 
-void iio_save_image_float_vec(char *filename, float *x, int w, int h, int pd);
 void iio_save_image_float_split(char *filename, float *x, int w, int h, int pd);
 void iio_save_image_double_vec(char *filename, double *x, int w, int h, int pd);
 void iio_save_image_float(char *filename, float *x, int w, int h);

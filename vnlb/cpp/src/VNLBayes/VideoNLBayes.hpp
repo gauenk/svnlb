@@ -69,7 +69,8 @@
 
 
 
-#include "../VidUtils/LibVideoT.hpp"
+#include <vnlb/cpp/src/VidUtils/LibVideoT.hpp>
+/* #include "../VidUtils/LibVideoT.hpp" */
 
 namespace VideoNLB
 {

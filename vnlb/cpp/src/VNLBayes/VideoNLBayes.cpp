@@ -24,7 +24,7 @@
 
 #include <stdio.h>     // getchar() for debugging
 
-#include "VideoNLBayes.h"
+#include <vnlb/cpp/src/VNLBayes/VideoNLBayes.hpp>
 #include "LibMatrix.h"
 
 #ifdef _OPENMP
@@ -408,8 +408,8 @@ std::vector<float> runNLBayesThreads(
 			// it causes a compilation error with OpenMP (only on IPOL server)
 			nlbParams prms_cpy(prms[iter]);
 #pragma omp parallel for schedule(dynamic, nParts/nThreads) \
-			shared(imNoisySub, imBasicSub, imFinalSub) \
-			firstprivate (prms_cpy)
+// 			shared(imNoisySub, imBasicSub, imFinalSub) \
+// 			firstprivate (prms_cpy)
 #endif
 			for (int n = 0; n < (int)nParts; n++)
 				groupsProcessedSub[n] =
@@ -490,8 +490,8 @@ unsigned processNLBayes(
 		end_f = params.onlyFrame + 1;
 	}
 
-//	ori_f = std::max((int)sz.frames / 2 - (int)sPt - 1, 0);
-//	end_f = sz.frames / 2 + 1;
+	ori_f = std::max((int)sz.frames / 2 - (int)sPt - 1, 0);
+	end_f = sz.frames / 2 + 1;
 
 	// Fill processing mask
 	for (int f = ori_f, df = 0; f < end_f; f++, df++)

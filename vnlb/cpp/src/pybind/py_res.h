@@ -1,5 +1,4 @@
 
-
 #pragma once
 
 /****
@@ -22,20 +21,22 @@ PyVnlbParams() :
 	  use_clean(0),
 	  use_flow(0),
 	  fflow(nullptr),
+	  oracle(nullptr),
 	  noisy(nullptr),
+	  basic(nullptr),
 	  clean(nullptr),
 	  final(nullptr), 
 	  // --> vnlb tuning params <--
 	  search_space(nullptr),
 	  num_patches(nullptr),
 	  rank(nullptr),
-	  thres(nullptr),
+	  thresh(nullptr),
 	  beta(nullptr),
-	  flat_area(nullptr),
+	  flat_areas(nullptr),
 	  couple_ch(nullptr),
 	  aggeBoost(nullptr),
 	  patch_step(nullptr),
-	  sigmab(nullptr),
+	  sigmaBasic(nullptr),
 	  sigma(nullptr){}
 	  
 
@@ -55,7 +56,9 @@ PyVnlbParams() :
     bool use_flow;
 
     // noisy image to denoise
+    const float* oracle;
     const float* noisy;
+    const float* basic;
     const float* clean;
     const float* final;
     const float* fflow;
@@ -66,19 +69,19 @@ PyVnlbParams() :
 
     ***/
 
-    float[2] sigma;
-    float[2] sigmaBasic;
-    unsigned[2] search_space;
-    unsigned[2] num_patches;
-    unsigned[2] rank;
-    float[2] thresh;
-    float[2] beta;
-    unsigned[2] patch_step;
-    bool[2] flat_areas;
-    bool[2] couple_ch;
-    bool[2] aggeBoost;
+    float* sigma;
+    float* sigmaBasic;
+    unsigned* search_space;
+    unsigned* num_patches;
+    unsigned* rank;
+    float* thresh;
+    float* beta;
+    unsigned* patch_step;
+    bool* flat_areas;
+    bool* couple_ch;
+    bool* aggeBoost;
     bool verbose;
-    bool print_params;
+    unsigned print_params;
 
 };
 
