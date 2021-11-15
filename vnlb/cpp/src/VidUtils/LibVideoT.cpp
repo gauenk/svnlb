@@ -252,9 +252,6 @@ void Video<T>::loadVideoFromPtr(
         // run "clear"
 	clear();
 
-	// open first frame to retrieve frame size and allocate mem
-	typename std::vector<T>::iterator o_data;
-
 	// set video size
 	sz.width     = w;
 	sz.height    = h;
@@ -266,9 +263,8 @@ void Video<T>::loadVideoFromPtr(
 	data.resize(sz.whcf);
 
 	// copy first frame
-	o_data = data.begin();
-	for (unsigned k = 0; k < w * h * c * t; ++k, ++o_data){
-	  *o_data = dataBuf[k];
+	for (unsigned k = 0; k < w * h * c * t; ++k){
+	  data[k] = dataBuf[k];
 	}
 
 	return;
@@ -277,10 +273,6 @@ void Video<T>::loadVideoFromPtr(
 template <class T>
 void Video<T>::saveVideoToPtr(T* dataBuf)
 {
-
-	// open first frame to retrieve frame size and allocate mem
-	typename std::vector<T>::iterator i_data;
-
 	// set video size
 	int w,h,c,t;
 	w = sz.width;
@@ -288,10 +280,8 @@ void Video<T>::saveVideoToPtr(T* dataBuf)
 	c = sz.channels;
 	t = sz.frames;
 	
-	// copy first frame
-	i_data = data.begin();
-	for (unsigned k = 0; k < w * h * c * t; ++k, ++i_data){
-	  dataBuf[k] = i_data[k];
+	for (unsigned k = 0; k < w * h * c * t; ++k){
+	  dataBuf[k] = data[k];
 	}
 
 	return;

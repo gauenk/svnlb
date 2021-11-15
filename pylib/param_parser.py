@@ -26,7 +26,7 @@ def optional(pydict,key,default,dtype=None):
 def optional_swig_ptr(elem):
     if not isinstance(elem,np.ndarray):
         return elem
-    elem = np.ascontiguousarray(elem)
+    # elem = np.ascontiguousarray(elem)
     return vnlb.swig_ptr(elem)
 
 def set_optional_params(args,pyargs):
@@ -47,13 +47,13 @@ def set_optional_params(args,pyargs):
     args.verbose = True
     args.print_params = 0
     
-def np_zero_tensors(t,h,w,c):
+def np_zero_tensors(t,c,h,w):
     tensors = edict()
-    tensors.flow = np.zeros((w,h,2,t),dtype=np.float32)
-    tensors.oracle = np.zeros((w,h,2,t),dtype=np.float32)
-    tensors.clean = np.zeros((w,h,c,t),dtype=np.float32)
-    tensors.basic = np.zeros((w,h,c,t),dtype=np.float32)
-    tensors.final = np.zeros((w,h,c,t),dtype=np.float32)
+    tensors.flow = np.zeros((t,2,h,w),dtype=np.float32)
+    tensors.oracle = np.zeros((t,2,h,w),dtype=np.float32)
+    tensors.clean = np.zeros((t,c,h,w),dtype=np.float32)
+    tensors.basic = np.zeros((t,c,h,w),dtype=np.float32)
+    tensors.final = np.zeros((t,c,h,w),dtype=np.float32)
     return tensors
 
 def set_tensors(args,pyargs,tensors):
@@ -79,7 +79,7 @@ def parse_args(noisy,sigma,pyargs):
     c,t,h,w  = noisy.shape
 
     # -- format noisy image --
-    noisy = rearrange(noisy,'c t h w -> w h c t')
+    noisy = rearrange(noisy,'c t h w -> t c h w')
     if dtype != np.float32 and verbose:
         print(f"Warning: converting noisy image from {dtype} to np.float32.")
         noisy = noisy.astype(np.float32)
@@ -107,7 +107,7 @@ def parse_args(noisy,sigma,pyargs):
     set_optional_params(args,pyargs)
 
     # -- create shell tensors & set arrays --
-    ztensors = np_zero_tensors(t,h,w,c)
+    ztensors = np_zero_tensors(t,c,h,w)
     set_tensors(args,pyargs,ztensors)
 
     # -- copy to swig --

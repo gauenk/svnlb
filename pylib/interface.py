@@ -27,7 +27,7 @@ def runVnlb_np(noisy,sigma,pyargs=None):
 
     # -- format & create results --
     res = {}
-    res['final'] = rearrange(args.final,'w h c t -> c t h w')
+    res['final'] = rearrange(args.final,'t c h w -> c t h w')
 
     # -- alias some vars --
     res['denoised'] = res['final']

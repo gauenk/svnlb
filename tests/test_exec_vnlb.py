@@ -79,6 +79,6 @@ def test_exec_vnlb():
     # -- denoise --
     result = pyvnlb.runPyVnlb(noisy,std)
     denoised = result['denoised']
-    print(denoised)
+    # print(denoised)
     print(denoised.shape)
     th_save_image(denoised,"denoised.png")
