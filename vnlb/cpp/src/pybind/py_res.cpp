@@ -85,8 +85,8 @@ void runVnlb(const PyVnlbParams& args) {
 
   // copy back to arrays
   final.saveVideoToPtr(const_cast<float*>(args.final));
-  final.saveVideo("deno_%03d.png", 0, 1);
-  noisy.saveVideo("noisy_%03d.png", 0, 1);
+  // final.saveVideo("deno_%03d.png", 0, 1);
+  // noisy.saveVideo("noisy_%03d.png", 0, 1);
 
 
 }
