@@ -12,6 +12,7 @@ set(VNLB_SRC
 )
 
 set(VNLB_HEADERS
+  cpp/lib/VnlbVersion.h
   cpp/lib/platform_macros.h
   cpp/lib/VnlbAsserts.h
   cpp/lib/io.h

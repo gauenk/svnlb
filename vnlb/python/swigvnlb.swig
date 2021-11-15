@@ -58,6 +58,7 @@ typedef uint64_t size_t;
 
 #endif
 
+#include <vnlb/cpp/lib/VnlbVersion.h>
 #include <vnlb/cpp/lib/VnlbInterrupt.h>
 #include <vnlb/cpp/lib/VnlbAsserts.h>
 #include <vnlb/cpp/lib/io.h>
@@ -118,6 +119,7 @@ typedef uint64_t size_t;
 
 %include <vnlb/cpp/src/pybind/py_res.h>
 %include <vnlb/cpp/lib/io.h>
+%include <vnlb/cpp/lib/VnlbVersion.h>
 
 
 %ignore vnlb::InterruptCallback::instance;
@@ -172,6 +174,9 @@ PyObject *swig_ptr (PyObject *a)
         return NULL;
     }
     void * data = PyArray_DATA(ao);
+    if(PyArray_TYPE(ao) == NPY_BOOL) {
+        return SWIG_NewPointerObj(data, SWIGTYPE_p_bool, 0);
+    }
     if(PyArray_TYPE(ao) == NPY_FLOAT32) {
         return SWIG_NewPointerObj(data, SWIGTYPE_p_float, 0);
     }

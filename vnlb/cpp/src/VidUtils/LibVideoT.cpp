@@ -253,7 +253,6 @@ void Video<T>::loadVideoFromPtr(
 	clear();
 
 	// open first frame to retrieve frame size and allocate mem
-	typename std::vector<T>::iterator i_data;
 	typename std::vector<T>::iterator o_data;
 
 	// set video size
@@ -269,8 +268,7 @@ void Video<T>::loadVideoFromPtr(
 	// copy first frame
 	o_data = data.begin();
 	for (unsigned k = 0; k < w * h * c * t; ++k, ++o_data){
-	  *o_data = (T)*dataBuf;
-	  dataBuf++;
+	  *o_data = dataBuf[k];
 	}
 
 	return;

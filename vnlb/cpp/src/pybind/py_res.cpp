@@ -58,8 +58,8 @@ void runVnlb(const PyVnlbParams& args) {
   noisy.loadVideoFromPtr(args.noisy,w,h,c,t);
   basic.loadVideoFromPtr(args.basic,w,h,c,t);
   if (args.use_flow){
-    fflow.loadVideoFromPtr(args.fflow,w,h,c,t);
-    bflow.loadVideoFromPtr(args.fflow,w,h,c,t); // yes, fflow
+    fflow.loadVideoFromPtr(args.fflow,w,h,2,t);
+    bflow.loadVideoFromPtr(args.fflow,w,h,2,t); // yes, fflow
   }
 
   // update params 

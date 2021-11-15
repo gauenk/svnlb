@@ -1,4 +1,10 @@
 build/*
+cmake/*
+*.py[co]
+__pycache__/
+*~
+\#*
+\.\#*
 
 *.swp
 *.swo

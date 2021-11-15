@@ -24,6 +24,8 @@
 
 #include <stdio.h>     // getchar() for debugging
 
+#include <vnlb/cpp/lib/VnlbAsserts.h>
+#include <vnlb/cpp/lib/VnlbInterrupt.h>
 #include <vnlb/cpp/src/VNLBayes/VideoNLBayes.hpp>
 #include "LibMatrix.h"
 
@@ -282,6 +284,7 @@ std::vector<float> runNLBayesThreads(
 	Video<float> &imClean)
 {
 	// Only 1, 3 or 4-channels images can be processed.
+        std::fprintf(stdout,"hi im here.\n");
 	const unsigned chnls = imNoisy.sz.channels;
 	if (! (chnls == 1 || chnls == 3 || chnls == 4))
 		throw std::runtime_error("VideoNLB::runNLBayes: Wrong number of "
@@ -364,17 +367,21 @@ std::vector<float> runNLBayesThreads(
 	// Split optical flow
 	std::vector<Video<float> > fflowSub(nParts), bflowSub(nParts);
 	std::vector<VideoUtils::TilePosition > oflowCrops(nParts);
+        std::fprintf(stdout,"subdivide start.\n");
 	VideoUtils::subDivideTight(fflow, fflowSub, oflowCrops, border, nParts);
 	VideoUtils::subDivideTight(bflow, bflowSub, oflowCrops, border, nParts);
+        std::fprintf(stdout,"subdivide end.\n");
 
 	// Divide the noisy image into sub-images in order to easier parallelize the process
 	std::vector<Video<float> > imNoisySub(nParts);
 	std::vector<Video<float> > imCleanSub(nParts);
 	std::vector<Video<float> > imBasicSub(nParts);
 	std::vector<VideoUtils::TilePosition > imCrops(nParts);
+        std::fprintf(stdout,"subdivide start.\n");
 	VideoUtils::subDivideTight(imNoisy, imNoisySub, imCrops, border, nParts);
 	VideoUtils::subDivideTight(imClean, imCleanSub, imCrops, border, nParts);
 	VideoUtils::subDivideTight(imBasic, imBasicSub, imCrops, border, nParts);
+        std::fprintf(stdout,"subdivide end.\n");
 
 	std::vector<Video<float> > imFinalSub(nParts);
 
@@ -383,8 +390,13 @@ std::vector<float> runNLBayesThreads(
 	prms[1] = prms2;
 
 	// Run VNLBayes steps
-	for (int iter = 0; iter < 2; ++iter)
-		if (prms[iter].sizePatch)
+	bool interrupt = false;
+	for (int iter = 0; iter < 2; ++iter) {
+   	        if (interrupt || vnlb::InterruptCallback::is_interrupted()) {
+		  interrupt = true;
+		}
+
+		if (prms[iter].sizePatch && !interrupt)
 		{
 			if (prms[iter].verbose)
 			{
@@ -411,15 +423,36 @@ std::vector<float> runNLBayesThreads(
 // 			shared(imNoisySub, imBasicSub, imFinalSub) \
 // 			firstprivate (prms_cpy)
 #endif
-			for (int n = 0; n < (int)nParts; n++)
-				groupsProcessedSub[n] =
-					processNLBayes(imNoisySub[n], fflowSub[n], bflowSub[n],
-					               imBasicSub[n], imFinalSub[n], prms[iter], imCrops[n],
-					               imCleanSub[n]);
+			for (int n = 0; n < (int)nParts; n++){
+			  if (interrupt || vnlb::InterruptCallback::is_interrupted()) {
+			    interrupt = true;
+			  }
 
-			for (int n = 0; n < (int)nParts; n++)
-				groupsRatio[iter] += 100.f * (float)groupsProcessedSub[n]/(float)size.whf;
+				groupsProcessedSub[n] =
+					processNLBayes(imNoisySub[n],
+						       fflowSub[n],
+						       bflowSub[n],
+					               imBasicSub[n],
+						       imFinalSub[n],
+						       interrupt,
+						       prms[iter],
+						       imCrops[n],
+					               imCleanSub[n]);
+			}
+
+			for (int n = 0; n < (int)nParts; n++){
+			  if (interrupt || vnlb::InterruptCallback::is_interrupted()) {
+			    interrupt = true;
+			  }
+
+			  groupsRatio[iter] += 100.f * (float)groupsProcessedSub[n]/(float)size.whf;
+			}
 		}
+	}
+
+	if (interrupt) {
+	  VNLB_THROW_MSG("interrupted");
+	}
 
 	// Get the basic estimate
 	VideoUtils::subBuildTight(imBasicSub, imBasic, border);
@@ -440,6 +473,7 @@ unsigned processNLBayes(
 	Video<float> const& bflow,
 	Video<float> &imBasic,
 	Video<float> &imFinal,
+	bool& interrupt,
 	nlbParams const& params,
 	VideoUtils::TilePosition crop,
 	Video<float> const &imClean)
@@ -494,29 +528,42 @@ unsigned processNLBayes(
 	end_f = sz.frames / 2 + 1;
 
 	// Fill processing mask
-	for (int f = ori_f, df = 0; f < end_f; f++, df++)
-	for (int y = ori_y, dy = 0; y < end_y; y++, dy++)
-	for (int x = ori_x, dx = 0; x < end_x; x++, dx++)
-	{
-		if ( (df % stepf == 0) || (!border_t1 && f == end_f - 1))
-		{
-			int phasey = (!border_t1 && f == end_f - 1) ? 0 : f/stepf;
+	for (int f = ori_f, df = 0; f < end_f; f++, df++){
+	  for (int y = ori_y, dy = 0; y < end_y; y++, dy++){
+	    for (int x = ori_x, dx = 0; x < end_x; x++, dx++){
+	      if (interrupt || vnlb::InterruptCallback::is_interrupted()) {
+		interrupt = true;
+		break;
+	      }
+	      if (!interrupt){
 
-			if ( (dy % stepy == phasey % stepy) ||
-			     (!border_y1 && y == end_y - 1) ||
-			     (!border_y0 && y == ori_y    ) )
+		if ( (df % stepf == 0) || (!border_t1 && f == end_f - 1)) {
+		  int phasey = (!border_t1 && f == end_f - 1) ? 0 : f/stepf;
+		  
+		  if ( (dy % stepy == phasey % stepy) ||
+		       (!border_y1 && y == end_y - 1) ||
+		       (!border_y0 && y == ori_y    ) )
+		    {
+		      int _tmp = phasey + y/stepy;
+		      int phasex = (!border_y1 && y == end_y - 1) ? 0 : (_tmp);
+
+		      if ( (dx % stepx == phasex % stepx) ||
+			   (!border_x1 && x == end_x - 1) ||
+			   (!border_x0 && x == ori_x    ) )
 			{
-				int phasex = (!border_y1 && y == end_y - 1) ? 0 : (phasey + y/stepy);
-
-				if ( (dx % stepx == phasex % stepx) ||
-				     (!border_x1 && x == end_x - 1) ||
-				     (!border_x0 && x == ori_x    ) )
-				{
-					mask(x,y,f) = true;
-					n_groups++;
-				}
+			  mask(x,y,f) = true;
+			  n_groups++;
 			}
-		}
+		    }
+		} // if df
+	      } // no interrupt
+	    } // for x
+	  } // for y
+	} // for f
+
+	// exit if interrupt
+	if (interrupt){
+	  return 0;
 	}
 
 	// Used matrices during Bayes' estimate
@@ -547,54 +594,69 @@ unsigned processNLBayes(
 
 	// Loop over video
 	int remaining_groups = n_groups;
-	for (unsigned pt = 0; pt < sz.frames; pt++)
-	for (unsigned py = 0; py < sz.height; py++)
-	for (unsigned px = 0; px < sz.width ; px++)
-		if (mask(px,py,pt)) //< Only non-seen patches are processed
-		{
-			group_counter++;
+	for (unsigned pt = 0; pt < sz.frames; pt++){
+	  for (unsigned py = 0; py < sz.height; py++){
+	    for (unsigned px = 0; px < sz.width ; px++){
+		if (interrupt || vnlb::InterruptCallback::is_interrupted()) {
+		  interrupt = true;
+		  break;
+		}
 
-			const unsigned ij  = sz.index(px,py,pt);
-			const unsigned ij3 = sz.index(px,py,pt, 0);
+		if (!interrupt){
+		  if (mask(px,py,pt)) //< Only non-seen patches are processed
+		    {
+		      group_counter++;
 
-			if (params.verbose && (group_counter % 100 == 0))
+		      const unsigned ij  = sz.index(px,py,pt);
+		      const unsigned ij3 = sz.index(px,py,pt, 0);
+
+		      if (params.verbose && (group_counter % 100 == 0))
 			{
-				int ntiles = crop.ntiles_t * crop.ntiles_x * crop.ntiles_y;
-				int part_idx = crop.tile_t * crop.ntiles_x * crop.ntiles_y +
-				               crop.tile_y * crop.ntiles_x + 
-				               crop.tile_x;
+			  int ntiles = crop.ntiles_t * crop.ntiles_x * crop.ntiles_y;
+			  int part_idx = crop.tile_t * crop.ntiles_x * crop.ntiles_y +
+			    crop.tile_y * crop.ntiles_x + 
+			    crop.tile_x;
 
-				printf("\x1b[%dF[%d,%d,%d] %05.1f\x1b[%dE", ntiles - part_idx,
-						crop.tile_x, crop.tile_y, crop.tile_t,
-						100.f - (float)remaining_groups/(float)(n_groups)*100.f,
-						ntiles - part_idx);
+			  printf("\x1b[%dF[%d,%d,%d] %05.1f\x1b[%dE", ntiles - part_idx,
+				 crop.tile_x, crop.tile_y, crop.tile_t,
+				 100.f - (float)remaining_groups/(float)(n_groups)*100.f,
+				 ntiles - part_idx);
 
-				std::cout << std::flush;
+			  std::cout << std::flush;
 			}
 
-			// Search for similar patches around the reference one
-			unsigned nSimP = estimateSimilarPatches(imNoisy, imBasic, fflow, bflow,
-					groupNoisy, groupBasic, indices, ij3, params, imClean);
+		      // Search for similar patches around the reference one
+		      unsigned nSimP = estimateSimilarPatches(imNoisy, imBasic, fflow, bflow,
+							      groupNoisy, groupBasic, indices, ij3, params, imClean);
 
-			// If we use the homogeneous area trick
-			bool flatPatch = false;
-			if (params.flatAreas)
-				flatPatch = computeFlatArea(groupNoisy, groupBasic, params, nSimP, sz.channels);
+		      // If we use the homogeneous area trick
+		      bool flatPatch = false;
+		      if (params.flatAreas)
+			flatPatch = computeFlatArea(groupNoisy, groupBasic, params, nSimP, sz.channels);
 
-			// Bayesian estimate
+		      // Bayesian estimate
 #ifdef FAT_ORIGINAL
-			// The Bayesian estimation is skipped with the original Flat Area
-			// trick, since the denoising has been done already in the 
-			// computeFlatArea function.
-			if (flatPatch == false)
+		      // The Bayesian estimation is skipped with the original Flat Area
+		      // trick, since the denoising has been done already in the 
+		      // computeFlatArea function.
+		      if (flatPatch == false)
 #endif
 			computeBayesEstimate(groupNoisy, groupBasic, mat, params, nSimP, sz.channels, flatPatch);
 
-			// Aggregation
-			remaining_groups -=
-				computeAggregation(step1 ? imBasic : imFinal, weight, mask, groupNoisy,
-						indices, params, nSimP);
-		}
+		      // Aggregation
+		      remaining_groups -=
+			computeAggregation(step1 ? imBasic : imFinal, weight, mask, groupNoisy,
+					   indices, params, nSimP);
+		    }
+		} // not intterupt
+	    } // for px
+	  }// for py
+	}// for pt
+
+	// exit if interrupt
+	if (interrupt){
+	  return 0;
+	}
 
 	// Weighted aggregation
 	computeWeightedAggregation(imNoisy, step1 ? imBasic : imFinal, weight);
