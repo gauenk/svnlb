@@ -1,6 +1,7 @@
 Python Bindings for VNLB | Non-local Bayesian Video Denoising
 =========================================
 
+* Original Code [linked here](https://github.com/pariasm/vnlb)
 * C++ (and Primary) Author    : Pablo Arias <pariasm@gmail.com>, see `AUTHORS`
 * Copyright : (C) 2019, Pablo Arias <pariasm@gmail.com>
 * Python Bindings Author: Kent Gauen
