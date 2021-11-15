@@ -58,12 +58,16 @@ def th_save_image(burst,fn):
     burst = rearrange(burst,'c t h w -> t c h w')
     tvUtils.save_image(burst,fn)
 
-def test_exec_vnlb():
+def test_exec_vnlb_color():
+    exec_vnlb(3)
 
+def test_exec_vnlb_bw():
+    exec_vnlb(1)
 
+def exec_vnlb(c):
     # -- load image --
     mrange = 3
-    c,t,h,w = 3,5,64,64 # fixed order by user
+    t,h,w = 5,64,64 # fixed order by user
     itype = "RGB" if c == 3 else "L"
     img = np.array(Image.open("./tests/image.jpg").convert(itype))
     if c == 1: img = img[:,:,None]
@@ -79,6 +83,4 @@ def test_exec_vnlb():
     # -- denoise --
     result = pyvnlb.runPyVnlb(noisy,std)
     denoised = result['denoised']
-    # print(denoised)
-    print(denoised.shape)
     th_save_image(denoised,"denoised.png")
