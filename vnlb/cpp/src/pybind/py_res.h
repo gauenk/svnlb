@@ -8,7 +8,7 @@ The insertion point for the Python API
 ****/
 
 
-/// Arguments to brute-force GPU k-nearest neighbor searching
+/// Arguments for video denoising
 struct PyVnlbParams {
 PyVnlbParams() :
 	  // --> image details <--
@@ -85,6 +85,65 @@ PyVnlbParams() :
 
 };
 
+
+/// Arguments for video denoising
+struct PyTvFlowParams {
+PyTvFlowParams() :
+  // --> image details <--
+  t(0),h(0),w(0),c(0),
+    image1(nullptr),
+    image2(nullptr),
+    flow(nullptr),
+  // --> vnlb tuning params <--
+    nproc(-1),
+    tau(-1),
+    lambda(-1),
+    nscales(-1),
+    fscale(-1),
+    zfactor(-1),
+    nwarps(-1),
+    epsilon(-1),
+    verbose(0),
+    testing(0) {}
+
+  /***
+
+      --->   Image Info   <---
+
+  ***/
+
+  int t; // nframes
+  int h; // height
+  int w; // width
+  int c; // color
+
+  // image for flow
+
+  const float* image1;
+  const float* image2;
+  const float* flow;
+  
+  /***
+
+      --->  VNLB Tuning Params  <---
+
+  ***/
+
+  int   nproc;
+  float tau;
+  float lambda;
+  float theta;
+  int   nscales;
+  int   fscale;
+  float zfactor;
+  int   nwarps;
+  float epsilon;
+  int   verbose;
+  bool  testing;
+
+};
+
 void runVnlb(const PyVnlbParams& args);
+void runTV1Flow(const PyTvFlowParams& args);
 
 

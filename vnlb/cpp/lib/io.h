@@ -20,8 +20,6 @@
 #include <string>
 #include <vector>
 
-/* #include <vnlb/Index.h> */ // we don't need this.
-
 namespace vnlb {
 
 struct IOReader {

@@ -18,21 +18,8 @@
 #endif//DISABLE_OMP
 
 #include "iio.h"
-
 #include "tvl1flow_lib.c"
-
-
-#define PAR_DEFAULT_OUTFLOW "flow.flo"
-#define PAR_DEFAULT_NPROC   0
-#define PAR_DEFAULT_TAU     0.25
-#define PAR_DEFAULT_LAMBDA  0.15
-#define PAR_DEFAULT_THETA   0.3
-#define PAR_DEFAULT_NSCALES 100
-#define PAR_DEFAULT_FSCALE  0
-#define PAR_DEFAULT_ZFACTOR 0.5
-#define PAR_DEFAULT_NWARPS  5
-#define PAR_DEFAULT_EPSILON 0.01
-#define PAR_DEFAULT_VERBOSE 0
+#include "defaults.h"
 
 
 /**

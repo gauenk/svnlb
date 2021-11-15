@@ -249,7 +249,7 @@ void gaussian(
 		B[i] /= norm;
 
 	// convolution of each line of the input image
-	double *R = xmalloc((size + xdim + size)*sizeof*R);
+	double *R = (double*)xmalloc((size + xdim + size)*sizeof*R);
 
 	for (int k = 0; k < ydim; k++)
 	{
@@ -289,7 +289,7 @@ void gaussian(
 	}
 
 	// convolution of each column of the input image
-	double *T = xmalloc((size + ydim + size)*sizeof*T);
+	double *T = (double*)xmalloc((size + ydim + size)*sizeof*T);
 
 	for (int k = 0; k < xdim; k++)
 	{

@@ -1,12 +1,15 @@
 
 set(VNLB_SRC
   cpp/lib/io.cpp
+  cpp/lib/iio/iio.c
+  cpp/lib/tvl1flow/tvl1flow_lib.cpp
+  cpp/lib/tvl1flow/xmalloc.c
   cpp/src/pybind/py_res.cpp
+  cpp/src/pybind/py_params.cpp
   cpp/src/VNLBayes/VideoNLBayes.cpp
   cpp/src/VNLBayes/LibMatrix.cpp
   cpp/src/VidUtils/LibVideoT.cpp
   cpp/src/VidUtils/mt19937ar.c
-  cpp/lib/iio/iio.c
   cpp/lib/VnlbException.cpp
   cpp/lib/VnlbInterrupt.cpp
 )
@@ -16,12 +19,16 @@ set(VNLB_HEADERS
   cpp/lib/platform_macros.h
   cpp/lib/VnlbAsserts.h
   cpp/lib/io.h
+  cpp/lib/iio/iio.h
+  cpp/lib/tvl1flow/defaults.h
+  cpp/lib/tvl1flow/tvl1flow_lib.h
+  cpp/lib/tvl1flow/xmalloc.h
   cpp/src/pybind/py_res.h
+  cpp/src/pybind/py_params.h
   cpp/src/VNLBayes/VideoNLBayes.hpp
   cpp/src/VNLBayes/LibMatrix.h
   cpp/src/VidUtils/LibVideoT.hpp
   cpp/src/VidUtils/mt19937ar.h
-  cpp/lib/iio/iio.h
   cpp/lib/VnlbException.h
   cpp/lib/VnlbInterrupt.h
 )

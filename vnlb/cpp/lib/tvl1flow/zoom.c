@@ -49,7 +49,7 @@ void zoom_out(
 )
 {
 	// temporary working image
-	float *Is = xmalloc(nx * ny * sizeof*Is);
+        float *Is = (float*)xmalloc(nx * ny * sizeof*Is);
 	for(int i = 0; i < nx * ny; i++)
 		Is[i] = I[i];
 

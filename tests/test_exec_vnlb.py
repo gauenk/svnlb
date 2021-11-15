@@ -28,16 +28,16 @@ def rand_dir(mrange):
     return grid[idx]
     
 def gen_jitter(mrange,nframes):
-    flow = np.zeros((nframes,2),np.int32)
+    blocks = np.zeros((nframes,2),np.int32)
     for t in range(nframes):
-        flow[t,:] = rand_dir(mrange)
-    flow[nframes//2,:] = 0
-    return flow
+        blocks[t,:] = rand_dir(mrange)
+    blocks[nframes//2,:] = 0
+    return blocks
         
 def add_dynamics(img,mrange,nframes,h,w):
 
-    # -- create flow --
-    flow = gen_jitter(mrange,nframes)
+    # -- create blocks --
+    blocks = gen_jitter(mrange,nframes)
     
     # -- pick origin --
     origin = int(2*mrange)
@@ -45,13 +45,18 @@ def add_dynamics(img,mrange,nframes,h,w):
     # -- create burst --
     burst = []
     for t in range(nframes):
-        top,left = flow[t]+origin
+        top,left = blocks[t]+origin
         frame = img[top:top+h,left:left+w]
         burst.append(frame)
     burst = np.stack(burst,axis=0)
     burst = rearrange(burst,'t h w c -> c t h w')
+
+    # -- blocks -> flow --
+    
+    # -- augment flow --
+    blocks = repeat(blocks,'t two -> two t h w',h=h,w=w)
         
-    return burst
+    return burst,flow
         
 def th_save_image(burst,fn):
     burst = torch.FloatTensor(burst/255.)
@@ -69,18 +74,18 @@ def exec_vnlb(c):
     mrange = 3
     t,h,w = 5,64,64 # fixed order by user
     itype = "RGB" if c == 3 else "L"
-    img = np.array(Image.open("./tests/image.jpg").convert(itype))
+    img = np.array(Image.open("./data/image.jpg").convert(itype))
     if c == 1: img = img[:,:,None]
-    burst = add_dynamics(img,mrange,t,h,w)
-    th_save_image(burst,"burst.png")
+    burst,flow = add_dynamics(img,mrange,t,h,w)
+    th_save_image(burst,"./output/burst.png")
 
     # -- add noise --
     std = 10.
     noise = np.random.normal(0,scale=std,size=(c,t,h,w))
     noisy = np.clip(burst + noise,0,255.)
-    th_save_image(noisy,"noisy.png")
+    th_save_image(noisy,"./output/noisy.png")
 
     # -- denoise --
     result = pyvnlb.runPyVnlb(noisy,std)
     denoised = result['denoised']
-    th_save_image(denoised,"denoised.png")
+    th_save_image(denoised,"./output/denoised.png")

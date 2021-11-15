@@ -9,42 +9,12 @@
 #include <float.h>
 
 #include <vnlb/cpp/src/pybind/py_res.h>
+#include <vnlb/cpp/src/pybind/py_params.h>
 #include <vnlb/cpp/src/VNLBayes/VideoNLBayes.hpp>
+#include <vnlb/cpp/lib/iio/iio.h>
+#include <vnlb/cpp/lib/tvl1flow/tvl1flow_lib.h>
 
 using namespace std;
-
-
-void setVnlbParams(const PyVnlbParams& args, VideoNLB::nlbParams& params, int step){
-
-  // init 
-  int index = step-1;
-  float sigma = *(args.sigma+index);
-
-  // set default 
-  // int psX = args.ps;
-  // int psT = 1;
-  // VideoSize tmp;
-  // tmp.frames = args.t;
-  // tmp.channels = args.print_params;
-  // VideoNLB::defaultParameters(prms1, patch_sizex1, patch_sizet1, 1, sigma, tmp, false);
-  VideoSize img_sz(args.w,args.h,args.t,args.c);
-  VideoNLB::defaultParameters(params, -1, -1, step, sigma, img_sz, args.verbose);
-
-  // set from args 
-  // VideoNLB::setSizeSearchWindow(params, args.search_space[index]);
-  // VideoNLB::setNSimilarPatches(params, (unsigned)args.num_patches[index]);
-  // params.rank = args.rank[index];
-  // params.variThresh = args.thres[index];
-  // params.beta = args.beta[index];
-  // params.flatAreas = args.flat_area[index];
-  // params.coupleChannels = args.couple_ch[index];
-  // params.aggreBoost = args.aggeBoost[index];
-  // params.procStep = args.patch_step[index];
-  // params.sigmaBasic = args.sigmab[index];
-  if (args.verbose){
-    VideoNLB::printNlbParameters(params);
-  }
-}
 
 void runVnlb(const PyVnlbParams& args) {
 
@@ -88,5 +58,61 @@ void runVnlb(const PyVnlbParams& args) {
   // final.saveVideo("deno_%03d.png", 0, 1);
   // noisy.saveVideo("noisy_%03d.png", 0, 1);
 
+}
+
+
+void runTV1Flow(const PyTvFlowParams& args) {
+  
+  
+  // unpack shape 
+  int w = args.w;
+  int h = args.h;
+  int c = args.c;
+  int t = 1;
+  // std::fprintf(stdout,"(w,h,c,t): (%d,%d,%d,%d)\n",w,h,c,t);
+
+  // remove const cast (i think) needed by SWIG-Python
+  float *image1, *image2;
+  image1 = const_cast<float*>(args.image1);
+  image2 = const_cast<float*>(args.image2);
+
+  // set params 
+  tvFlowParams params;
+  setTvFlowParams(args,params);
+
+  // correct pyramid size 
+  const float N = 1 + log(hypot(w, h)/16.0) / log(1/params.zfactor);
+  if (N < params.nscales)
+    params.nscales = N;
+  if (params.nscales < params.fscale)
+    params.fscale = params.nscales;
+
+  // verbose printing
+  if (params.verbose)
+    fprintf(stderr,
+	    "nproc=%d tau=%f lambda=%f theta=%f nscales=%d "
+	    "zfactor=%f nwarps=%d epsilon=%g\n",
+	    params.nproc, params.tau, params.lambda,
+	    params.theta, params.nscales, params.zfactor,
+	    params.nwarps, params.epsilon);
+
+  //allocate memory for the flow
+  float *u = const_cast<float*>(args.flow);
+  float *v = u + h*w;
+
+  //compute the optical flow
+  Dual_TVL1_optic_flow_multiscale(image1, image2, u, v,
+  				  w, h, params.tau,
+  				  params.lambda, params.theta,
+  				  params.nscales, params.fscale,
+  				  params.zfactor, params.nwarps,
+  				  params.epsilon, params.verbose);
+
+  // [testing] save the optical flow
+  // if (args.testing){
+  //   char* outfile = "pyflow_%03d.flo";
+  //   iio_save_image_float_split(outfile, u, w, h, 2);
+  // }
 
 }
+
