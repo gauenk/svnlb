@@ -23,11 +23,12 @@ void setVnlbParams(const PyVnlbParams& args, VideoNLB::nlbParams& params, int st
   // set default 
   // int psX = args.ps;
   // int psT = 1;
-  VideoSize tmp;
-  tmp.frames = args.t;
-  tmp.channels = args.print_params;
+  // VideoSize tmp;
+  // tmp.frames = args.t;
+  // tmp.channels = args.print_params;
   // VideoNLB::defaultParameters(prms1, patch_sizex1, patch_sizet1, 1, sigma, tmp, false);
-  VideoNLB::defaultParameters(params, -1, -1, step, sigma, tmp, args.verbose);
+  VideoSize img_sz(args.w,args.h,args.t,args.c);
+  VideoNLB::defaultParameters(params, -1, -1, step, sigma, img_sz, args.verbose);
 
   // set from args 
   // VideoNLB::setSizeSearchWindow(params, args.search_space[index]);
@@ -56,6 +57,7 @@ void runVnlb(const PyVnlbParams& args) {
   int h = args.h;
   int c = args.c;
   int t = args.t;
+  // std::fprintf(stdout,"(w,h,c,t): (%d,%d,%d,%d)\n",w,h,c,t);
 
   // load video from ptr
   oracle.loadVideoFromPtr(args.oracle,w,h,c,t);
@@ -77,12 +79,14 @@ void runVnlb(const PyVnlbParams& args) {
   // Run denoising algorithm
   groupsRatio = VideoNLB::runNLBayesThreads(noisy, fflow, bflow, basic, final,
   					    params1, params2, oracle);
-
+  // std::fprintf(stdout,"final.sz: %d,%d,%d,%d\n",
+  // 	       final.sz.width,final.sz.height,
+  // 	       final.sz.channels,final.sz.frames);
 
   // copy back to arrays
   final.saveVideoToPtr(const_cast<float*>(args.final));
-  std::fprintf(stdout,"printint final to png files.\n");
   final.saveVideo("deno_%03d.png", 0, 1);
+  // noisy.saveVideo("noisy_%03d.png", 0, 1);
 
 
 }

@@ -24,8 +24,9 @@ def optional(pydict,key,default,dtype=None):
     return rtn
 
 def optional_swig_ptr(elem):
-    if not isinstance(elem,Iterable):        
+    if not isinstance(elem,np.ndarray):
         return elem
+    elem = np.ascontiguousarray(elem)
     return vnlb.swig_ptr(elem)
 
 def set_optional_params(args,pyargs):
@@ -65,11 +66,12 @@ def set_tensors(args,pyargs,tensors):
 def create_swig_args(args):
     sargs = vnlb.PyVnlbParams()
     for key,val in args.items():
+        print(key)        
         sval = optional_swig_ptr(val)
         setattr(sargs,key,sval)
     return sargs
 
-def init_args(noisy,sigma,pyargs):
+def parse_args(noisy,sigma,pyargs):
 
     # -- extract info --
     verbose = optional(pyargs,'verbose',True)
@@ -97,7 +99,7 @@ def init_args(noisy,sigma,pyargs):
     args.h = h
     args.c = c
     args.t = t
-    args.noisy = noisy#vnlb.swig_ptr(noisy)
+    args.noisy = noisy
     args.sigma = np.array([sigma,sigma],dtype=np.float32)
     args.sigmaBasic = np.array([sigma,sigma],dtype=np.float32)
     

@@ -8,7 +8,7 @@ from einops import rearrange
 import vnlb
 
 # -- local imports --
-from .param_parser import init_args
+from .param_parser import parse_args
 
 def runPyVnlb(noisy,sigma,pyargs=None):
     if torch.is_tensor(noisy):
@@ -20,7 +20,7 @@ def runVnlb_np(noisy,sigma,pyargs=None):
     
     # -- extract info --
     c,t,h,w  = noisy.shape
-    args,sargs = init_args(noisy,sigma,pyargs)
+    args,sargs = parse_args(noisy,sigma,pyargs)
 
     # -- exec using numpy --
     vnlb.runVnlb(sargs)

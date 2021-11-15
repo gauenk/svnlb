@@ -278,9 +278,6 @@ template <class T>
 void Video<T>::saveVideoToPtr(T* dataBuf)
 {
 
-        // run "clear"
-	clear();
-
 	// open first frame to retrieve frame size and allocate mem
 	typename std::vector<T>::iterator i_data;
 
@@ -294,7 +291,7 @@ void Video<T>::saveVideoToPtr(T* dataBuf)
 	// copy first frame
 	i_data = data.begin();
 	for (unsigned k = 0; k < w * h * c * t; ++k, ++i_data){
-	  dataBuf[k] = (125+k) % 200;//i_data[k];
+	  dataBuf[k] = i_data[k];
 	}
 
 	return;
@@ -319,7 +316,6 @@ void Video<float>::saveVideo(
 {
 	// allocate memory for frame buffer
 	float* imTmp = new float[sz.whc];
-
 	unsigned lastFrame = firstFrame + sz.frames * frameStep;
 	std::vector<float> frame(sz.whc);
 	std::vector<float>::const_iterator p_data = data.begin();
