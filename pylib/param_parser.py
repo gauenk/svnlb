@@ -16,14 +16,17 @@ def optional(pydict,key,default,dtype=None):
     if pydict is None: rtn = default
     elif key in pydict: rtn = pydict[key]
 
-    # -- convert to swig --
-    if isinstance(rtn,Iterable):        
-        if isinstance(rtn,list):
-            if dtype is None: dtype = np.float32
-            rtn = np.array(rtn,dtype=dtype)
-        return vnlb.swig_ptr(rtn)
-    else:
-        return rtn
+    # -- convert to correct numpy type --
+    if isinstance(rtn,list):
+        if dtype is None: dtype = np.float32
+        rtn = np.array(rtn,dtype=dtype)
+
+    return rtn
+
+def optional_swig_ptr(elem):
+    if not isinstance(elem,Iterable):        
+        return elem
+    return vnlb.swig_ptr(elem)
 
 def set_optional_params(args,pyargs):
     # -- set optional numeric vals --
@@ -59,6 +62,13 @@ def set_tensors(args,pyargs,tensors):
     args.basic = optional(pyargs,'basic',tensors.basic)
     args.final = optional(pyargs,'final',tensors.final)
 
+def create_swig_args(args):
+    sargs = vnlb.PyVnlbParams()
+    for key,val in args.items():
+        sval = optional_swig_ptr(val)
+        setattr(sargs,key,sval)
+    return sargs
+
 def init_args(noisy,sigma,pyargs):
 
     # -- extract info --
@@ -80,18 +90,25 @@ def init_args(noisy,sigma,pyargs):
         sigma = est_sigma(noisy)
 
     # -- params --
-    args = vnlb.PyVnlbParams()
+    args = edict()
 
     # -- set required numeric values --
-    args.noisy = vnlb.swig_ptr(noisy)
     args.w = w
     args.h = h
     args.c = c
     args.t = t
-    args.sigma = vnlb.swig_ptr(np.array([sigma,sigma],dtype=np.float32))
-    args.sigmaBasic = vnlb.swig_ptr(np.array([sigma,sigma],dtype=np.float32))
+    args.noisy = noisy#vnlb.swig_ptr(noisy)
+    args.sigma = np.array([sigma,sigma],dtype=np.float32)
+    args.sigmaBasic = np.array([sigma,sigma],dtype=np.float32)
     
     # -- set optional params --
     set_optional_params(args,pyargs)
 
-    return args
+    # -- create shell tensors & set arrays --
+    ztensors = np_zero_tensors(t,h,w,c)
+    set_tensors(args,pyargs,ztensors)
+
+    # -- copy to swig --
+    sargs = create_swig_args(args)
+
+    return args, sargs

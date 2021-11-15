@@ -1,8 +1,14 @@
 
+# -- python imports --
 import torch
 import numpy
+from einops import rearrange
+
+# -- vnlb imports --
 import vnlb
-from .param_parser import init_args,set_tensors,np_zero_tensors
+
+# -- local imports --
+from .param_parser import init_args
 
 def runPyVnlb(noisy,sigma,pyargs=None):
     if torch.is_tensor(noisy):
@@ -14,14 +20,16 @@ def runVnlb_np(noisy,sigma,pyargs=None):
     
     # -- extract info --
     c,t,h,w  = noisy.shape
-    args = init_args(noisy,sigma,pyargs)
-
-    # -- create containers if needed --
-    ztensors = np_zero_tensors(t,h,w,c)
-
-    # -- set arrays --
-    set_tensors(args,pyargs,ztensors)
+    args,sargs = init_args(noisy,sigma,pyargs)
 
     # -- exec using numpy --
-    vnlb.runVnlb(args)
+    vnlb.runVnlb(sargs)
 
+    # -- format & create results --
+    res = {}
+    res['final'] = rearrange(args.final,'w h c t -> c t h w')
+
+    # -- alias some vars --
+    res['denoised'] = res['final']
+
+    return res
