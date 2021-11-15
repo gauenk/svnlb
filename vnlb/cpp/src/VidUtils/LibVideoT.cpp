@@ -1071,12 +1071,12 @@ namespace VideoUtils
 		      std::vector<TilePosition> &tiles,
 		      const int border,
 		      const int ntiles){
-    subDivideTight(vid,vidSub,tiles,border,ntiles);
+    subDivideTight<float>(vid,vidSub,tiles,border,ntiles);
   }
 
   void subBuildTight(std::vector<Video<float>> const& vidSub,
 		     Video<float> &vid, const int border){
-    subBuildTight(vidSub,vid,border);
+    subBuildTight<float>(vidSub,vid,border);
   }
 
 } // namespace VideoUtils
