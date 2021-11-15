@@ -283,7 +283,6 @@ void Video<T>::saveVideoToPtr(T* dataBuf)
 
 	// open first frame to retrieve frame size and allocate mem
 	typename std::vector<T>::iterator i_data;
-	typename std::vector<T>::iterator o_data;
 
 	// set video size
 	int w,h,c,t;
@@ -292,14 +291,10 @@ void Video<T>::saveVideoToPtr(T* dataBuf)
 	c = sz.channels;
 	t = sz.frames;
 	
-	// create iter 
-	typename std::vector<T> vData(dataBuf,dataBuf+sz.whcf);
-
 	// copy first frame
 	i_data = data.begin();
-	o_data = vData.begin();
-	for (unsigned k = 0; k < w * h * c * t; ++k, ++i_data, ++o_data){
-	  *o_data = *i_data;
+	for (unsigned k = 0; k < w * h * c * t; ++k, ++i_data){
+	  dataBuf[k] = (125+k) % 200;//i_data[k];
 	}
 
 	return;

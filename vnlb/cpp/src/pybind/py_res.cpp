@@ -74,11 +74,6 @@ void runVnlb(const PyVnlbParams& args) {
   // Percentage or processed groups of patches over total number of pixels
   std::vector<float> groupsRatio;
 
-  std::fprintf(stdout,"params1.sizeSearchWindow: %d\n",params1.sizeSearchWindow);
-  std::fprintf(stdout,"params2.sizeSearchWindow: %d\n",params2.sizeSearchWindow);
-  std::fprintf(stdout,"params1.sizePatch: %d\n",params1.sizePatch);
-  std::fprintf(stdout,"params2.sizePatch: %d\n",params2.sizePatch);
-  
   // Run denoising algorithm
   groupsRatio = VideoNLB::runNLBayesThreads(noisy, fflow, bflow, basic, final,
   					    params1, params2, oracle);
@@ -86,5 +81,8 @@ void runVnlb(const PyVnlbParams& args) {
 
   // copy back to arrays
   final.saveVideoToPtr(const_cast<float*>(args.final));
+  std::fprintf(stdout,"printint final to png files.\n");
+  final.saveVideo("deno_%03d.png", 0, 1);
+
 
 }
