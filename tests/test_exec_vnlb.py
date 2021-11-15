@@ -8,7 +8,7 @@ import numpy as np
 
 def test_exec_vnlb():
 
-    t,h,w,c = 3,64,64,3
-    noisy = np.random.rand(t,h,w,c)
+    c,t,h,w = 3,5,32,32
+    noisy = np.random.rand(c,t,h,w)
     print(dir(pyvnlb))
     pyvnlb.runPyVnlb(noisy,1.0)

@@ -41,7 +41,7 @@ def set_optional_params(args,pyargs):
     args.aggeBoost = optional(pyargs,'agge_boost',[True,True],bool)
     args.patch_step = optional(pyargs,'patch_step',[4,4],np.uint32)
     args.verbose = True
-    args.print_params = 1
+    args.print_params = 0
     
 def np_zero_tensors(t,h,w,c):
     tensors = edict()
@@ -64,10 +64,10 @@ def init_args(noisy,sigma,pyargs):
     # -- extract info --
     verbose = optional(pyargs,'verbose',True)
     dtype = noisy.dtype
-    t,h,w,c  = noisy.shape
+    c,t,h,w  = noisy.shape
 
     # -- format noisy image --
-    noisy = rearrange(noisy,'t h w c -> w h c t')
+    noisy = rearrange(noisy,'c t h w -> w h c t')
     if dtype != np.float32 and verbose:
         print(f"Warning: converting noisy image from {dtype} to np.float32.")
         noisy = noisy.astype(np.float32)

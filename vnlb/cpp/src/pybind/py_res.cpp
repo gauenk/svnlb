@@ -14,20 +14,24 @@
 using namespace std;
 
 
-void setVnlbParams(const PyVnlbParams& args, VideoNLB::nlbParams params, int step){
+void setVnlbParams(const PyVnlbParams& args, VideoNLB::nlbParams& params, int step){
 
   // init 
   int index = step-1;
   float sigma = *(args.sigma+index);
-  VideoSize tmp;
 
   // set default 
+  // int psX = args.ps;
+  // int psT = 1;
+  VideoSize tmp;
+  tmp.frames = args.t;
   tmp.channels = args.print_params;
-  VideoNLB::defaultParameters(params, -1, 0, step, sigma, tmp, false);
+  // VideoNLB::defaultParameters(prms1, patch_sizex1, patch_sizet1, 1, sigma, tmp, false);
+  VideoNLB::defaultParameters(params, -1, -1, step, sigma, tmp, args.verbose);
 
   // set from args 
-  VideoNLB::setSizeSearchWindow(params, args.search_space[index]);
-  VideoNLB::setNSimilarPatches(params, (unsigned)args.num_patches[index]);
+  // VideoNLB::setSizeSearchWindow(params, args.search_space[index]);
+  // VideoNLB::setNSimilarPatches(params, (unsigned)args.num_patches[index]);
   // params.rank = args.rank[index];
   // params.variThresh = args.thres[index];
   // params.beta = args.beta[index];
@@ -36,7 +40,7 @@ void setVnlbParams(const PyVnlbParams& args, VideoNLB::nlbParams params, int ste
   // params.aggreBoost = args.aggeBoost[index];
   // params.procStep = args.patch_step[index];
   // params.sigmaBasic = args.sigmab[index];
-  if (args.print_params){
+  if (args.verbose){
     VideoNLB::printNlbParameters(params);
   }
 }
@@ -70,9 +74,15 @@ void runVnlb(const PyVnlbParams& args) {
   // Percentage or processed groups of patches over total number of pixels
   std::vector<float> groupsRatio;
 
+  std::fprintf(stdout,"params1.sizeSearchWindow: %d\n",params1.sizeSearchWindow);
+  std::fprintf(stdout,"params2.sizeSearchWindow: %d\n",params2.sizeSearchWindow);
+  std::fprintf(stdout,"params1.sizePatch: %d\n",params1.sizePatch);
+  std::fprintf(stdout,"params2.sizePatch: %d\n",params2.sizePatch);
+  
   // Run denoising algorithm
   groupsRatio = VideoNLB::runNLBayesThreads(noisy, fflow, bflow, basic, final,
   					    params1, params2, oracle);
+
 
   // copy back to arrays
   final.saveVideoToPtr(const_cast<float*>(args.final));

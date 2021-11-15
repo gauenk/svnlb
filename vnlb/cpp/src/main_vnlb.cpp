@@ -60,8 +60,8 @@ int main(int argc, char **argv)
 	// Video NLB parameters
 	const int time_search1  = clo_option("-wt1", 0  , "< search window temporal radius, step 1");
 	const int time_search2  = clo_option("-wt2", 0  , "< search window temporal radius, step 2");
-	const int space_search1 = clo_option("-wx1",-1  , "< search window spatial radius, step 1");
-	const int space_search2 = clo_option("-wx2",-1  , "< search window spatial radius, step 2");
+	const int search_space1 = clo_option("-wx1",-1  , "< search window spatial radius, step 1");
+	const int search_space2 = clo_option("-wx2",-1  , "< search window spatial radius, step 2");
 	const int patch_sizex1  = clo_option("-px1",-1  , "< spatial patch size, step 1");
 	const int patch_sizex2  = clo_option("-px2",-1  , "< spatial patch size, step 2");
 	const int patch_sizet1  = clo_option("-pt1", 1  , "< temporal patch size, step 1");
@@ -109,8 +109,8 @@ int main(int argc, char **argv)
 			return fprintf(stderr, "%s: np1, np2, r1, r2, th1 and th2 cannot be negative.\n"
 					"Try `%s --help' for more information.\n", argv[0], argv[0]), EXIT_FAILURE;
 
-		if ((space_search1 < 0 && space_search1 != -1) ||
-		    (space_search2 < 0 && space_search2 != -1) ||
+		if ((search_space1 < 0 && search_space1 != -1) ||
+		    (search_space2 < 0 && search_space2 != -1) ||
 		    ( time_search1 < 0 ||  time_search2 <   0) )
 			return fprintf(stderr, "%s: wx1, wx2, wt1 and wt2 cannot be negative.\n"
 					"Try `%s --help' for more information.\n", argv[0], argv[0]), EXIT_FAILURE;
@@ -148,8 +148,8 @@ int main(int argc, char **argv)
 		VideoNLB::defaultParameters(prms2, patch_sizex2, patch_sizet2, 2, sigma, tmp, false);
 
 		// Override with command line parameters
-		if (space_search1 >= 0) VideoNLB::setSizeSearchWindow(prms1, (unsigned)space_search1);
-		if (space_search2 >= 0) VideoNLB::setSizeSearchWindow(prms2, (unsigned)space_search2);
+		if (search_space1 >= 0) VideoNLB::setSizeSearchWindow(prms1, (unsigned)search_space1);
+		if (search_space2 >= 0) VideoNLB::setSizeSearchWindow(prms2, (unsigned)search_space2);
 		if (num_patches1  >= 0) VideoNLB::setNSimilarPatches(prms1, (unsigned)num_patches1);
 		if (num_patches2  >= 0) VideoNLB::setNSimilarPatches(prms2, (unsigned)num_patches2);
 		if (rank1         >= 0) prms1.rank = rank1;
@@ -205,8 +205,8 @@ int main(int argc, char **argv)
 	VideoNLB::defaultParameters(prms2, patch_sizex2, patch_sizet2, 2, sigma, noisy.sz, verbose);
 
 	// Override with command line parameters
-	if (space_search1 >= 0) VideoNLB::setSizeSearchWindow(prms1, (unsigned)space_search1);
-	if (space_search2 >= 0) VideoNLB::setSizeSearchWindow(prms2, (unsigned)space_search2);
+	if (search_space1 >= 0) VideoNLB::setSizeSearchWindow(prms1, (unsigned)search_space1);
+	if (search_space2 >= 0) VideoNLB::setSizeSearchWindow(prms2, (unsigned)search_space2);
 	if (num_patches1  >= 0) VideoNLB::setNSimilarPatches(prms1, (unsigned)num_patches1);
 	if (num_patches2  >= 0) VideoNLB::setNSimilarPatches(prms2, (unsigned)num_patches2);
 	if (rank1         >= 0) prms1.rank = rank1;

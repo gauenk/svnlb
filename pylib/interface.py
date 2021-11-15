@@ -13,7 +13,7 @@ def runPyVnlb(noisy,sigma,pyargs=None):
 def runVnlb_np(noisy,sigma,pyargs=None):
     
     # -- extract info --
-    t,h,w,c  = noisy.shape
+    c,t,h,w  = noisy.shape
     args = init_args(noisy,sigma,pyargs)
 
     # -- create containers if needed --

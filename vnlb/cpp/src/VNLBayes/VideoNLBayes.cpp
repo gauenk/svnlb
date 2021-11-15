@@ -77,6 +77,8 @@ void defaultParameters(
 		psz_x = (channels   == 1) ? 10 : 7 ;
 		psz_t = (size.frames > 1) ? 2  : 1 ;
 	}
+	fprintf(stdout,"psz_x: %d\n",psz_x);
+	fprintf(stdout,"psz_t: %d\n",psz_t);
 
 	// Store noise level in parameter struct
 	prms.sigma = s;
@@ -363,6 +365,12 @@ std::vector<float> runNLBayesThreads(
 	const int border = std::max(2*(prms1.sizeSearchWindow/2) + prms1.sizePatch - 1,
 	                            2*(prms2.sizeSearchWindow/2) + prms2.sizePatch - 1);
 
+        std::fprintf(stdout,"prms1.sizeSearchWindow: %d\n",prms1.sizeSearchWindow);
+        std::fprintf(stdout,"prms2.sizeSearchWindow: %d\n",prms2.sizeSearchWindow);
+        std::fprintf(stdout,"prms1.sizePatch: %d\n",prms1.sizePatch);
+        std::fprintf(stdout,"prms2.sizePatch: %d\n",prms2.sizePatch);
+        std::fprintf(stdout,"border: %d\n",border);
+        std::fprintf(stdout,"nParts: %d\n",nParts);
 
 	// Split optical flow
 	std::vector<Video<float> > fflowSub(nParts), bflowSub(nParts);
@@ -427,17 +435,18 @@ std::vector<float> runNLBayesThreads(
 			  if (interrupt || vnlb::InterruptCallback::is_interrupted()) {
 			    interrupt = true;
 			  }
+			  std::fprintf(stdout,"npart [%d]\n",n);
 
-				groupsProcessedSub[n] =
-					processNLBayes(imNoisySub[n],
-						       fflowSub[n],
-						       bflowSub[n],
-					               imBasicSub[n],
-						       imFinalSub[n],
-						       interrupt,
-						       prms[iter],
-						       imCrops[n],
-					               imCleanSub[n]);
+			  groupsProcessedSub[n] =
+			    processNLBayes(imNoisySub[n],
+					   fflowSub[n],
+					   bflowSub[n],
+					   imBasicSub[n],
+					   imFinalSub[n],
+					   interrupt,
+					   prms[iter],
+					   imCrops[n],
+					   imCleanSub[n]);
 			}
 
 			for (int n = 0; n < (int)nParts; n++){
@@ -526,15 +535,17 @@ unsigned processNLBayes(
 
 	ori_f = std::max((int)sz.frames / 2 - (int)sPt - 1, 0);
 	end_f = sz.frames / 2 + 1;
+	std::fprintf(stdout,"pre mask\n");
 
 	// Fill processing mask
 	for (int f = ori_f, df = 0; f < end_f; f++, df++){
 	  for (int y = ori_y, dy = 0; y < end_y; y++, dy++){
 	    for (int x = ori_x, dx = 0; x < end_x; x++, dx++){
-	      if (interrupt || vnlb::InterruptCallback::is_interrupted()) {
-		interrupt = true;
-		break;
-	      }
+	      // if (interrupt || vnlb::InterruptCallback::is_interrupted()) {
+	      // 	interrupt = true;
+	      // 	break;
+	      // }
+	      std::fprintf(stdout,"in mask: %d,%d,%d\n",f,y,x);
 	      if (!interrupt){
 
 		if ( (df % stepf == 0) || (!border_t1 && f == end_f - 1)) {
@@ -565,6 +576,7 @@ unsigned processNLBayes(
 	if (interrupt){
 	  return 0;
 	}
+	std::fprintf(stdout,"post brackets.\n");
 
 	// Used matrices during Bayes' estimate
 	const unsigned patch_dim = sPx * sPx * sPt * (params.coupleChannels ? sz.channels : 1);
@@ -572,35 +584,46 @@ unsigned processNLBayes(
 	const unsigned patch_num = sWx * sWx * sWt;
 
 	// Matrices used for Bayes' estimate
+	std::fprintf(stdout,"[pre] indices and mat.\n");
 	vector<unsigned> indices(patch_num);
 	matWorkspace mat;
 	mat.group     .resize(patch_num * patch_dim);
 	mat.covMat    .resize(patch_dim * patch_dim);
 	mat.center.resize(patch_dim * patch_chnls);
+	std::fprintf(stdout,"[post] indices and mat.\n");
 
 	// Variance captured by the principal components
+	std::fprintf(stdout,"[pre] var.\n");
 	Video<float> variance(mask.sz);
+	std::fprintf(stdout,"[post] var.\n");
 
 	// Total number of groups of similar patches processed
 	unsigned group_counter = 0;
 
 	// Allocate output sizes
+	std::fprintf(stdout,"[pre] resize\n");
 	if (step1) imBasic.resize(sz); // output of first step
 	else       imFinal.resize(sz); // output of second step
+	std::fprintf(stdout,"[popst] resize.\n");
 
 	// Matrices used for Bayes' estimate
+	std::fprintf(stdout,"[pre] groups\n");
 	vector<float> groupNoisy(            patch_num * patch_dim * patch_chnls);
 	vector<float> groupBasic(step1 ? 0 : patch_num * patch_dim * patch_chnls);
+	std::fprintf(stdout,"[post] groups\n");
 
 	// Loop over video
+	std::fprintf(stdout,"(f,h,w): frames,height,width\n");
 	int remaining_groups = n_groups;
 	for (unsigned pt = 0; pt < sz.frames; pt++){
 	  for (unsigned py = 0; py < sz.height; py++){
 	    for (unsigned px = 0; px < sz.width ; px++){
-		if (interrupt || vnlb::InterruptCallback::is_interrupted()) {
-		  interrupt = true;
-		  break;
-		}
+		// if (interrupt || vnlb::InterruptCallback::is_interrupted()) {
+		//   interrupt = true;
+		//   break;
+		// }
+
+		std::fprintf(stdout,"pt,py,px: %d,%d,%d\n",pt,py,px);
 
 		if (!interrupt){
 		  if (mask(px,py,pt)) //< Only non-seen patches are processed
