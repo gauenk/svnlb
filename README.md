@@ -34,26 +34,48 @@ The original git repo is [available here](https://github.com/pariasm/vnlb/).
 * libpng, libtiff and libjpeg: image i/o
 
 **Compilation:** 
-Compilation was tested on Ubuntu Linux 16.04 and 18.04.
+Compilation was tested on Ubuntu Linux 20.02.
 Configure and compile the source code using cmake and make.
 It is recommended that you create a folder for building:
 ```
-$ mkdir build; cd build
-$ cmake ..
-$ make
+$ ./install.sh
 ```
 
-Binaries will be created in `build/bin folder`.
+This installs the package to the user's local install using Python-pip.
 
 NOTE: By default, the code is compiled with OpenMP multithreaded
 parallelization enabled (if your system supports it). Use the
 `OMP_NUM_THREADS` enviroment variable to control the number of threads
 used.
 
-USAGE
+USAGE of Python-API
+-------------------
+
+We expect the noisy input image to be shaped `(channels,nframes,height,width)` with
+pixel values in range `[0,...,255.]`. Common noise levels include 10, 20, 50, etc.
+
+```
+import vnlb.pylib as pyvnlb
+
+# -- get data --
+clean,noisy,std = pyvnlb.get_example_burst() # [0,...,255.]
+print(noisy.shape) # (channels,nframes,height,width)
+
+# -- exec function --
+result = pyvnlb.runPyVnlb(noisy,std)
+denoised = result['denoised']
+
+# -- exec function --
+psnr = pyvnlb.psnr(clean,denoised)
+print("VNLM PSNRS: %2.1f" % psnr)
+
+```
+
+
+C-API
 -----
 
-Please [see original github repo](https://github.com/pariasm/vnlb/) for usage of original code. The python binding usage is coming soon...
+Please [see original github repo](https://github.com/pariasm/vnlb/) for usage of original C-code. 
 
 
 LICENSE
