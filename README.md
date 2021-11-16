@@ -48,7 +48,7 @@ parallelization enabled (if your system supports it). Use the
 `OMP_NUM_THREADS` enviroment variable to control the number of threads
 used.
 
-USAGE of Python-API
+Usage of Python-API
 -------------------
 
 We expect the noisy input image to be shaped `(channels,nframes,height,width)` with
