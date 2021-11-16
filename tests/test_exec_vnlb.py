@@ -72,7 +72,7 @@ def test_exec_vnlb_bw():
 def exec_vnlb(c):
     # -- load image --
     mrange = 3
-    t,h,w = 5,64,64 # fixed order by user
+    t,h,w = 5,128,256 # fixed order by user
     itype = "RGB" if c == 3 else "L"
     img = np.array(Image.open("./data/image.jpg").convert(itype))
     if c == 1: img = img[:,:,None]
@@ -86,6 +86,7 @@ def exec_vnlb(c):
     th_save_image(noisy,"./output/noisy.png")
 
     # -- denoise --
-    result = pyvnlb.runPyVnlb(noisy,std)
+    pyargs = {'testing': True}
+    result = pyvnlb.runPyVnlb(noisy,std,pyargs)
     denoised = result['denoised']
     th_save_image(denoised,"./output/denoised.png")

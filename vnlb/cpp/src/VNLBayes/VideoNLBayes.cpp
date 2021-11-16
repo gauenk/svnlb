@@ -52,6 +52,18 @@
 #define ANSI_BWHT "\x1b[37;01m"
 #define ANSI_RST  "\x1b[0m"
 
+void plain_print(Video<float> const& imVid){
+  const VideoSize sz = imVid.sz;
+  FILE* fp;
+  fp = fopen("plain_print.txt","w");
+  float* data = const_cast<float*>(&(imVid.data[0]));
+  for (int i = 0; i < sz.whcf; ++i){
+    fprintf(fp,"%2.6f\n",*(data+i));
+  }
+  fclose(fp);
+}
+
+
 namespace VideoNLB
 {
 
@@ -283,6 +295,7 @@ std::vector<float> runNLBayesThreads(
 	const nlbParams prms2,
 	Video<float> &imClean)
 {
+        plain_print(imNoisy);
 	// Only 1, 3 or 4-channels images can be processed.
 	const unsigned chnls = imNoisy.sz.channels;
 	if (! (chnls == 1 || chnls == 3 || chnls == 4))
@@ -512,15 +525,14 @@ unsigned processNLBayes(
 	int end_x = (int)sz.width  - (int)(border_x1 ? border_x : sPx-1);
 	int end_y = (int)sz.height - (int)(border_y1 ? border_x : sPx-1);
 	int end_f = (int)sz.frames - (int)(border_t1 ? border_t : sPt-1);
+	// std::fprintf(stdout,"sPx: %d, sPt: %d\n",sPx,sPt);
+	// interrupt = true;
 
 	if (params.onlyFrame >=0)
 	{
 		ori_f = params.onlyFrame;
 		end_f = params.onlyFrame + 1;
 	}
-
-	ori_f = std::max((int)sz.frames / 2 - (int)sPt - 1, 0);
-	end_f = sz.frames / 2 + 1;
 
 	// Fill processing mask
 	for (int f = ori_f, df = 0; f < end_f; f++, df++){
@@ -589,6 +601,7 @@ unsigned processNLBayes(
 
 	// Loop over video
 	int remaining_groups = n_groups;
+	// std::fprintf(stdout,"remaining_groups: %d\n",remaining_groups);
 	for (unsigned pt = 0; pt < sz.frames; pt++){
 	  for (unsigned py = 0; py < sz.height; py++){
 	    for (unsigned px = 0; px < sz.width ; px++){
@@ -616,7 +629,6 @@ unsigned processNLBayes(
 				 crop.tile_x, crop.tile_y, crop.tile_t,
 				 100.f - (float)remaining_groups/(float)(n_groups)*100.f,
 				 ntiles - part_idx);
-
 			  std::cout << std::flush;
 			}
 
@@ -642,8 +654,11 @@ unsigned processNLBayes(
 		      remaining_groups -=
 			computeAggregation(step1 ? imBasic : imFinal, weight, mask, groupNoisy,
 					   indices, params, nSimP);
-		    }
-		} // not intterupt
+		      if (remaining_groups < 0){
+			interrupt = true;
+		      }
+		    } // mask
+		} // not interrupt
 	    } // for px
 	  }// for py
 	}// for pt
@@ -1276,6 +1291,9 @@ int computeAggregation(
 	const unsigned h   = im.sz.height;
 	const unsigned wh  = im.sz.wh;
 	const unsigned whc = im.sz.whc;
+	// std::fprintf(stdout,"h w c wh whc: "
+	// 	     "%d %d %d %d %d\n",
+	// 	     h, w, chnls, wh, whc);
 
 	// Aggregate estimates
 	int masked = 0;

@@ -30,9 +30,10 @@ void runVnlb(const PyVnlbParams& args) {
   // std::fprintf(stdout,"(w,h,c,t): (%d,%d,%d,%d)\n",w,h,c,t);
 
   // load video from ptr
-  oracle.loadVideoFromPtr(args.oracle,w,h,c,t);
+  // oracle.loadVideoFromPtr(args.oracle,w,h,c,t);
   noisy.loadVideoFromPtr(args.noisy,w,h,c,t);
   basic.loadVideoFromPtr(args.basic,w,h,c,t);
+  std::fprintf(stdout,"use_flow: %d\n",args.use_flow);
   if (args.use_flow){
     fflow.loadVideoFromPtr(args.fflow,w,h,2,t);
     bflow.loadVideoFromPtr(args.bflow,w,h,2,t);
@@ -42,13 +43,31 @@ void runVnlb(const PyVnlbParams& args) {
   VideoNLB::nlbParams params1, params2;
   setVnlbParams(args,params1,1);
   setVnlbParams(args,params2,2);
+  params1.verbose = true;
+  params2.verbose = true;
+  params1.coupleChannels = false;
+  params2.coupleChannels = false;
 
   // Percentage or processed groups of patches over total number of pixels
   std::vector<float> groupsRatio;
 
   // Run denoising algorithm
+  auto tmp = params2.sizePatch;
+  params2.sizePatch = 0;
   groupsRatio = VideoNLB::runNLBayesThreads(noisy, fflow, bflow, basic, final,
   					    params1, params2, oracle);
+  if (args.verbose)
+    printf("Done. Processed %5.2f%% of possible patch groups in 1st step, and\n"
+		       "%5.2f%% in 2nd step.\n", groupsRatio[0], groupsRatio[1]);
+
+  params1.sizePatch = 0;
+  params2.sizePatch = tmp;
+  noisy.loadVideoFromPtr(args.noisy,w,h,c,t);
+  groupsRatio = VideoNLB::runNLBayesThreads(noisy, fflow, bflow, basic, final,
+  					    params1, params2, oracle);
+  if (args.verbose)
+    printf("Done. Processed %5.2f%% of possible patch groups in 1st step, and\n"
+		       "%5.2f%% in 2nd step.\n", groupsRatio[0], groupsRatio[1]);
   // std::fprintf(stdout,"final.sz: %d,%d,%d,%d\n",
   // 	       final.sz.width,final.sz.height,
   // 	       final.sz.channels,final.sz.frames);

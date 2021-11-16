@@ -35,6 +35,7 @@ def runVnlb_np(noisy,sigma,pyargs=None):
     # -- format & create results --
     res = {}
     res['final'] = rearrange(args.final,'t c h w -> c t h w')
+    res['final'] = numpy.flip(res['final'],axis=0) # BGR -> RGB
 
     # -- alias some vars --
     res['denoised'] = res['final']
