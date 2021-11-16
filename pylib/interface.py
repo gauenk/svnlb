@@ -55,8 +55,7 @@ def runPyFlowFB(noisy,sigma,pyargs=None):
     pyargs['direction'] = 0
     resFwd = runPyTvL1Flow(noisy,sigma,pyargs)
     pyargs['direction'] = 1
-    # resBwd = runPyTvL1Flow(noisy,sigma,pyargs)
-    resBwd = resFwd
+    resBwd = runPyTvL1Flow(noisy,sigma,pyargs)
     res = {'fflow':resFwd['fflow'],'bflow':resBwd['bflow']}
     return res
 

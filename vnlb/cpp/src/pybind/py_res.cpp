@@ -16,6 +16,8 @@
 #include <vnlb/cpp/lib/iio/iio.h>
 #include <vnlb/cpp/lib/tvl1flow/tvl1flow_lib.h>
 
+void plain_print_burst(Video<float> const& imVid);
+
 void runVnlb(const PyVnlbParams& args) {
 
   // Declarations
@@ -35,8 +37,8 @@ void runVnlb(const PyVnlbParams& args) {
   basic.loadVideoFromPtr(args.basic,w,h,c,t);
   std::fprintf(stdout,"use_flow: %d\n",args.use_flow);
   if (args.use_flow){
-    fflow.loadVideoFromPtr(args.fflow,w,h,2,t);
-    bflow.loadVideoFromPtr(args.bflow,w,h,2,t);
+    fflow.loadVideoFromPtr(args.fflow,w,h,2,t-1);
+    bflow.loadVideoFromPtr(args.bflow,w,h,2,t-1);
   }
 
   // update params 
@@ -86,6 +88,15 @@ void runVnlb(const PyVnlbParams& args) {
   // final.saveVideo("deno_%03d.png", 0, 1);
   // noisy.saveVideo("noisy_%03d.png", 0, 1);
 
+}
+
+void plain_print_burst(float* data, int size){
+  FILE* fp;
+  fp = fopen("plain_print_burst.txt","a+");
+  for (int i = 0; i < size; ++i){
+    fprintf(fp,"%2.6f\n",*(data+i));
+  }
+  fclose(fp);
 }
 
 
@@ -156,6 +167,8 @@ void runTV1Flow(const PyTvFlowParams& args) {
     // point to image pairs
     float* image1 = burst + mult1*hwc;
     float* image2 = burst + mult2*hwc;
+
+    plain_print_burst(image1,hwc);
 
     // point to flow
     float *u = flow + _t*(h*w*2);
