@@ -158,7 +158,7 @@ int main(int argc, char *argv[])
 
 		//allocate memory for the flow
 		float *u = xmalloc(2 * nx * ny * sizeof*u);
-		float *v = u + nx*ny;;
+		float *v = u + nx*ny;
 
 		//compute the optical flow
 		Dual_TVL1_optic_flow_multiscale(

@@ -56,7 +56,7 @@ def add_dynamics(img,mrange,nframes,h,w):
     # -- augment flow --
     blocks = repeat(blocks,'t two -> two t h w',h=h,w=w)
         
-    return burst,flow
+    return burst,blocks
         
 def th_save_image(burst,fn):
     burst = torch.FloatTensor(burst/255.)

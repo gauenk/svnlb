@@ -21,6 +21,7 @@ PyVnlbParams() :
 	  use_clean(0),
 	  use_flow(0),
 	  fflow(nullptr),
+	  bflow(nullptr),
 	  oracle(nullptr),
 	  noisy(nullptr),
 	  basic(nullptr),
@@ -37,7 +38,8 @@ PyVnlbParams() :
 	  aggeBoost(nullptr),
 	  patch_step(nullptr),
 	  sigmaBasic(nullptr),
-	  sigma(nullptr){}
+	  sigma(nullptr),
+	  testing(0){}
 	  
 
     /***
@@ -62,6 +64,7 @@ PyVnlbParams() :
     const float* clean;
     const float* final;
     const float* fflow;
+    const float* bflow;
 
     /***
 
@@ -82,6 +85,7 @@ PyVnlbParams() :
     bool* aggeBoost;
     bool verbose;
     unsigned print_params;
+    bool testing;
 
 };
 
@@ -91,13 +95,14 @@ struct PyTvFlowParams {
 PyTvFlowParams() :
   // --> image details <--
   t(0),h(0),w(0),c(0),
-    image1(nullptr),
-    image2(nullptr),
-    flow(nullptr),
+    burst(nullptr),
+    fflow(nullptr),
+    bflow(nullptr),
   // --> vnlb tuning params <--
+    direction(-1),
     nproc(-1),
     tau(-1),
-    lambda(-1),
+    plambda(-1),
     nscales(-1),
     fscale(-1),
     zfactor(-1),
@@ -119,9 +124,9 @@ PyTvFlowParams() :
 
   // image for flow
 
-  const float* image1;
-  const float* image2;
-  const float* flow;
+  const float* burst;
+  const float* fflow;
+  const float* bflow;
   
   /***
 
@@ -129,9 +134,10 @@ PyTvFlowParams() :
 
   ***/
 
+  int   direction;
   int   nproc;
   float tau;
-  float lambda;
+  float plambda;
   float theta;
   int   nscales;
   int   fscale;

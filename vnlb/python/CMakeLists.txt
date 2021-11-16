@@ -124,3 +124,5 @@ configure_file(loader.py loader.py COPYONLY)
 
 file(GLOB files "${PROJECT_SOURCE_DIR}/../../pylib/*.py")
 file(COPY ${files} DESTINATION pylib/)
+file(GLOB files "${PROJECT_SOURCE_DIR}/../../benchmarks/*.py")
+file(COPY ${files} DESTINATION benchmarks/)
