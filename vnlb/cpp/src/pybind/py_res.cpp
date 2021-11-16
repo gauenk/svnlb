@@ -47,6 +47,12 @@ void runVnlb(const PyVnlbParams& args) {
   params2.verbose = true;
   params1.coupleChannels = false;
   params2.coupleChannels = false;
+  // params1.onlyFrame = false;
+  // params2.onlyFrame = false;
+  // std::fprintf(stdout,"params1.sigma: %2.3f\n",params1.sigma);
+  // std::fprintf(stdout,"params2.sigma: %2.3f\n",params2.sigma);
+  std::fprintf(stdout,"use_flow: %d\n",args.use_flow);
+
 
   // Percentage or processed groups of patches over total number of pixels
   std::vector<float> groupsRatio;

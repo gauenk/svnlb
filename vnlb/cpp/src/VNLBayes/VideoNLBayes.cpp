@@ -63,6 +63,17 @@ void plain_print(Video<float> const& imVid){
   fclose(fp);
 }
 
+void plain_print_char(Video<char> const& imVid){
+  const VideoSize sz = imVid.sz;
+  FILE* fp;
+  fp = fopen("plain_print_char.txt","w");
+  char* data = const_cast<char*>(&(imVid.data[0]));
+  for (int i = 0; i < sz.whcf; ++i){
+    fprintf(fp,"%d\n",*(data+i));
+  }
+  fclose(fp);
+}
+
 
 namespace VideoNLB
 {
@@ -579,6 +590,7 @@ unsigned processNLBayes(
 	const unsigned patch_num = sWx * sWx * sWt;
 
 	// Matrices used for Bayes' estimate
+	std::fprintf(stdout,"patch_num: %d\n",patch_num);
 	vector<unsigned> indices(patch_num);
 	matWorkspace mat;
 	mat.group     .resize(patch_num * patch_dim);
@@ -602,6 +614,7 @@ unsigned processNLBayes(
 	// Loop over video
 	int remaining_groups = n_groups;
 	// std::fprintf(stdout,"remaining_groups: %d\n",remaining_groups);
+	// std::fprintf(stdout,"(t,h,w): (%d,%d,%d)\n",sz.frames,sz.height,sz.width);
 	for (unsigned pt = 0; pt < sz.frames; pt++){
 	  for (unsigned py = 0; py < sz.height; py++){
 	    for (unsigned px = 0; px < sz.width ; px++){
@@ -663,6 +676,8 @@ unsigned processNLBayes(
 	  }// for py
 	}// for pt
 
+
+	plain_print_char(mask);
 	// exit if interrupt
 	if (interrupt){
 	  return 0;
@@ -1342,6 +1357,7 @@ int computeAggregation(
 			if (px < w - 2*sPx) mask(ind1 + 1) = false;
 		}
 	}
+	// std::fprintf(stdout,"masked: %d\n",masked);
 
 	return masked;
 }
