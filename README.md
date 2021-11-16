@@ -16,7 +16,7 @@ Usage
 -----
 
 We expect the noisy input image to be shaped `(channels,nframes,height,width)` with
-pixel values in range `[0,...,255.]`. The color channels are ordered RGB. Common noise levels include 10, 20, 50, etc.
+pixel values in range `[0,...,255.]`. The color channels are ordered RGB. Common examples of noise levels are 10, 20 and 50.
 
 ```python
 
@@ -40,6 +40,10 @@ print(psnrs)
 
 ```
 
+Comparing with C-API
+---
+
+To demonstrate the Python-API is within a floating-point error of the C-API output, we provide the following test. ...
 
 Dependencies
 --------
