@@ -40,8 +40,8 @@ def runVnlb_np(noisy,sigma,pyargs=None):
     # res['basic'] = rearrange(args.basic,'t c h w -> c t h w')
     res['final'] = args.final#'t c h w -> c t h w')
     res['basic'] = args.basic
-    res['final'] = numpy.flip(res['final'],axis=0) # BGR -> RGB
-    res['basic'] = numpy.flip(res['basic'],axis=0) # BGR -> RGB
+    res['final'] = numpy.flip(res['final'],axis=1) # BGR -> RGB
+    res['basic'] = numpy.flip(res['basic'],axis=1) # BGR -> RGB
 
     # -- alias some vars --
     res['denoised'] = res['final']

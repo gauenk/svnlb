@@ -6,9 +6,10 @@ from pathlib import Path
 from einops import rearrange
 from easydict import EasyDict as edict
 
-def th_save_image(burst,fn):
-    burst = torch.FloatTensor(burst)
-    burst = rearrange(burst,'c t h w -> t c h w')
+def th_save_image(burst,fn,imax=1.):
+    burst = torch.FloatTensor(burst.copy())/imax
+    if burst.shape[0] in [1,3,4]:
+        burst = rearrange(burst,'c t h w -> t c h w')
     tvUtils.save_image(burst,fn)
 
 
