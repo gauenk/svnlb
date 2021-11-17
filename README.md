@@ -15,7 +15,7 @@ $ ./install.sh
 Usage
 -----
 
-We expect the noisy input image to be shaped `(channels,nframes,height,width)` with
+We expect the noisy input image to be shaped `(nframes,channels,height,width)` with
 pixel values in range `[0,...,255.]`. The color channels are ordered RGB. Common examples of noise levels are 10, 20 and 50.
 
 ```python
