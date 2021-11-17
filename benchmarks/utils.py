@@ -35,7 +35,7 @@ def save_field(field,cppField,pyField):
 
 def relative_error(approx,gt):
     eps = 1e-16
-    rel = np.abs(approx-gt)/(gt+eps)
+    rel = np.abs(approx-gt)/(np.abs(gt)+eps)
     return np.mean(rel)
     
 def np_log(np_array):

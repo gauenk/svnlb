@@ -82,8 +82,10 @@ def exec_pyvnlb(pyvnlb_path,pyflow_path,noisy,std,flows=None):
     else:
         fflow = flows['fflow']
         bflow = flows['bflow']
-        _fflow = rearrange(fflow,'two t h w -> t two h w')
-        _bflow = rearrange(bflow,'two t h w -> t two h w')
+        _fflow = fflow
+        _bflow = bflow
+        # _fflow = rearrange(fflow,'two t h w -> t two h w')
+        # _bflow = rearrange(bflow,'two t h w -> t two h w')
         _fflow = np.ascontiguousarray(_fflow.copy())
         _bflow = np.ascontiguousarray(_bflow.copy())
     
@@ -126,6 +128,7 @@ def run_comparison():
     # -- exec pyvnlb --    
     print("Exec PyVNLB")
     # flows = None
+    print(vnlb_res['fflow'].shape,noisy.shape)
     flows = {'fflow':vnlb_res['fflow'],'bflow':vnlb_res['bflow']}
     # flows = {'fflow':np.zeros_like(vnlb_res['fflow']),
     #          'bflow':np.zeros_like(vnlb_res['bflow'])}

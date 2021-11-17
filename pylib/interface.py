@@ -10,7 +10,7 @@ import vnlb
 # -- local imports --
 from .utils import optional
 from .vnlb_param_parser import parse_args as parse_vnlb_args
-from .tvl1_param_parser import parse_args as parse_tvl1_args
+from .flow_param_parser import parse_args as parse_flow_args
 
 # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 #
@@ -82,7 +82,7 @@ def runPyTvL1Flow_np(noisy,sigma,pyargs=None):
     # -- extract info --
     t,c,h,w  = noisy.shape
     assert c in [1,3,4],"must have the color channel be 1, 3, or 4"
-    args,sargs = parse_tvl1_args(noisy,sigma,pyargs)
+    args,sargs = parse_flow_args(noisy,sigma,pyargs)
 
     # -- exec using numpy --
     vnlb.runTV1Flow(sargs)

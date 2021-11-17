@@ -51,6 +51,10 @@ void runVnlb(const PyVnlbParams& args) {
   params2.sizePatch = 0;
   groupsRatio = VideoNLB::runNLBayesThreads(noisy, fflow, bflow, basic, final,
   					    params1, params2, oracle);
+
+  if (args.testing){
+    basic.saveVideoToPtr(const_cast<float*>(args.basic));
+  }
   if (args.verbose)
     printf("Done. Processed %5.2f%% of possible patch groups in 1st step, and\n"
 		       "%5.2f%% in 2nd step.\n", groupsRatio[0], groupsRatio[1]);
@@ -69,9 +73,6 @@ void runVnlb(const PyVnlbParams& args) {
 
   // copy back to arrays
   final.saveVideoToPtr(const_cast<float*>(args.final));
-  if (args.testing){
-    basic.saveVideoToPtr(const_cast<float*>(args.basic));
-  }
   // final.saveVideo("deno_%03d.png", 0, 1);
   // noisy.saveVideo("noisy_%03d.png", 0, 1);
 
