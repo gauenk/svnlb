@@ -23,8 +23,8 @@ import numpy as np
 import vnlb.pylib as pyvnlb
 
 # -- get data --
-clean = pyvnlb.get_example_burst() # [0,...,255.]
-print(clean.shape) # (channels,nframes,height,width)
+clean = np.random.rand(5,3,64,64)
+# (nframes,channels,height,width)
 
 # -- add noise --
 std = 20.
