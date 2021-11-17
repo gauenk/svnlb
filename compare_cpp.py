@@ -30,9 +30,10 @@ pyargs = {"nproc":0,"tau":0.25,"lambda":0.2,"theta":0.3,"nscales":100,
           "fscale":1,"zfactor":0.5,"nwarps":5,"epsilon":0.01,
           "verbose":False,"testing":False,'bw':True}
 fflow,bflow = pyvnlb.runPyFlow(noisy,std,pyargs)
-pyargs = {'fflow':fflow,'bflow':bflow,'testing':True}
-# pyargs['fflow'] = np.ascontiguousarray(res_vnlb.fflow)
-# pyargs['bflow'] = np.ascontiguousarray(res_vnlb.bflow)
+# pyargs = {'fflow':fflow,'bflow':bflow,'testing':True}
+pyargs = {'testing':True}
+pyargs['fflow'] = np.ascontiguousarray(res_vnlb.fflow)
+pyargs['bflow'] = np.ascontiguousarray(res_vnlb.bflow)
 res_pyvnlb = pyvnlb.runPyVnlb(noisy,std,pyargs)
 # res_pyvnlb = {}
 
@@ -61,7 +62,8 @@ for field in fields:
     pyField = res_pyvnlb[field]
     print(cppField.shape,pyField.shape)
     psnrs = np.mean(pyvnlb.compute_psnrs(cppField,pyField,maxes[field]))
-    print(f"PSNR for [{field}]: %2.2f" % psnrs)
+    rel = np.mean(np.abs(cppField - pyField)/(cppField+1e-10))
+    print(f"[{field}] PSNR: %2.2f | RelError: %2.1e" % (psnrs,rel))
     if field in ['fflow','bflow']:
         cppField = rearrange(cppField,'c t h w -> t c h w')
         pyField = rearrange(pyField,'c t h w -> t c h w')

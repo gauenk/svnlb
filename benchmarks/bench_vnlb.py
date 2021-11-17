@@ -50,8 +50,8 @@ def exec_vnlb(vnlb_path,npaths,std,fstart,nframes):
         exit()
 
     # -- format --
-    results['fflow'] = rearrange(results['fflow'],'t h w two -> two t h w')
-    results['bflow'] = rearrange(results['bflow'],'t h w two -> two t h w')
+    # results['fflow'] = rearrange(results['fflow'],'t h w two -> two t h w')
+    # results['bflow'] = rearrange(results['bflow'],'t h w two -> two t h w')
 
     return results
     
@@ -105,22 +105,26 @@ def run_comparison():
     std,fstart,nframes = 20,0,5
     ipath = Path("/home/gauenk/Documents/packages/vnlb/")
     # ipath = ipath / Path("output/davis_baseball_64x64_20/vnlb/")
-    ipath = ipath / Path("data/davis_baseball/")
-    # ipath = Path("../vnlb/data/davis_baseball_64x64/")
+    # ipath = ipath / Path("output/davis_baseball_64x64_20/vnlb/")
+    # ipath = ipath / Path("data/davis_baseball/")
+    ipath = ipath / Path("./data/davis_baseball_64x64/")
     opath = Path(f"../vnlb/output/davis_baseball_64x64_20/")
     vnlb_path = opath / "./vnlb/"
     pyvnlb_path = opath / f"./pyvnlb_vnlb.pkl"
     pyflow_path = opath / f"./pyvnlb_flow.pkl"
 
     # -- get images --
+    print("Reading images and paths.")
     clean,noisy,npaths = get_vnlb_burst(ipath,vnlb_path,fstart,nframes)
     noisy = rearrange(noisy,'t h w c -> t c h w')
     clean = rearrange(clean,'t h w c -> t c h w')
     
     # -- exec vnlb --
+    print("Reading vnlb outputs.")
     vnlb_res = exec_vnlb(vnlb_path,npaths,std,fstart,nframes)
 
     # -- exec pyvnlb --    
+    print("Exec PyVNLB")
     # flows = None
     flows = {'fflow':vnlb_res['fflow'],'bflow':vnlb_res['bflow']}
     # flows = {'fflow':np.zeros_like(vnlb_res['fflow']),
@@ -128,22 +132,24 @@ def run_comparison():
     pyvnlb_res = exec_pyvnlb(pyvnlb_path,pyflow_path,noisy,std,flows)
 
     # -- compare vnlb & pyvnlb --    
+    print("Results:")
     fields = list(pyvnlb_res.keys())
     print(fields)
     for field in fields:
         cppField = vnlb_res[field]
         pyField  = pyvnlb_res[field]
-        print(cppField.shape,pyField.shape)
-        delta = np.mean(np.abs(cppField - pyField))
+        delta = np.abs(cppField - pyField)
+        dmean = np.mean(delta)
         psnr = compute_psnrs(cppField,pyField)
         rel = relative_error(pyField,cppField)
-        print("[%s]: %2.3f | %2.2f | %2.2e" % (field,delta,psnr,rel))
-        # save_field(field,cppField,pyField)
-        # if field in ["denoised","basic"]:
-        #     th_save_image(clean/255.,"clean.png")
-        #     cpp_psnr = compute_psnrs(cppField,clean)
-        #     py_psnr = compute_psnrs(pyField,clean)
-        #     print("[PSNRS]: Cpp: %2.2f Python: %2.2f" % (cpp_psnr,py_psnr))
+        print("[%s]: %2.3f | %2.2f | %2.2e" % (field,dmean,psnr,rel))
+        save_field(field,cppField,pyField)
+        if field in ["denoised","basic"]:
+            th_save_image(delta/255.,f"delta_{field}.png")
+            th_save_image(clean/255.,"clean.png")
+            cpp_psnr = compute_psnrs(cppField,clean)
+            py_psnr = compute_psnrs(pyField,clean)
+            print("\t[PSNRS]: Cpp: %2.2f Python: %2.2f" % (cpp_psnr,py_psnr))
 
 
 if __name__ == "__main__":

@@ -7,7 +7,6 @@ def read_result(vnlb_path,fmt,fstart,nframes):
     agg = []
     for t in range(fstart,fstart+nframes):
         path = vnlb_path / (fmt % t)
-        print(path)
         if not path.exists(): return None
         data = read_file(path)
         agg.append(data)

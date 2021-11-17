@@ -50,6 +50,18 @@ def set_tensors(args,pyargs,tensors):
     args.basic = optional(pyargs,'basic',tensors.basic)
     args.final = optional(pyargs,'final',tensors.final)
 
+def check_and_expand_flows(pyargs,t):
+    fflow,bflow = pyargs['fflow'],pyargs['bflow']
+    nfflow = fflow.shape[0]
+    nbflow = bflow.shape[0]
+    assert nfflow == nbflow,"num flows must be equal."
+    if nfflow == t-1:
+        expand_flows(pyargs)    
+    elif nfflow < t-1:
+        msg = "The input flows are the wrong shape.\n"
+        msg += "(nframes,two,height,width)"
+        raise ValueError(msg)
+
 def create_swig_args(args):
     sargs = vnlb.PyVnlbParams()
     for key,val in args.items():
@@ -65,8 +77,7 @@ def parse_args(noisy,sigma,pyargs):
     t,c,h,w  = noisy.shape
 
     # -- format noisy image --
-    # noisy = np.ascontiguousarray(np.flip(noisy,axis=1).copy()) # RGB -> BGR
-    noisy = np.ascontiguousarray(noisy) # RGB -> BGR
+    noisy = np.ascontiguousarray(noisy)
     if dtype != np.float32:
         if verbose:
             print(f"Warning: converting burst image from {dtype} to np.float32.")
@@ -95,7 +106,7 @@ def parse_args(noisy,sigma,pyargs):
     set_optional_params(args,pyargs)
 
     # -- format flows for c++ --
-    if args.use_flow: expand_flows(pyargs)
+    if args.use_flow: check_and_expand_flows(pyargs,t)
 
     # -- create shell tensors & set arrays --
     ztensors = np_zero_tensors(t,c,h,w)
