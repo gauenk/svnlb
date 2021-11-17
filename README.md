@@ -23,7 +23,7 @@ import numpy as np
 import vnlb.pylib as pyvnlb
 
 # -- get data --
-clean = np.random.rand(5,3,64,64)
+clean = 255.*np.random.rand(5,3,64,64)
 # (nframes,channels,height,width)
 
 # -- add noise --
