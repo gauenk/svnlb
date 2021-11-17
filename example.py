@@ -1,30 +1,16 @@
 
+
+# -- imports --
 import numpy as np
-from pathlib import Path
-from einops import rearrange
-
 import vnlb.pylib as pyvnlb
-from vnlb.benchmarks.utils import th_save_image
-from vnlb.benchmarks.create_noisy_burst import get_vnlb_burst
-
-# print(clean.shape) # (nframes,channels,height,width)
-
-
-# -- parms --
-std,fstart,nframes = 20,0,5
-ipath = Path("../vnlb/data/davis_baseball_64x64/")
-opath = Path(f"../vnlb/output/davis_baseball_64x64_{std}/")
-vnlb_path = opath / "./vnlb/"
-pyvnlb_path = opath / f"./pyvnlb_vnlb.pkl"
-pyflow_path = opath / f"./pyvnlb_flow.pkl"
+from data_loader import load_dataset
+from file_io import save_images
 
 # -- get data --
-clean,noisy,npaths = get_vnlb_burst(ipath,vnlb_path,fstart,nframes)
-clean = rearrange(clean,'t h w c -> t c h w')
-noisy = rearrange(noisy,'t h w c -> t c h w')
+clean = load_dataset("davis_64x64")
 
 # -- add noise --
-std = 10.
+std = 20.
 noisy = np.random.normal(clean,scale=std)
 
 # -- TV-L1 Optical Flow --
@@ -35,19 +21,18 @@ result = pyvnlb.runPyVnlb(noisy,std,{'fflow':fflow,'bflow':bflow})
 denoised = result['denoised']
 
 # -- compute denoising quality --
-noisy_psnrs = pyvnlb.compute_psnrs(clean,noisy)
-print("Starting PSNRs:")
-print(noisy_psnrs)
-
 psnrs = pyvnlb.compute_psnrs(clean,denoised)
 print("Denoised PSNRs:")
 print(psnrs)
 
+# -- compare with original  --
+noisy_psnrs = pyvnlb.compute_psnrs(clean,noisy)
+print("Starting PSNRs:")
+print(noisy_psnrs)
+
 # -- save images --
-th_save_image(clean,"clean.png",imax=255.)
-th_save_image(noisy,"noisy.png",imax=255.)
-th_save_image(denoised,"denoised.png",imax=255.)
-fflow_img = pyvnlb.flow2img(fflow)
-bflow_img = pyvnlb.flow2img(bflow)
-th_save_image(fflow,"fflow.png",imax=1.)
-th_save_image(bflow,"bflow.png",imax=1.)
+save_images(clean,"clean.png",imax=255.)
+save_images(noisy,"noisy.png",imax=255.)
+save_images(denoised,"denoised.png",imax=255.)
+# save_images(pyvnlb.flow2img(fflow),"fflow.png",imax=1.)
+# save_images(pyvnlb.flow2img(bflow),"bflow.png",imax=1.)
