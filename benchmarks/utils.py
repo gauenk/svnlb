@@ -32,6 +32,11 @@ def save_field(field,cppField,pyField):
     else:
         print(f"Uknown save for field [{field}]")
 
+def relative_error(approx,gt):
+    eps = 1e-16
+    rel = np.abs(approx-gt)/(gt+eps)
+    return np.mean(rel)
+    
 def np_log(np_array):
     if type(np_array) is not np.ndarray:
         if type(np_array) is not list:
@@ -39,11 +44,6 @@ def np_log(np_array):
         np_array = np.array(np_array)
     return np.ma.log(np_array).filled(-np.infty)
         
-def relative_error(approx,gt):
-    eps = 1e-16
-    rel = np.abs(approx-gt)/(gt+eps)
-    return np.mean(rel)
-    
 def compute_psnrs(img1,img2):
     eps=1e-16
     img1 = img1/255.
