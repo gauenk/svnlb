@@ -19,17 +19,21 @@ We expect the noisy input image to be shaped `(channels,nframes,height,width)` w
 pixel values in range `[0,...,255.]`. The color channels are ordered RGB. Common examples of noise levels are 10, 20 and 50.
 
 ```python
-
+import numpy as np
 import vnlb.pylib as pyvnlb
 
 # -- get data --
-clean,noisy,std = pyvnlb.get_example_burst() # [0,...,255.]
-print(noisy.shape) # (channels,nframes,height,width)
+clean = pyvnlb.get_example_burst() # [0,...,255.]
+print(clean.shape) # (channels,nframes,height,width)
 
-# -- exec TV-L1 Optical Flow --
+# -- add noise --
+std = 20.
+noisy = np.random.normal(clean,scale=std)
+
+# -- TV-L1 Optical Flow --
 fflow,bflow = pyvnlb.runPyFlow(noisy,std)
 
-# -- exec Video Non-Local Bayes --
+# -- Video Non-Local Bayes --
 result = pyvnlb.runPyVnlb(noisy,std,{'fflow':fflow,'bflow':bflow})
 denoised = result['denoised']
 
