@@ -76,7 +76,7 @@ find_package(BLAS REQUIRED)
 target_link_libraries(vnlb PRIVATE ${BLAS_LIBRARIES})
 target_link_libraries(vnlb_avx2 PRIVATE ${BLAS_LIBRARIES})
 
-find_package(LAPACK REQUIRED )
+find_package(LAPACKE REQUIRED )
 target_link_libraries(vnlb PRIVATE ${LAPACK_LIBRARIES})
 target_link_libraries(vnlb_avx2 PRIVATE ${LAPACK_LIBRARIES})
 

@@ -2,19 +2,24 @@ import torch
 import numpy as np
 import vnlb
 
-def np_log(np_array):
-    if type(np_array) is not np.ndarray:
-        if type(np_array) is not list:
-            np_array = [np_array]
-        np_array = np.array(np_array)
-    return np.ma.log(np_array).filled(-np.infty)
+def compute_psnrs(img1,img2,imax=255.):
 
-def psnrs(img1,img2,imax=255.):
+    # -- same num of dims --
+    assert img1.ndim == img2.ndim,"both must have same dims."
+
+    # -- give batch dim if not exist --
+    if img1.ndim == 3:
+        img1 = img1[None,:]
+        img2 = img2[None,:]
+
+    # -- compute --
     eps=1e-16
+    b = img1.shape[0]
     img1 = img1/255.
     img2 = img2/255.
-    mse = ((img1-img2)**2).mean() + eps
-    log_mse = np_log10(1./mse).filled(-np.inty)
+    delta = (img1 - img2)**2
+    mse = delta.reshape(b,-1).mean(axis=1) + eps
+    log_mse = np.ma.log10(1./mse).filled(-np.infty)
     psnr = 10 * log_mse
     return psnr
 

@@ -7,9 +7,9 @@ def read_result(vnlb_path,fmt,fstart,nframes,direction="fwd"):
 
     # -- which ids to load --
     if direction == "fwd":
-        fids = np.arange(fstart,fstart+nframes-1)
+        fids = np.arange(fstart,fstart+nframes)
     elif direction == "bwd":
-        fids = np.flip(np.arange(fstart+nframes-1,fstart,-1),axis=0)
+        fids = np.flip(np.arange(fstart+nframes,fstart,-1),axis=0)
     else:
         fids = np.arange(fstart,fstart+nframes)
 

@@ -16,8 +16,6 @@
 #include <vnlb/cpp/lib/iio/iio.h>
 #include <vnlb/cpp/lib/tvl1flow/tvl1flow_lib.h>
 
-void plain_print_burst(Video<float> const& imVid);
-
 void runVnlb(const PyVnlbParams& args) {
 
   // Declarations
@@ -35,26 +33,15 @@ void runVnlb(const PyVnlbParams& args) {
   // oracle.loadVideoFromPtr(args.oracle,w,h,c,t);
   noisy.loadVideoFromPtr(args.noisy,w,h,c,t);
   basic.loadVideoFromPtr(args.basic,w,h,c,t);
-  std::fprintf(stdout,"use_flow: %d\n",args.use_flow);
   if (args.use_flow){
-    fflow.loadVideoFromPtr(args.fflow,w,h,2,t-1);
-    bflow.loadVideoFromPtr(args.bflow,w,h,2,t-1);
+    fflow.loadVideoFromPtr(args.fflow,w,h,2,t);
+    bflow.loadVideoFromPtr(args.bflow,w,h,2,t);
   }
 
   // update params 
   VideoNLB::nlbParams params1, params2;
   setVnlbParams(args,params1,1);
   setVnlbParams(args,params2,2);
-  params1.verbose = true;
-  params2.verbose = true;
-  params1.coupleChannels = false;
-  params2.coupleChannels = false;
-  // params1.onlyFrame = false;
-  // params2.onlyFrame = false;
-  // std::fprintf(stdout,"params1.sigma: %2.3f\n",params1.sigma);
-  // std::fprintf(stdout,"params2.sigma: %2.3f\n",params2.sigma);
-  std::fprintf(stdout,"use_flow: %d\n",args.use_flow);
-
 
   // Percentage or processed groups of patches over total number of pixels
   std::vector<float> groupsRatio;
@@ -88,15 +75,6 @@ void runVnlb(const PyVnlbParams& args) {
   // final.saveVideo("deno_%03d.png", 0, 1);
   // noisy.saveVideo("noisy_%03d.png", 0, 1);
 
-}
-
-void plain_print_burst(float* data, int size){
-  FILE* fp;
-  fp = fopen("plain_print_burst.txt","a+");
-  for (int i = 0; i < size; ++i){
-    fprintf(fp,"%2.6f\n",*(data+i));
-  }
-  fclose(fp);
 }
 
 
@@ -167,8 +145,6 @@ void runTV1Flow(const PyTvFlowParams& args) {
     // point to image pairs
     float* image1 = burst + mult1*hwc;
     float* image2 = burst + mult2*hwc;
-
-    plain_print_burst(image1,hwc);
 
     // point to flow
     float *u = flow + _t*(h*w*2);

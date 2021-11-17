@@ -29,7 +29,7 @@ def set_optional_params(args,pyargs):
     args.aggeBoost = optional(pyargs,'agge_boost',[True,True],bool)
     args.patch_step = optional(pyargs,'patch_step',[4,4],np.uint32)
     args.testing = optional(pyargs,'testing',False)
-    args.verbose = optional(pyargs,'verbose',True)
+    args.verbose = optional(pyargs,'verbose',False)
     args.print_params = optional(pyargs,'print_params',0)
     
 def np_zero_tensors(t,c,h,w):
@@ -57,18 +57,32 @@ def create_swig_args(args):
         setattr(sargs,key,sval)
     return sargs
 
+def expand_flows(pyargs):
+
+    # -- unpack --
+    fflow,bflow = pyargs['fflow'],pyargs['bflow']
+    np.cat = np.concatenate
+
+    # -- expand according to original c++ repo --
+    fflow = np.cat([fflow,fflow[[-1]]],axis=0)
+    bflow = np.cat([bflow[[0]],bflow],axis=0)
+
+    # -- update --
+    pyargs['fflow'],pyargs['bflow'] = fflow,bflow
+
+
 def parse_args(noisy,sigma,pyargs):
 
     # -- extract info --
-    verbose = optional(pyargs,'verbose',True)
+    verbose = optional(pyargs,'verbose',False)
     dtype = noisy.dtype
-    c,t,h,w  = noisy.shape
+    t,c,h,w  = noisy.shape
 
     # -- format noisy image --
-    noisy = rearrange(noisy,'c t h w -> t c h w')
     noisy = np.ascontiguousarray(np.flip(noisy,axis=1).copy()) # RGB -> BGR
-    if dtype != np.float32 and verbose:
-        print(f"Warning: converting noisy image from {dtype} to np.float32.")
+    if dtype != np.float32:
+        if verbose:
+            print(f"Warning: converting burst image from {dtype} to np.float32.")
         noisy = noisy.astype(np.float32)
     if not noisy.data.contiguous:
         noisy = np.ascontiguousarray(noisy)
@@ -92,6 +106,9 @@ def parse_args(noisy,sigma,pyargs):
     
     # -- set optional params --
     set_optional_params(args,pyargs)
+
+    # -- format flows for c++ --
+    if args.use_flow: expand_flows(pyargs)
 
     # -- create shell tensors & set arrays --
     ztensors = np_zero_tensors(t,c,h,w)

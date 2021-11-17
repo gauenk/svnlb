@@ -8,6 +8,7 @@ from einops import rearrange
 import vnlb
 
 # -- local imports --
+from .utils import optional
 from .vnlb_param_parser import parse_args as parse_vnlb_args
 from .tvl1_param_parser import parse_args as parse_tvl1_args
 
@@ -26,7 +27,8 @@ def runPyVnlb(noisy,sigma,pyargs=None):
 def runVnlb_np(noisy,sigma,pyargs=None):
     
     # -- extract info --
-    c,t,h,w  = noisy.shape
+    t,c,h,w  = noisy.shape
+    assert c in [1,3,4],"must have the color channel be 1, 3, or 4"
     args,sargs = parse_vnlb_args(noisy,sigma,pyargs)
 
     # -- exec using numpy --
@@ -34,8 +36,10 @@ def runVnlb_np(noisy,sigma,pyargs=None):
 
     # -- format & create results --
     res = {}
-    res['final'] = rearrange(args.final,'t c h w -> c t h w')
-    res['basic'] = rearrange(args.basic,'t c h w -> c t h w')
+    # res['final'] = rearrange(args.final,'t c h w -> c t h w')
+    # res['basic'] = rearrange(args.basic,'t c h w -> c t h w')
+    res['final'] = args.final#'t c h w -> c t h w')
+    res['basic'] = args.basic
     res['final'] = numpy.flip(res['final'],axis=0) # BGR -> RGB
     res['basic'] = numpy.flip(res['basic'],axis=0) # BGR -> RGB
 
@@ -50,17 +54,24 @@ def runVnlb_np(noisy,sigma,pyargs=None):
 #
 # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
+def runPyFlow(noisy,sigma,pyargs=None):
+    return runPyFlowFB(noisy,sigma,pyargs)
+
 def runPyFlowFB(noisy,sigma,pyargs=None):
     if pyargs is None: pyargs = {}
+
+    # -- exec --
     pyargs['direction'] = 0
     resFwd = runPyTvL1Flow(noisy,sigma,pyargs)
     pyargs['direction'] = 1
     resBwd = runPyTvL1Flow(noisy,sigma,pyargs)
-    res = {'fflow':resFwd['fflow'],'bflow':resBwd['bflow']}
-    return res
 
-def runPyFlow(noisy,sigma,pyargs=None):
-    return runPyTvL1Flow(noisy,sigma,pyargs)
+    # -- format --
+    fflow,bflow = resFwd['fflow'],resBwd['bflow']
+    fflow = numpy.ascontiguousarray(fflow.copy())
+    bflow = numpy.ascontiguousarray(bflow.copy())
+
+    return fflow,bflow
 
 def runPyTvL1Flow(noisy,sigma,pyargs=None):
     if torch.is_tensor(noisy):
@@ -71,7 +82,8 @@ def runPyTvL1Flow(noisy,sigma,pyargs=None):
 def runPyTvL1Flow_np(noisy,sigma,pyargs=None):
     
     # -- extract info --
-    c,t,h,w  = noisy.shape
+    t,c,h,w  = noisy.shape
+    assert c in [1,3,4],"must have the color channel be 1, 3, or 4"
     args,sargs = parse_tvl1_args(noisy,sigma,pyargs)
 
     # -- exec using numpy --
@@ -83,7 +95,9 @@ def runPyTvL1Flow_np(noisy,sigma,pyargs=None):
     res['bflow'] = rearrange(args.bflow,'t c h w -> c t h w')
 
     # -- alias some vars --
-    res['flow'] = res['fflow']
+    direction = optional(pyargs,'direction',0)
+    if direction == 0: res['flow'] = res['fflow']
+    else: res['flow'] = res['bflow']
 
     return res
 

@@ -27,6 +27,8 @@ void setVnlbParams(const PyVnlbParams& args, VideoNLB::nlbParams& params, int st
   VideoNLB::defaultParameters(params, -1, -1, step, sigma, img_sz, args.verbose);
 
   // set from args 
+  params.verbose = args.verbose;
+  params.coupleChannels = false;
   // VideoNLB::setSizeSearchWindow(params, args.search_space[index]);
   // VideoNLB::setNSimilarPatches(params, (unsigned)args.num_patches[index]);
   // params.rank = args.rank[index];

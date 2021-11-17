@@ -52,28 +52,6 @@
 #define ANSI_BWHT "\x1b[37;01m"
 #define ANSI_RST  "\x1b[0m"
 
-void plain_print(Video<float> const& imVid){
-  const VideoSize sz = imVid.sz;
-  FILE* fp;
-  fp = fopen("plain_print.txt","w");
-  float* data = const_cast<float*>(&(imVid.data[0]));
-  for (int i = 0; i < sz.whcf; ++i){
-    fprintf(fp,"%2.6f\n",*(data+i));
-  }
-  fclose(fp);
-}
-
-void plain_print_char(Video<char> const& imVid){
-  const VideoSize sz = imVid.sz;
-  FILE* fp;
-  fp = fopen("plain_print_char.txt","w");
-  char* data = const_cast<char*>(&(imVid.data[0]));
-  for (int i = 0; i < sz.whcf; ++i){
-    fprintf(fp,"%d\n",*(data+i));
-  }
-  fclose(fp);
-}
-
 
 namespace VideoNLB
 {
@@ -306,7 +284,7 @@ std::vector<float> runNLBayesThreads(
 	const nlbParams prms2,
 	Video<float> &imClean)
 {
-        plain_print(imNoisy);
+
 	// Only 1, 3 or 4-channels images can be processed.
 	const unsigned chnls = imNoisy.sz.channels;
 	if (! (chnls == 1 || chnls == 3 || chnls == 4))
@@ -590,7 +568,6 @@ unsigned processNLBayes(
 	const unsigned patch_num = sWx * sWx * sWt;
 
 	// Matrices used for Bayes' estimate
-	std::fprintf(stdout,"patch_num: %d\n",patch_num);
 	vector<unsigned> indices(patch_num);
 	matWorkspace mat;
 	mat.group     .resize(patch_num * patch_dim);
@@ -677,7 +654,6 @@ unsigned processNLBayes(
 	}// for pt
 
 
-	plain_print_char(mask);
 	// exit if interrupt
 	if (interrupt){
 	  return 0;

@@ -100,7 +100,7 @@ def exec_pyvnlb(pyvnlb_path,pyflow_path,noisy,std,flows=None):
 def run_comparison():
 
     # -- parms --
-    std,fstart,nframes = 20,0,3
+    std,fstart,nframes = 20,0,5
     ipath = Path("../vnlb/data/davis_baseball_64x64/")
     opath = Path(f"../vnlb/output/davis_baseball_64x64_{std}/")
     vnlb_path = opath / "./vnlb/"

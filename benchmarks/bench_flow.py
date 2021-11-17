@@ -36,6 +36,7 @@ def unpack_vnlb(vnlb_path,fstart,nframes):
     results = edict()
     results.fflow = read_result(vnlb_path,"tvl1_%03d_f.flo",fstart,nframes,"fwd")
     results.bflow = read_result(vnlb_path,"tvl1_%03d_b.flo",fstart,nframes,"bwd")
+
     return results
 
 def exec_vnlb(vnlb_path,npaths,std,fstart,nframes):
@@ -80,8 +81,9 @@ def exec_pyflow(pyvnlb_path,noisy,std):
     pyargs['epsilon'] = 0.01
     pyargs['verbose'] = True
     pyargs['testing'] = True
-    results = pyvnlb.runPyFlowFB(noisy,std,pyargs)
-    if 'flow' in results: del results['flow']
+    fflow,bflow= pyvnlb.runPyFlowFB(noisy,std,pyargs)
+    results = {'fflow':fflow,'bflow':bflow}
+    if 'flow' in results.keys(): del results['flow']
 
     # -- save to file --
     pickle.dump(results,open(str(pyvnlb_path),'wb'))
@@ -133,6 +135,7 @@ def run_comparison():
     for field in fields:
         cppField = vnlb_res[field]
         pyField  = pyvnlb_res[field]
+        print(cppField.shape,pyField.shape)
         for i in range(2):
             print(field,cppField[:,i,32,32],pyField[:,i,32,32])
             print(field,cppField[:,i,38,38],pyField[:,i,38,38])

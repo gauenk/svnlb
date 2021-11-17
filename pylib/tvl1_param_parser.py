@@ -50,15 +50,15 @@ def create_swig_args(args):
 def parse_args(burst,sigma,pyargs):
 
     # -- extract info --
-    verbose = optional(pyargs,'verbose',True)
+    verbose = optional(pyargs,'verbose',False)
     dtype = burst.dtype
-    c,t,h,w  = burst.shape
+    t,c,h,w  = burst.shape
 
     # -- format burst image --
-    burst = rearrange(burst,'c t h w -> t c h w')
-    # burst = np.ascontiguousarray(np.flip(burst,axis=1).copy()) # RGB -> BGR
-    if dtype != np.float32 and verbose:
-        print(f"Warning: converting burst image from {dtype} to np.float32.")
+    burst = np.ascontiguousarray(np.flip(burst,axis=1).copy()) # RGB -> BGR
+    if dtype != np.float32:
+        if verbose:
+            print(f"Warning: converting burst image from {dtype} to np.float32.")
         burst = burst.astype(np.float32)
     if not burst.data.contiguous:
         burst = np.ascontiguousarray(burst)
