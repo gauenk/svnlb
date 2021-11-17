@@ -72,20 +72,13 @@ find_package( PNG  REQUIRED )
 target_link_libraries(vnlb PRIVATE png tiff)
 target_link_libraries(vnlb_avx2 PRIVATE png tiff jpeg)
 
+find_package(BLAS REQUIRED)
+target_link_libraries(vnlb PRIVATE ${BLAS_LIBRARIES})
+target_link_libraries(vnlb_avx2 PRIVATE ${BLAS_LIBRARIES})
 
-#find_package(MKL)
-if(MKL_FOUND)
-  target_link_libraries(vnlb PRIVATE ${MKL_LIBRARIES})
-  target_link_libraries(vnlb_avx2 PRIVATE ${MKL_LIBRARIES})
-else()
-  find_package(BLAS REQUIRED)
-  target_link_libraries(vnlb PRIVATE ${BLAS_LIBRARIES})
-  target_link_libraries(vnlb_avx2 PRIVATE ${BLAS_LIBRARIES})
-
-  find_package(LAPACKE REQUIRED)
-  target_link_libraries(vnlb PRIVATE ${LAPACK_LIBRARIES})
-  target_link_libraries(vnlb_avx2 PRIVATE ${LAPACK_LIBRARIES})
-endif()
+find_package(LAPACKE REQUIRED)
+target_link_libraries(vnlb PRIVATE ${LAPACK_LIBRARIES})
+target_link_libraries(vnlb_avx2 PRIVATE ${LAPACK_LIBRARIES})
 
 install(TARGETS vnlb
   EXPORT vnlb-targets
