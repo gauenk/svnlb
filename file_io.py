@@ -1,7 +1,8 @@
 
 # -- python imports --
-import cv2
+import cv2,sys
 import numpy as np
+from pathlib import Path
 from einops import rearrange
 from easydict import EasyDict as edict
 
@@ -12,55 +13,33 @@ import torchvision.utils as tvUtils
 
 # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 #  
-#       Read VNLB Results
+#      Read Files in a Loop
 #
 # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-def read_vnlb_results(vnlb_path,fstart,nframes):
-
-    # -- load dict --
-    results = edict()
-    results.clean = read_result(vnlb_path,"%05d.jpg",fstart,nframes)
-    results.noisy = read_result(vnlb_path,"%03d.tif",fstart,nframes)
-    results.fflow = read_result(vnlb_path,"tvl1_%03d_f.flo",fstart,nframes)
-    results.bflow = read_result(vnlb_path,"tvl1_%03d_b.flo",fstart,nframes)
-    results.basic = read_result(vnlb_path,"bsic_%03d.tif",fstart,nframes)
-    results.denoised = read_result(vnlb_path,"deno_%03d.tif",fstart,nframes)
-    results.std = np.loadtxt(str(vnlb_path/"sigma.txt")).item(),"sigma.txt","sigma.txt"
-
-    # -- reshape --
-    data,paths,fmts = edict(),edict(),edict()
-    for key in results.keys():
-        # -- unpack --
-        data[key] = results[key][0]
-        paths[key] = results[key][1]
-        fmts[key] = results[key][2]
-
-        # -- format data --
-        if key == "std": continue
-        data[key] = rearrange(data[key],'t h w c -> t c h w')
-
-    return data,paths,fmts
+def read_result(path,fmt,fstart,nframes):
+    tensors,paths = [],[]
+    for t in range(fstart,fstart+nframes):
+        path_t = path / (fmt % t)
+        if not path_t.exists():
+            print(f"Error: the file {str(path_t)} does not exist.")
+            sys.exit(1)
+        data = read_file(path_t)
+        tensors.append(data)
+        paths.append(str(path_t))
+    tensors = np.stack(tensors)
+    tensors = np.ascontiguousarray(tensors.copy())
+    fmt = str(path / fmt)
+    return tensors,paths,fmt
 
 def read_file(filename):
     if filename.suffix == ".flo":
-        return read_flo_file(filename)
+        img = read_flo_file(filename)
     else:
         img = cv2.imread(str(filename),-1)
         img = cv2.cvtColor(img,cv2.COLOR_BGR2RGB)        
-        return img
-
-def read_result(vnlb_path,fmt,fstart,nframes):
-    tensors,paths = [],[]
-    for t in range(fstart,fstart+nframes):
-        path = vnlb_path / (fmt % t)
-        if not path.exists(): return None
-        data = read_file(path)
-        tensors.append(data)
-        paths.append(str(path))
-    tensors = np.stack(tensors)
-    fmt = str(vnlb_path / fmt)
-    return tensors,paths,fmt
+    img = rearrange(img,'h w c -> c h w')
+    return img
 
 def read_flo_file(filename):
     """
@@ -89,6 +68,39 @@ def read_flo_file(filename):
 #             Misc
 #
 # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+def get_dataset_info(name):
+    if name == "davis_64x64":
+        return Path("data/davis_baseball_64x64/"),5,"%05d.jpg"
+    elif name == "davis":
+        return Path("data/davis_baseball/"),10,"%05d.jpg"
+    elif name == "gmobile":
+        path = Path("data/gmobile/")
+        print_gmobile_message(path)
+        return Path("data/gmobile/"),300,"%03d.png"
+    else:
+        print("Options include:")
+        print(menu)
+        raise ValueError(f"Uknown dataset name {name}")
+
+def print_gmobile_message():
+    if not path.exists():
+        print("Please run the following commands")
+        print("mkdir data/gmobile/")
+        print("cd data/gmobile/")
+        print("wget http://dev.ipol.im/~pariasm/video_nlbayes/videos/gmobile.avi")
+        print("ffmpeg -i gmobile.avi -f image2 %03d.png")
+        sys.exit(1)
+
+def format_vnlb_results(results):
+    # -- reshape --
+    data,paths,fmts = edict(),edict(),edict()
+    for key in results.keys():
+        # -- unpack --
+        data[key] = results[key][0]
+        paths[key] = results[key][1]
+        fmts[key] = results[key][2]
+    return data,paths,fmts
 
 def save_images(tensor,fn,imax=255.):
     # -- swap string and tensor --

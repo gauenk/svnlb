@@ -14,8 +14,7 @@ def ndarray_ctg_dtype(ndarray,dtype,verbose):
     return ndarray
 
 def rgb2bw(burst):
-    # burst_bw = .299 * burst[:,2] + .587 * burst[:,1] + .114 * burst[:,0]
-    # burst_bw = burst_bw[:,None].copy()
+    burst = burst.astype(np.float32)
     burst_bw = []
     for t in range(burst.shape[0]):
         frame = burst[t]
@@ -25,9 +24,6 @@ def rgb2bw(burst):
         frame = rearrange(frame,'h w -> 1 h w')
         burst_bw.append(frame)
     burst_bw = np.stack(burst_bw).copy()
-    # import torch
-    # import torchvision.utils as tvUtils
-    # tvUtils.save_image(torch.FloatTensor(burst_bw)/255.,"burst_bw_inner.png")
     return burst_bw
 
 def compute_psnrs(img1,img2,imax=255.):

@@ -52,7 +52,7 @@ def parse_args(burst,sigma,pyargs):
 
     # -- extract info --
     dtype = burst.dtype
-    use_rgb2bw = optional(pyargs,'bw',False)
+    use_rgb2bw = optional(pyargs,'bw',True)
     verbose = optional(pyargs,'verbose',False)
     if use_rgb2bw: burst = rgb2bw(burst)
     t,c,h,w  = burst.shape

@@ -1,4 +1,9 @@
 
+# The code directory structure is kind of a mess for the cpp/
+# I like the cpp/ python/ split
+# I do not like the "src/" and "lib/" structure.
+# This is weird for the Python API. It made sense for the C++ Code.
+
 set(VNLB_SRC
   cpp/lib/io.cpp
   cpp/lib/iio/iio.c

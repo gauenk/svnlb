@@ -2,12 +2,13 @@
 
 # -- imports --
 import numpy as np
+from pathlib import Path
 import vnlb.pylib as pyvnlb
 from data_loader import load_dataset
 from file_io import save_images
 
 # -- get data --
-clean = load_dataset("davis_64x64")
+clean = load_dataset("davis_64x64")[0]['clean']
 
 # -- add noise --
 std = 20.
@@ -31,8 +32,12 @@ print("Starting PSNRs:")
 print(noisy_psnrs)
 
 # -- save images --
-save_images(clean,"clean.png",imax=255.)
-save_images(noisy,"noisy.png",imax=255.)
-save_images(denoised,"denoised.png",imax=255.)
-# save_images(pyvnlb.flow2img(fflow),"fflow.png",imax=1.)
-# save_images(pyvnlb.flow2img(bflow),"bflow.png",imax=1.)
+save_outputs = True
+if save_outputs:
+    output = Path("./output/")
+    if not output.exists(): output.mkdir()
+    save_images(clean,output/"clean.png",imax=255.)
+    save_images(noisy,output/"noisy.png",imax=255.)
+    save_images(denoised,output/"denoised.png",imax=255.)
+    save_images(pyvnlb.flow2burst(fflow),"output/fflow.png")
+    save_images(pyvnlb.flow2burst(bflow),"output/bflow.png")

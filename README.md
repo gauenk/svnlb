@@ -1,6 +1,6 @@
 PyVNLB 
 =========================================
-A Python API for Video Non-local Bayesian Denoising
+A Python API for Video Non-Local Bayesian Denoising ([C++ code originally from Pablo Arias](https://github.com/pariasm/vnlb))
 
 
 Install
@@ -15,8 +15,8 @@ $ ./install.sh
 Usage
 -----
 
-We expect the noisy input image to be shaped `(nframes,channels,height,width)` with
-pixel values in range `[0,...,255.]`. The color channels are ordered RGB. Common examples of noise levels are 10, 20 and 50.
+We expect the images to be shaped `(nframes,channels,height,width)` with
+pixel values in range `[0,...,255.]`. The color channels are ordered RGB. Common examples of noise levels are 10, 20 and 50. See `example.py` for more details.
 
 ```python
 import numpy as np
@@ -44,17 +44,32 @@ print(psnrs)
 
 ```
 
-Comparing with C-API
+Comparing with C++ Code
 ---
 
-To demonstrate the Python-API is within a floating-point error of the C-API output, we provide the following test. ...
+The outputs from the Python-API and the C++ Code are exactly equal. To demonstrate this claim, we provide the `compare_cpp.py` script. We have two examples from the [C++ Code](https://github.com/pariasm/vnlb) provided in the `data/` folder. To run the comparison, type:
+
+```
+$ export OMP_NUM_THREADS=4
+$ python compare_cpp.py
+```
+
+The script prints the below table. Each element of the table is the sum of the absolute relative error between the outputs from the Python-API and C++ Code.
+
+|                   |   noisyForFlow |   noisyForVnlb |   fflow |   bflow |   basic |   denoised |
+|:------------------|---------------:|---------------:|--------:|--------:|--------:|-----------:|
+| Total Error (cv2) |    0.000505755 |              0 | 504.308 |  21.643 |       0 |          0 |
+| Total Error (cpp) |    0           |              0 |   0     |   0     |       0 |          0 |
+
+
+Details can be found in [COMPARE.md](https://github.com/gauenk/pyvnlb/blob/master/COMPARE.md)
 
 Dependencies
 --------
 
 The code depends on the following packages:
 * [CBLAS](http://www.netlib.org/blas/#_cblas),
-[LAPACKE](https://www.netlib.org/lapack/lapacke.html): operations with matrices
+* [LAPACKE](https://www.netlib.org/lapack/lapacke.html): operations with matrices
 * OpenMP: parallelization [optional, but recommended]
 * libpng, libtiff and libjpeg: image i/o
 
