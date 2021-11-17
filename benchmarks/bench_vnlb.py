@@ -30,8 +30,11 @@ def unpack_vnlb(vnlb_path,fstart,nframes):
     results.denoised = read_result(vnlb_path,"deno_%03d.tif",fstart,nframes)
 
     # -- reshaping --
-    results.denoised = rearrange(results.denoised,'t h w c -> c t h w')
-    results.basic = rearrange(results.basic,'t h w c -> c t h w')
+    for key,val in results.items():
+        if key == "std": continue
+        results[key] = rearrange(val,'t h w c -> t c h w')
+    # results.denoised = rearrange(results.denoised,'t h w c -> c t h w')
+    # results.basic = rearrange(results.basic,'t h w c -> c t h w')
 
     return results
 
@@ -39,7 +42,6 @@ def exec_vnlb(vnlb_path,npaths,std,fstart,nframes):
 
     # -- read info [if exsists] --
     results = unpack_vnlb(vnlb_path,fstart,nframes)
-    print(len(results.values()))
     any_none = False
     for elem in results.values():
         if elem is None: any_none = True
@@ -101,16 +103,19 @@ def run_comparison():
 
     # -- parms --
     std,fstart,nframes = 20,0,5
-    ipath = Path("../vnlb/data/davis_baseball_64x64/")
-    opath = Path(f"../vnlb/output/davis_baseball_64x64_{std}/")
+    ipath = Path("/home/gauenk/Documents/packages/vnlb/")
+    # ipath = ipath / Path("output/davis_baseball_64x64_20/vnlb/")
+    ipath = ipath / Path("data/davis_baseball/")
+    # ipath = Path("../vnlb/data/davis_baseball_64x64/")
+    opath = Path(f"../vnlb/output/davis_baseball_64x64_20/")
     vnlb_path = opath / "./vnlb/"
     pyvnlb_path = opath / f"./pyvnlb_vnlb.pkl"
     pyflow_path = opath / f"./pyvnlb_flow.pkl"
 
     # -- get images --
     clean,noisy,npaths = get_vnlb_burst(ipath,vnlb_path,fstart,nframes)
-    noisy = rearrange(noisy,'t h w c -> c t h w')
-    clean = rearrange(clean,'t h w c -> c t h w')
+    noisy = rearrange(noisy,'t h w c -> t c h w')
+    clean = rearrange(clean,'t h w c -> t c h w')
     
     # -- exec vnlb --
     vnlb_res = exec_vnlb(vnlb_path,npaths,std,fstart,nframes)
@@ -128,16 +133,17 @@ def run_comparison():
     for field in fields:
         cppField = vnlb_res[field]
         pyField  = pyvnlb_res[field]
+        print(cppField.shape,pyField.shape)
         delta = np.mean(np.abs(cppField - pyField))
         psnr = compute_psnrs(cppField,pyField)
         rel = relative_error(pyField,cppField)
         print("[%s]: %2.3f | %2.2f | %2.2e" % (field,delta,psnr,rel))
-        save_field(field,cppField,pyField)
-        if field in ["denoised","basic"]:
-            th_save_image(clean/255.,"clean.png")
-            cpp_psnr = compute_psnrs(cppField,clean)
-            py_psnr = compute_psnrs(pyField,clean)
-            print("[PSNRS]: Cpp: %2.2f Python: %2.2f" % (cpp_psnr,py_psnr))
+        # save_field(field,cppField,pyField)
+        # if field in ["denoised","basic"]:
+        #     th_save_image(clean/255.,"clean.png")
+        #     cpp_psnr = compute_psnrs(cppField,clean)
+        #     py_psnr = compute_psnrs(pyField,clean)
+        #     print("[PSNRS]: Cpp: %2.2f Python: %2.2f" % (cpp_psnr,py_psnr))
 
 
 if __name__ == "__main__":

@@ -9,7 +9,7 @@ import vnlb
 
 # from .ptr_utils import py2swig
 from .image_utils import est_sigma
-from .utils import optional,optional_swig_ptr
+from .utils import optional,optional_swig_ptr,expand_flows
 
 def set_optional_params(args,pyargs):
     # -- set optional numeric vals --
@@ -57,20 +57,6 @@ def create_swig_args(args):
         setattr(sargs,key,sval)
     return sargs
 
-def expand_flows(pyargs):
-
-    # -- unpack --
-    fflow,bflow = pyargs['fflow'],pyargs['bflow']
-    np.cat = np.concatenate
-
-    # -- expand according to original c++ repo --
-    fflow = np.cat([fflow,fflow[[-1]]],axis=0)
-    bflow = np.cat([bflow[[0]],bflow],axis=0)
-
-    # -- update --
-    pyargs['fflow'],pyargs['bflow'] = fflow,bflow
-
-
 def parse_args(noisy,sigma,pyargs):
 
     # -- extract info --
@@ -79,7 +65,8 @@ def parse_args(noisy,sigma,pyargs):
     t,c,h,w  = noisy.shape
 
     # -- format noisy image --
-    noisy = np.ascontiguousarray(np.flip(noisy,axis=1).copy()) # RGB -> BGR
+    # noisy = np.ascontiguousarray(np.flip(noisy,axis=1).copy()) # RGB -> BGR
+    noisy = np.ascontiguousarray(noisy) # RGB -> BGR
     if dtype != np.float32:
         if verbose:
             print(f"Warning: converting burst image from {dtype} to np.float32.")

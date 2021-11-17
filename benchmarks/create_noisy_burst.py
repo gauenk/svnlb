@@ -22,7 +22,8 @@ def load_burst(path,fstart,nframes):
     # -- read burst --
     burst = []
     for t in range(fstart,fstart+nframes):
-        frame = cv2.imread(files[t])
+        frame = cv2.imread(files[t],-1)
+        frame = cv2.cvtColor(frame,cv2.COLOR_BGR2RGB)
         burst.append(frame)
     burst = np.stack(burst)
     return burst
@@ -51,7 +52,8 @@ def load_noisy(path,fstart,nframes):
         fid = path / ("frame_%03d.tif" % fid)
         if not fid.exists(): return None
         npaths.append(fid)
-        frame = cv2.imread(str(fid))
+        frame = cv2.imread(str(fid),-1)
+        frame = cv2.cvtColor(frame,cv2.COLOR_BGR2RGB)
         burst.append(frame)
     burst = np.stack(burst)
     return burst,npaths
@@ -71,6 +73,7 @@ def get_vnlb_burst_at_path(vnlb_path,fstart,nframes,ext,fmt="%03d",prefix=None):
         if not fid.exists(): return None,None
         npaths.append(fid)
         frame = cv2.imread(str(fid),-1)
+        frame = cv2.cvtColor(frame,cv2.COLOR_BGR2RGB)
         burst.append(frame)
     burst = np.stack(burst)
     return burst,npaths

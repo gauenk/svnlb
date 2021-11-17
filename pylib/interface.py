@@ -38,10 +38,8 @@ def runVnlb_np(noisy,sigma,pyargs=None):
     res = {}
     # res['final'] = rearrange(args.final,'t c h w -> c t h w')
     # res['basic'] = rearrange(args.basic,'t c h w -> c t h w')
-    res['final'] = args.final#'t c h w -> c t h w')
+    res['final'] = args.final# t c h w 
     res['basic'] = args.basic
-    res['final'] = numpy.flip(res['final'],axis=1) # BGR -> RGB
-    res['basic'] = numpy.flip(res['basic'],axis=1) # BGR -> RGB
 
     # -- alias some vars --
     res['denoised'] = res['final']
@@ -91,8 +89,8 @@ def runPyTvL1Flow_np(noisy,sigma,pyargs=None):
 
     # -- format & create results --
     res = {}
-    res['fflow'] = rearrange(args.fflow,'t c h w -> c t h w')
-    res['bflow'] = rearrange(args.bflow,'t c h w -> c t h w')
+    res['fflow'] = args.fflow #t c h w
+    res['bflow'] = args.bflow
 
     # -- alias some vars --
     direction = optional(pyargs,'direction',0)

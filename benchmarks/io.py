@@ -2,20 +2,10 @@
 import cv2
 import numpy as np
 
-def read_result(vnlb_path,fmt,fstart,nframes,direction="fwd"):
+def read_result(vnlb_path,fmt,fstart,nframes):
+
     agg = []
-
-    # -- which ids to load --
-    if direction == "fwd":
-        fids = np.arange(fstart,fstart+nframes)
-    elif direction == "bwd":
-        fids = np.flip(np.arange(fstart+nframes,fstart,-1),axis=0)
-    else:
-        fids = np.arange(fstart,fstart+nframes)
-
-    nfids = len(fids)
-    for _t in range(nfids):
-        t = fids[_t]
+    for t in range(fstart,fstart+nframes):
         path = vnlb_path / (fmt % t)
         print(path)
         if not path.exists(): return None
@@ -29,6 +19,7 @@ def read_file(filename):
         return read_flo_file(filename)
     else:
         img = cv2.imread(str(filename),-1)
+        img = cv2.cvtColor(img,cv2.COLOR_BGR2RGB)
         return img
 
 def read_flo_file(filename):

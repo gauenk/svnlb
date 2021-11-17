@@ -8,8 +8,8 @@ from easydict import EasyDict as edict
 
 def th_save_image(burst,fn,imax=1.):
     burst = torch.FloatTensor(burst.copy())/imax
-    if burst.shape[0] in [1,3,4]:
-        burst = rearrange(burst,'c t h w -> t c h w')
+    # if burst.shape[0] in [1,3,4]:
+    #     burst = rearrange(burst,'c t h w -> t c h w')
     tvUtils.save_image(burst,fn)
 
 

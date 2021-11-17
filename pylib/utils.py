@@ -42,3 +42,29 @@ def optional_swig_ptr(elem):
     # elem = np.ascontiguousarray(elem)
     return vnlb.swig_ptr(elem)
 
+
+def expand_flows(pydict,axis=0):
+    """
+    CPP requires the flows be repeated so
+    the number of temporal flows matches
+    the number of frames in a burst.
+    """
+    
+    # -- unpack --
+    fflow,bflow = pydict['fflow'],pydict['bflow']
+    np.cat = np.concatenate
+
+    # -- expand according to original c++ repo --
+    if axis == 0:
+        fflow = np.cat([fflow,fflow[[-1]]],axis=0)
+        bflow = np.cat([bflow[[0]],bflow],axis=0)
+    elif axis == 1:
+        fflow = np.cat([fflow,fflow[:,[-1]]],axis=1)
+        bflow = np.cat([bflow[:,[0]],bflow],axis=1)
+    else:
+        raise ValueError(f"Invalid axis {axis}")
+
+    # -- update --
+    pydict['fflow'],pydict['bflow'] = fflow,bflow
+
+

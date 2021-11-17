@@ -1,7 +1,7 @@
 
 
-import vnlb.benchmarks.bench_tvflow
+# import vnlb.benchmarks.bench_flow
 
-def exec_benchmarks():
-    bench_tvflow.run_comparion()    
-    bench_vnlb.run_comparion()    
+# def exec_benchmarks():
+#     bench_flow.run_comparion()    
+#     bench_vnlb.run_comparion()    

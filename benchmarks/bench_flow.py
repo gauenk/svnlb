@@ -34,8 +34,8 @@ def th_save_image(burst,fn):
 def unpack_vnlb(vnlb_path,fstart,nframes):
     # -- read flow,basic,denoised --
     results = edict()
-    results.fflow = read_result(vnlb_path,"tvl1_%03d_f.flo",fstart,nframes,"fwd")
-    results.bflow = read_result(vnlb_path,"tvl1_%03d_b.flo",fstart,nframes,"bwd")
+    results.fflow = read_result(vnlb_path,"tvl1_%03d_f.flo",fstart,nframes)
+    results.bflow = read_result(vnlb_path,"tvl1_%03d_b.flo",fstart,nframes)
 
     return results
 
@@ -52,8 +52,8 @@ def exec_vnlb(vnlb_path,npaths,std,fstart,nframes):
         exit()
 
     # -- format --
-    results['fflow'] = rearrange(results['fflow'],'t h w two -> two t h w')
-    results['bflow'] = rearrange(results['bflow'],'t h w two -> two t h w')
+    results['fflow'] = rearrange(results['fflow'],'t h w two -> t two h w')
+    results['bflow'] = rearrange(results['bflow'],'t h w two -> t two h w')
 
     return results
 
@@ -63,27 +63,17 @@ def exec_pyflow(pyvnlb_path,noisy,std):
     rerun = True
     if pyvnlb_path.exists() and not(rerun):
         results = pickle.load(open(str(pyvnlb_path),'rb'))
-        # results['fflow'] = results['fflow'][:,:-1]
-        # results['bflow'] = results['bflow'][:,:-1]
         if 'flow' in results: del results['flow']
         return results
 
     # -- exec --
-    pyargs = {}
-    pyargs['nproc'] = 0
-    pyargs['tau'] = 0.25
-    pyargs['lambda'] = 0.2
-    pyargs['theta'] = 0.3
-    pyargs['nscales'] = 100
-    pyargs['fscale'] = 1
-    pyargs['zfactor'] = 0.5
-    pyargs['nwarps'] = 5
-    pyargs['epsilon'] = 0.01
-    pyargs['verbose'] = True
-    pyargs['testing'] = True
+    pyargs = {"nproc":0,"tau":0.25,"lambda":0.2,"theta":0.3,"nscales":100,
+              "fscale":1,"zfactor":0.5,"nwarps":5,"epsilon":0.01,
+              "verbose":True,"testing":True,"bw":True}
     fflow,bflow= pyvnlb.runPyFlowFB(noisy,std,pyargs)
     results = {'fflow':fflow,'bflow':bflow}
     if 'flow' in results.keys(): del results['flow']
+    pyvnlb.expand_flows(results)
 
     # -- save to file --
     pickle.dump(results,open(str(pyvnlb_path),'wb'))
@@ -104,19 +94,27 @@ def run_comparison():
     clean,noisy,npaths = get_vnlb_burst(ipath,vnlb_path,fstart,nframes)
 
     # -- to black and white --
-    bwnoisy = []
-    for t in range(noisy.shape[0]):
-        # frame = rearrange(noisy[t],'h w c -> c h w')
-        frame = noisy[t]
-        # frame = .299 * frame[...,0] + .587 * frame[...,1] + .114 * frame[...,2]
-        frame = cv2.cvtColor(frame,cv2.COLOR_BGR2GRAY)
-        bwnoisy.append(np.array(frame)[:,:,None])
-    bwnoisy = np.stack(bwnoisy)
-    noisy  = bwnoisy
+    # bwnoisy = []
+    # for t in range(noisy.shape[0]):
+    #     # frame = rearrange(noisy[t],'h w c -> c h w')
+    #     frame = noisy[t]
+    #     # frame = .299 * frame[...,0] + .587 * frame[...,1] + .114 * frame[...,2]
+    #     # frame = cv2.cvtColor(frame,cv2.COLOR_BGR2GRAY) 
+    #     frame = cv2.cvtColor(frame,cv2.COLOR_RGB2GRAY) 
+    #     bwnoisy.append(np.array(frame)[:,:,None])
+    # bwnoisy = np.stack(bwnoisy)
+    # noisy  = bwnoisy
 
-    noisy = rearrange(noisy,'t h w c -> c t h w')
-    clean = rearrange(clean,'t h w c -> c t h w')
-    th_save_image(noisy/255.,"noisy.png")
+
+    noisy = rearrange(noisy,'t h w c -> t c h w')
+    clean = rearrange(clean,'t h w c -> t c h w')
+
+    # import torch
+    # import torchvision.utils as tvUtils
+    # tvUtils.save_image(torch.FloatTensor(noisy)/255.,"burst_bw_outer.png")
+    
+
+    # th_save_image(noisy/255.,"noisy.png")
     # noisy = np.flip(noisy,axis=0).copy()
 
     # -- print info --
