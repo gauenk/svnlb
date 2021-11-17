@@ -14,7 +14,7 @@ import vnlb
 
 # from .ptr_utils import py2swig
 from .image_utils import est_sigma
-from .utils import optional,optional_swig_ptr
+from .utils import optional,optional_swig_ptr,ndarray_ctg_dtype,rgb2bw
 
 def set_optional_params(args,pyargs):
 
@@ -48,26 +48,6 @@ def create_swig_args(args):
         setattr(sargs,key,sval)
     return sargs
 
-def rgb2bw(burst):
-    print(burst.shape)
-    # burst_bw = .299 * burst[:,2] + .587 * burst[:,1] + .114 * burst[:,0]
-    # burst_bw = burst_bw[:,None].copy()
-    burst = burst.copy()
-    burst_bw = []
-    for t in range(burst.shape[0]):
-        frame = burst[t]
-        frame = np.ascontiguousarray(rearrange(frame,'c h w -> h w c')).copy()
-        frame = cv2.cvtColor(frame,cv2.COLOR_RGB2GRAY)
-        frame = rearrange(frame,'h w -> 1 h w')
-        burst_bw.append(frame)
-    burst_bw = np.stack(burst_bw).copy()
-    # import torch
-    # import torchvision.utils as tvUtils
-    # tvUtils.save_image(torch.FloatTensor(burst_bw)/255.,"burst_bw_inner.png")
-    
-    
-    return burst_bw
-
 def parse_args(burst,sigma,pyargs):
 
     # -- extract info --
@@ -78,13 +58,8 @@ def parse_args(burst,sigma,pyargs):
     t,c,h,w  = burst.shape
 
     # -- format burst image --
-    burst = np.ascontiguousarray(burst)
-    if dtype != np.float32:
-        if verbose:
-            print(f"Warning: converting burst image from {dtype} to np.float32.")
-        burst = burst.astype(np.float32)
-    if not burst.data.contiguous:
-        burst = np.ascontiguousarray(burst)
+    if c == 1: burst = burst[:,0]
+    burst = ndarray_ctg_dtype(burst,np.float32,verbose)
 
     # -- get sigma --
     sigma = optional(pyargs,'sigma',sigma)

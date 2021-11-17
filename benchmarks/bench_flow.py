@@ -28,7 +28,7 @@ from vnlb.benchmarks.create_noisy_burst import get_noisy_burst,get_vnlb_burst
 
 def th_save_image(burst,fn):
     burst = torch.FloatTensor(burst)
-    burst = rearrange(burst,'c t h w -> t c h w')
+    # burst = rearrange(burst,'c t h w -> t c h w')
     tvUtils.save_image(burst,fn)
 
 def unpack_vnlb(vnlb_path,fstart,nframes):
@@ -133,15 +133,25 @@ def run_comparison():
     for field in fields:
         cppField = vnlb_res[field]
         pyField  = pyvnlb_res[field]
+        # cppField = np.around(vnlb_res[field],7)
+        # pyField  = np.around(pyvnlb_res[field],7)
         print(cppField.shape,pyField.shape)
         for i in range(2):
-            print(field,cppField[:,i,32,32],pyField[:,i,32,32])
-            print(field,cppField[:,i,38,38],pyField[:,i,38,38])
-        delta = np.mean(np.abs(cppField - pyField))
-        psnr = compute_psnrs(cppField,pyField)
+            pblock = np.stack([cppField[:,i,32,32],pyField[:,i,32,32]],axis=-1)
+            print(field,pblock)
+            # print(field,cppField[:,i,38,38],pyField[:,i,38,38])
+        delta = np.abs(cppField - pyField)
+        dmean = np.sum(delta)
+        psnrs = compute_psnrs(cppField,pyField)
+        psnr = np.mean(psnrs)
         rel = relative_error(pyField,cppField)
-        print("[%s]: %2.3f | %2.2f | %2.2e" % (field,delta,psnr,rel))
+        print(field)
+        print(psnrs)
+        print("[%s]: %2.3f | %2.2f | %2.2e" % (field,dmean,psnr,rel))
         save_field(field,cppField,pyField)
+        print("delta.shape: ",delta.shape)
+        print(delta.max())
+        th_save_image(200000.*delta,"delta_bench_flow.png")
         if field in ["denoised","basic"]:
             th_save_image(clean/255.,"clean.png")
             cpp_psnr = compute_psnrs(cppField,clean)

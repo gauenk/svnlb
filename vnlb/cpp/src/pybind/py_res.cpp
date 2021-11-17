@@ -13,8 +13,11 @@
 #include <vnlb/cpp/src/pybind/py_res.h>
 #include <vnlb/cpp/src/pybind/py_params.h>
 #include <vnlb/cpp/src/VNLBayes/VideoNLBayes.hpp>
-#include <vnlb/cpp/lib/iio/iio.h>
 #include <vnlb/cpp/lib/tvl1flow/tvl1flow_lib.h>
+extern "C" {
+#include <vnlb/cpp/lib/iio/iio.h>
+}
+
 
 void runVnlb(const PyVnlbParams& args) {
 
@@ -126,11 +129,7 @@ void runTV1Flow(const PyTvFlowParams& args) {
 	    params.nwarps, params.epsilon, args.direction);
   }
 
-  // flow for the burst
-  // char name[] = "flow_";
-  // char ending[] = ".flo";
-  // char outfile[1024];
-
+  // run flows per image
   int hwc = h*w*c;
   for (int _t = 0; _t < (t-1); ++_t){
 
@@ -172,3 +171,131 @@ void runTV1Flow(const PyTvFlowParams& args) {
 
 }
 
+/*******************************
+
+      Testing and CPP File IO 
+      to verify exact
+      numerical precision
+      of Python API
+
+*******************************/
+
+void readVideoForVnlb(const ReadVideoParams& args) {
+
+  // prints
+  if (args.verbose){
+    fprintf(stdout,"-- [readVideoForVnlb] Parameters --\n");
+    fprintf(stdout,"video_paths: %s\n",args.video_paths);
+    fprintf(stdout,"first_frame: %d\n",args.first_frame);
+    fprintf(stdout,"last_frame: %d\n",args.last_frame);
+    fprintf(stdout,"frame_step: %d\n",args.frame_step);
+    fprintf(stdout,"(t,h,w): (%d,%d,%d)\n",args.t,args.h,args.w);
+  }
+  
+  // init videos 
+  Video<float> cppVideo,pyVideo;
+  cppVideo.loadVideo(args.video_paths,args.first_frame,args.last_frame,args.frame_step);
+  cppPtr = cppVideo.data.data();
+  int size = cppVideo.sz.whcf;
+  std::memcpy(args.read_video,cppPtr,size*sizeof(float));
+
+  // pyVideo.loadVideoFromPtr(args.test_video,args.w,args.h,args.c,args.t);
+  // // compute difference 
+  // float delta = 0;
+  // int size = cppVideo.sz.whcf;
+  // auto cppData = cppVideo.data;
+  // auto pyData = pyVideo.data;
+  // for (int i = 0; i < size; ++i){
+  //   float delta_i = (cppData[i]-pyData[i]);
+  //   delta += (delta_i * delta_i);
+  // }
+  // delta /= size;
+
+  // // print report 
+  // if (args.verbose){
+  //   fprintf(stdout,"[Cpp v. Python]: %2.2e\n",delta);
+  // }
+  // *args.delta = delta;
+
+}
+
+void readVideoForFlow(const ReadVideoParams& args) {
+
+  // prints
+  if (args.verbose){
+    fprintf(stdout,"-- [readVideoForFlow] Parameters --\n");
+    fprintf(stdout,"video_paths: %s\n",args.video_paths);
+    fprintf(stdout,"first_frame: %d\n",args.first_frame);
+    fprintf(stdout,"last_frame: %d\n",args.last_frame);
+    fprintf(stdout,"frame_step: %d\n",args.frame_step);
+    fprintf(stdout,"(t,h,w): (%d,%d,%d)\n",args.t,args.h,args.w);
+  }
+
+  // load cpp video
+  int size = args.w*args.h;
+  for(int tidx = args.first_frame;
+      tidx <= args.last_frame;
+      tidx += args.frame_step){
+    int w, h;
+    char filename[1024];
+    sprintf(filename,args.video_paths,tidx);
+    float* dataPtr = args.read_video+tidx*size;
+    float* iioPtr = iio_read_image_float(filename, &w, &h);
+    std::memcpy(dataPtr,iioPtr,w*h*sizeof(float));
+    assert(w == args.w);
+    assert(h == args.h);
+  }
+
+}
+
+
+// void testIIORead(const ReadVideoParams& args) {
+  
+//   // init videos 
+//   Video<float> cppVideo,pyVideo;
+//   if (args.verbose){
+//     fprintf(stdout,"-- testIIORead Parameters --\n");
+//     fprintf(stdout,"video_paths: %s\n",args.video_paths);
+//     fprintf(stdout,"first_frame: %d\n",args.first_frame);
+//     fprintf(stdout,"last_frame: %d\n",args.last_frame);
+//     fprintf(stdout,"frame_step: %d\n",args.frame_step);
+//     fprintf(stdout,"(t,h,w): (%d,%d,%d)\n",args.t,args.h,args.w);
+//   }
+
+//   // load python video 
+//   assert(args.c == 1);
+//   pyVideo.loadVideoFromPtr(args.test_video,args.w,args.h,args.c,args.t);
+//   cppVideo.resize(pyVideo.sz);
+
+//   // load cpp video
+//   int size = pyVideo.sz.whc;
+//   float* cppVecPtr = cppVideo.data.data();
+//   for(int tidx = args.first_frame;
+//       tidx <= args.last_frame;
+//       tidx += args.frame_step){
+//     int w, h;
+//     char filename[1024];
+//     sprintf(filename,args.video_paths,tidx);
+//     float* cppPtr = cppVecPtr+tidx*size;
+//     float* iioPtr = iio_read_image_float(filename, &w, &h);
+//     std::memcpy(cppPtr,iioPtr,w*h*sizeof(float));
+//     assert(w == args.w);
+//     assert(h == args.h);
+//   }
+
+//   // // compute difference 
+//   // float delta = 0;
+//   // auto cppData = cppVideo.data;
+//   // auto pyData = pyVideo.data;
+//   // for (int i = 0; i < size; ++i){
+//   //   float delta_i = (cppData[i]-pyData[i]);
+//   //   delta += (delta_i * delta_i);
+//   // }
+
+//   // // print report 
+//   // if (args.verbose){
+//   //   fprintf(stdout,"[Cpp v. Python]: %2.3e\n",delta);
+//   // }
+//   // *args.delta = delta;
+
+// }

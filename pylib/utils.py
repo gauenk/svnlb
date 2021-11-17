@@ -1,6 +1,34 @@
+import cv2
 import torch
 import numpy as np
+from einops import rearrange
 import vnlb
+
+def ndarray_ctg_dtype(ndarray,dtype,verbose):
+    in_dtype = ndarray.dtype
+    if in_dtype != dtype:
+        if verbose:
+            print(f"Warning: converting burst image from {in_dtype} to {dtype}.")
+        ndarray = ndarray.astype(np.float32)
+    ndarray = np.ascontiguousarray(ndarray.copy())
+    return ndarray
+
+def rgb2bw(burst):
+    # burst_bw = .299 * burst[:,2] + .587 * burst[:,1] + .114 * burst[:,0]
+    # burst_bw = burst_bw[:,None].copy()
+    burst_bw = []
+    for t in range(burst.shape[0]):
+        frame = burst[t]
+        frame = np.ascontiguousarray(rearrange(frame,'c h w -> h w c')).copy()
+        # frame = .299 * frame[...,0] + .587 * frame[...,1] + .114 * frame[...,2]
+        frame = cv2.cvtColor(frame,cv2.COLOR_RGB2GRAY)
+        frame = rearrange(frame,'h w -> 1 h w')
+        burst_bw.append(frame)
+    burst_bw = np.stack(burst_bw).copy()
+    # import torch
+    # import torchvision.utils as tvUtils
+    # tvUtils.save_image(torch.FloatTensor(burst_bw)/255.,"burst_bw_inner.png")
+    return burst_bw
 
 def compute_psnrs(img1,img2,imax=255.):
 
@@ -15,8 +43,8 @@ def compute_psnrs(img1,img2,imax=255.):
     # -- compute --
     eps=1e-16
     b = img1.shape[0]
-    img1 = img1/255.
-    img2 = img2/255.
+    img1 = img1/imax
+    img2 = img2/imax
     delta = (img1 - img2)**2
     mse = delta.reshape(b,-1).mean(axis=1) + eps
     log_mse = np.ma.log10(1./mse).filled(-np.infty)
@@ -37,7 +65,10 @@ def optional(pydict,key,default,dtype=None):
     return rtn
 
 def optional_swig_ptr(elem):
-    if not isinstance(elem,np.ndarray):
+    swig_xfer = isinstance(elem,np.ndarray)
+    swig_xfer = swig_xfer or isinstance(elem,str)
+    swig_xfer = swig_xfer or isinstance(elem,bytes)
+    if not swig_xfer:
         return elem
     # elem = np.ascontiguousarray(elem)
     return vnlb.swig_ptr(elem)

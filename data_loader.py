@@ -49,7 +49,7 @@ def load_data_davis(small=True,nframes=5):
     if nframes > fmax: nframes = 5
 
     # -- read files using PIL --
-    burst = []
+    burst,paths = [],[]
     for i in range(nframes):
         fn = path / ("%05d.jpg" % i)
         print(fn)
@@ -58,6 +58,7 @@ def load_data_davis(small=True,nframes=5):
             sys.exit(1)
         frame = cv2.imread(str(fn),-1)
         frame = cv2.cvtColor(frame,cv2.COLOR_BGR2RGB)
+        paths.append(str(fn))
         burst.append(frame)
 
     # -- format --
@@ -65,7 +66,7 @@ def load_data_davis(small=True,nframes=5):
     burst = rearrange(burst,'t h w c -> t c h w')
     burst = np.ascontiguousarray(burst.copy())
     
-    return burst
+    return burst,paths
 
 def load_data_gmobile(nframes=5):
 
@@ -83,7 +84,7 @@ def load_data_gmobile(nframes=5):
     if nframes > 300: nframes = 300
 
     # -- read files using PIL --
-    burst = []
+    burst,paths = [],[]
     for i in range(nframes):
         fn = path / ("%03d.png" % i)
         if not fn.exists():
@@ -91,6 +92,7 @@ def load_data_gmobile(nframes=5):
             sys.exit(1)
         frame = cv2.imread(str(fn),-1)
         frame = cv2.cvtColor(frame,cv2.COLOR_BGR2RGB)
+        paths.append(str(fn))
         burst.append(frame)
 
     # -- format --
@@ -99,7 +101,7 @@ def load_data_gmobile(nframes=5):
     burst = np.ascontiguousarray(burst.copy())
     print("burst.shape: ",burst.shape)
     
-    return burst
+    return burst,paths
 
 def load_davis_pariasm_vnlb(nframes=5):
 

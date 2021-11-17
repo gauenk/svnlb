@@ -38,18 +38,28 @@ def relative_error(approx,gt):
     rel = np.abs(approx-gt)/(np.abs(gt)+eps)
     return np.mean(rel)
     
-def np_log(np_array):
+def np_log10(np_array):
     if type(np_array) is not np.ndarray:
         if type(np_array) is not list:
             np_array = [np_array]
         np_array = np.array(np_array)
-    return np.ma.log(np_array).filled(-np.infty)
+    return np.ma.log10(np_array).filled(-np.infty)
         
 def compute_psnrs(img1,img2):
+
+    # -- add batch dim
+    assert img1.ndim == img2.ndim,"same dims please."
+    if img1.ndim == 3:
+        img1 = img1[None,:]
+        img2 = img2[None,:]
+    B = img1.shape[0]
+
+    # -- compute psnr --
     eps=1e-16
     img1 = img1/255.
     img2 = img2/255.
-    mse = ((img1-img2)**2).mean() + eps
-    psnr = 10 * np_log(1./mse)[0]/np_log(10)[0]
-    return psnr
+    delta = (img1-img2)**2
+    mse = delta.reshape(B,-1).mean(axis=1) + eps
+    psnrs = 10 * np_log10(1./mse)
+    return psnrs
 

@@ -21,9 +21,21 @@ from file_io import save_images
 # 
 # ----------------------------------
 
+print("Be sure to run: export OMP_NUM_THREADS=4")
+
 # -- load c++ results --
-res_vnlb = load_dataset("davis_pariasm_vnlb")
+res_vnlb,paths = load_dataset("davis_pariasm_vnlb")
 clean,noisy,std = res_vnlb.clean,res_vnlb.noisy,res_vnlb.std
+
+# -- compate with cpp --
+from pathlib import Path
+print(paths['noisy'])
+print(Path(paths['noisy'][0]).parents[0])
+video_paths = Path(paths['noisy'][0]).parents[0] / "%03d.tif"
+delta = pyvnlb.testLoadVideo(noisy,video_paths,{'verbose':True})
+print("Delta: ",delta)
+delta = pyvnlb.testIIORead(noisy,video_paths,{'verbose':True})
+exit()
 
 # -- exec python --
 pyargs = {"nproc":0,"tau":0.25,"lambda":0.2,"theta":0.3,"nscales":100,
@@ -58,9 +70,10 @@ for field in fields:
 print(maxes)
 
 for field in fields:
+    print("\n\n\n\n")
+    print(f"Results for {field}")
     cppField = res_vnlb[field]
     pyField = res_pyvnlb[field]
-    print(cppField.shape,pyField.shape)
     psnrs = np.mean(pyvnlb.compute_psnrs(cppField,pyField,maxes[field]))
     rel = np.mean(np.abs(cppField - pyField)/(np.abs(cppField)+1e-10))
     print(f"[{field}] PSNR: %2.2f | RelError: %2.1e" % (psnrs,rel))

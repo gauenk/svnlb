@@ -9,7 +9,7 @@ import vnlb
 
 # from .ptr_utils import py2swig
 from .image_utils import est_sigma
-from .utils import optional,optional_swig_ptr,expand_flows
+from .utils import optional,optional_swig_ptr,expand_flows,ndarray_ctg_dtype,rgb2bw
 
 def set_optional_params(args,pyargs):
     # -- set optional numeric vals --
@@ -77,13 +77,7 @@ def parse_args(noisy,sigma,pyargs):
     t,c,h,w  = noisy.shape
 
     # -- format noisy image --
-    noisy = np.ascontiguousarray(noisy)
-    if dtype != np.float32:
-        if verbose:
-            print(f"Warning: converting burst image from {dtype} to np.float32.")
-        noisy = noisy.astype(np.float32)
-    if not noisy.data.contiguous:
-        noisy = np.ascontiguousarray(noisy)
+    noisy = ndarray_ctg_dtype(noisy,np.float32,verbose)
 
     # -- get sigma --
     sigma = optional(pyargs,'sigma',sigma)

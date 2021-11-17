@@ -141,17 +141,19 @@ def run_comparison():
     for field in fields:
         cppField = vnlb_res[field]
         pyField  = pyvnlb_res[field]
+        print(field,cppField.shape,pyField.shape)
         delta = np.abs(cppField - pyField)
         dmean = np.mean(delta)
-        psnr = compute_psnrs(cppField,pyField)
+        psnrs = compute_psnrs(cppField,pyField)
+        psnr = np.mean(psnrs)
         rel = relative_error(pyField,cppField)
         print("[%s]: %2.3f | %2.2f | %2.2e" % (field,dmean,psnr,rel))
         save_field(field,cppField,pyField)
         if field in ["denoised","basic"]:
             th_save_image(delta/255.,f"delta_{field}.png")
             th_save_image(clean/255.,"clean.png")
-            cpp_psnr = compute_psnrs(cppField,clean)
-            py_psnr = compute_psnrs(pyField,clean)
+            cpp_psnr = np.mean(compute_psnrs(cppField,clean))
+            py_psnr = np.mean(compute_psnrs(pyField,clean))
             print("\t[PSNRS]: Cpp: %2.2f Python: %2.2f" % (cpp_psnr,py_psnr))
 
 

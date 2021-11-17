@@ -49,14 +49,25 @@ void setTvFlowParams(const PyTvFlowParams& args, tvFlowParams& params){
   //read the parameters
   params.nproc = (args.nproc < 0) ? PAR_DEFAULT_NPROC : args.nproc;
   params.tau = (args.tau < 0) ? PAR_DEFAULT_TAU : args.tau;
-  params.lambda = (params.theta < 0) ? PAR_DEFAULT_LAMBDA : args.plambda;
-  params.theta = (params.theta < 0) ? PAR_DEFAULT_THETA : args.theta;
-  params.nscales = (params.nscales < 0) ? PAR_DEFAULT_NSCALES : args.nscales;
-  params.fscale = (params.fscale < 0) ? PAR_DEFAULT_FSCALE : args.fscale;
-  params.zfactor = (params.zfactor < 0) ? PAR_DEFAULT_ZFACTOR : args.zfactor;
-  params.nwarps = (params.nwarps < 0) ? PAR_DEFAULT_NWARPS : args.nwarps;
-  params.epsilon = (params.epsilon < 0) ? PAR_DEFAULT_EPSILON : args.epsilon;
-  params.verbose = (params.verbose < 0) ? PAR_DEFAULT_VERBOSE : args.verbose;
+  params.lambda = (args.plambda < 0) ? PAR_DEFAULT_LAMBDA : args.plambda;
+  params.theta = (args.theta < 0) ? PAR_DEFAULT_THETA : args.theta;
+  params.nscales = (args.nscales < 0) ? PAR_DEFAULT_NSCALES : args.nscales;
+  params.fscale = (args.fscale < 0) ? PAR_DEFAULT_FSCALE : args.fscale;
+  params.zfactor = (args.zfactor < 0) ? PAR_DEFAULT_ZFACTOR : args.zfactor;
+  params.nwarps = (args.nwarps < 0) ? PAR_DEFAULT_NWARPS : args.nwarps;
+  params.epsilon = (args.epsilon < 0) ? PAR_DEFAULT_EPSILON : args.epsilon;
+  params.verbose = (args.verbose < 0) ? PAR_DEFAULT_VERBOSE : args.verbose;
+
+  // nproc = 0;
+  // tau = 0.25;
+  // lambda = 0.2;
+  // theta = 0.3;
+  // nscales = 100;
+  // fscale = 1;
+  // zfactor = 0.5;
+  // nwarps = 5;
+  // epsilon = 0.01;
+  // verbose = 0;
 
   //check parameters
   if (params.nproc < 0) {

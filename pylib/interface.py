@@ -11,6 +11,7 @@ import vnlb
 from .utils import optional
 from .vnlb_param_parser import parse_args as parse_vnlb_args
 from .flow_param_parser import parse_args as parse_flow_args
+from .tests_param_parser import parse_args as parse_videoio_args
 
 # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 #
@@ -98,4 +99,50 @@ def runPyTvL1Flow_np(noisy,sigma,pyargs=None):
     else: res['flow'] = res['bflow']
 
     return res
+
+
+
+# -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+#
+# --     Test IO Precision     --
+#
+# -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+def loadVideoForVnlb(burst,video_paths,pyargs=None):
+    
+    # -- extract info --
+    t,c,h,w  = burst.shape
+    assert c in [1,3,4],"must have the color channel be 1, 3, or 4"
+    use_bw = optional(pyargs,'bw',False)
+    assert use_bw == False,"This test shouldn't convert color to bw."
+
+    # -- parse args --
+    args,sargs = parse_videoio_args(burst,video_paths,pyargs)
+
+    # -- exec function --
+    vnlb.testLoadVideo(sargs)
+
+    # -- result --
+    delta = args.delta
+
+    return delta
+
+def loadVideoForFlow(burst,video_paths,pyargs=None):
+    
+    # -- extract info --
+    t,c,h,w  = burst.shape
+    assert c in [1,3,4],"must have the color channel be 1, 3, or 4"
+    if pyargs is None: pyargs = {}
+    pyargs['bw'] = True
+
+    # -- parse args --
+    args,sargs = parse_videoio_args(burst,video_paths,pyargs)
+
+    # -- exec function --
+    vnlb.testIIORead(sargs)
+
+    # -- result --
+    delta = args.delta
+
+    return delta
 
