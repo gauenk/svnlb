@@ -4,34 +4,110 @@ Compare the Python API with the C++ Results
 """
 
 # -- python imports --
+import os
 import numpy as np
+import pandas as pd
 from einops import rearrange
 from easydict import EasyDict as edict
+from collections import defaultdict
 
 # -- this package --
 import vnlb.pylib as pyvnlb
 
 # -- local imports --
 from data_loader import load_dataset
-from file_io import save_images
 
+
+
+
+#
+#  ---------------- Compare Results ----------------
+#
+
+def run_comparison():
+
+    # -- run method using different image IOs when computing Optical Flow  --
+    res_vnlb,res_pyvnlb_cv2 = run_method("cv2")
+    res_vnlb,res_pyvnlb_iio = run_method("iio") # exactly matches C++ code
+    res_vnlb = {'cv2':res_vnlb,'iio':res_vnlb} # both the same
+    res_pyvnlb = {'cv2':res_pyvnlb_cv2,'iio':res_pyvnlb_iio}    
+    
+    # -- compare results --
+    results = defaultdict(dict)
+    for imageIO in ['cv2','iio']:
+        for field in ["denoised",'fflow','bflow',"basic"]:
+            cppField = res_vnlb[imageIO][field]
+            pyField = res_pyvnlb[imageIO][field]
+            totalError = np.sum(np.abs(cppField - pyField))
+            rkey = f"Total Error ({imageIO})"
+            results[field][rkey] = totalError
+    results = pd.DataFrame(results)
+    print(results)
+
+#
+# -- Comparison Code --
+#
+
+def run_method_tmp(ioForFlow):
+    zeros = np.zeros(10)
+    a = {"denoised":zeros,'fflow':zeros,'bflow':zeros,"basic":zeros}
+    b = {"denoised":zeros,'fflow':zeros,'bflow':zeros,"basic":zeros}
+    return a,b
+
+def run_method(ioForFlow):
+
+    #
+    #  ---------------- Setup Parameters ----------------
+    #
+    
+    omp_nthreads = int(os.getenv('OMP_NUM_THREADS'))
+    assert omp_nthreads == 4,"run `export OMP_NUM_THREADS=4`"
+    flow_params = {"nproc":0,"tau":0.25,"lambda":0.2,"theta":0.3,"nscales":100,
+                   "fscale":1,"zfactor":0.5,"nwarps":5,"epsilon":0.01,
+                   "verbose":False,"testing":False,'bw':False}
+    
+    #
+    #  ---------------- Read Data (Image & VNLB-C++ Results) ----------------
+    #
+    
+    res_vnlb,paths,fmts = load_dataset("davis_pariasm_vnlb")
+    clean,noisy,std = res_vnlb.clean,res_vnlb.noisy,res_vnlb.std
+    noisyForFlow = pyvnlb.readVideoForFlow(noisy.shape,fmts.noisy)
+    if ioForFlow == "cv2": noisyForFlow = noisy
+    
+    #
+    #  ---------------- TV-L1 Optical Flow ----------------
+    #
+    
+    fflow,bflow = pyvnlb.runPyFlow(noisyForFlow,std,flow_params)
+    
+    
+    #
+    #  ---------------- Video Non-Local Bayes ----------------
+    #
+    
+    vnlb_params = {'fflow':fflow,'bflow':bflow,'testing':True}
+    res_pyvnlb = pyvnlb.runPyVnlb(noisy,std,vnlb_params)
+    
+    return res_vnlb,res_pyvnlb
+
+run_comparison() # exec file
+
+
+"""
 # ----------------------------------
 # 
 #     Compare Results with C++
 # 
 # ----------------------------------
 
-print("Be sure to run: export OMP_NUM_THREADS=4")
-
 # -- load c++ results --
-res_vnlb,paths = load_dataset("davis_pariasm_vnlb")
-clean,noisy,std = res_vnlb.clean,res_vnlb.noisy,res_vnlb.std
 
 # -- compate with cpp --
 from pathlib import Path
 print(paths['noisy'])
 print(Path(paths['noisy'][0]).parents[0])
-video_paths = Path(paths['noisy'][0]).parents[0] / "%03d.tif"
+video_paths = fmts.noisy#Path(paths['noisy'][0]).parents[0] / "%03d.tif"
 noisyForVnlb = pyvnlb.readVideoForVnlb(noisy.shape,video_paths,{'verbose':False})
 print("Delta: ",np.sum(np.abs(noisy - noisyForVnlb)))
 noisy_bw = pyvnlb.rgb2bw(noisy)
@@ -92,3 +168,4 @@ for field in fields:
         print(f"Denoising PSNR [Py,{field}]: %2.3f" % psnrs)
         save_images(f"cpp_{field}.png",cppField)
         save_images(f"py_{field}.png",pyField)
+"""

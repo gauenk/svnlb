@@ -26,20 +26,21 @@ def read_vnlb_results(vnlb_path,fstart,nframes):
     results.bflow = read_result(vnlb_path,"tvl1_%03d_b.flo",fstart,nframes)
     results.basic = read_result(vnlb_path,"bsic_%03d.tif",fstart,nframes)
     results.denoised = read_result(vnlb_path,"deno_%03d.tif",fstart,nframes)
-    results.std = np.loadtxt(str(vnlb_path/"sigma.txt")).item(),"sigma.txt"
+    results.std = np.loadtxt(str(vnlb_path/"sigma.txt")).item(),"sigma.txt","sigma.txt"
 
     # -- reshape --
-    data,paths = edict(),edict()
+    data,paths,fmts = edict(),edict(),edict()
     for key in results.keys():
         # -- unpack --
         data[key] = results[key][0]
         paths[key] = results[key][1]
+        fmts[key] = results[key][2]
 
         # -- format data --
         if key == "std": continue
         data[key] = rearrange(data[key],'t h w c -> t c h w')
 
-    return data,paths
+    return data,paths,fmts
 
 def read_file(filename):
     if filename.suffix == ".flo":
@@ -50,15 +51,16 @@ def read_file(filename):
         return img
 
 def read_result(vnlb_path,fmt,fstart,nframes):
-    agg,paths = [],[]
+    tensors,paths = [],[]
     for t in range(fstart,fstart+nframes):
         path = vnlb_path / (fmt % t)
         if not path.exists(): return None
         data = read_file(path)
+        tensors.append(data)
         paths.append(str(path))
-        agg.append(data)
-    agg = np.stack(agg)
-    return agg,paths
+    tensors = np.stack(tensors)
+    fmt = str(vnlb_path / fmt)
+    return tensors,paths,fmt
 
 def read_flo_file(filename):
     """

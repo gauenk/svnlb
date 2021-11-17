@@ -39,6 +39,8 @@ def runVnlb_np(noisy,sigma,pyargs=None):
     res = {}
     res['final'] = args.final# t c h w 
     res['basic'] = args.basic
+    res['fflow'] = args.fflow #t c h w
+    res['bflow'] = args.bflow
 
     # -- alias some vars --
     res['denoised'] = res['final']
@@ -126,8 +128,11 @@ def readVideoForVnlb(shape,video_paths,pyargs=None):
 def readVideoForFlow(shape,video_paths,pyargs=None):
     
     # -- extract info --
-    t,c,h,w  = shape
-    assert c == 1,"bw input shapes please."
+    t,c,h,w = shape
+    if c != 1:
+        shape = list(shape)
+        shape[1] = 1
+    # assert c == 1,"bw input shapes please."
 
     # -- parse args --
     args,sargs = parse_videoio_args(shape,video_paths,pyargs)
