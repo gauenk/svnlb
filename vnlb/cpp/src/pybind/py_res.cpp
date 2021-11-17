@@ -189,33 +189,15 @@ void readVideoForVnlb(const ReadVideoParams& args) {
     fprintf(stdout,"first_frame: %d\n",args.first_frame);
     fprintf(stdout,"last_frame: %d\n",args.last_frame);
     fprintf(stdout,"frame_step: %d\n",args.frame_step);
-    fprintf(stdout,"(t,h,w): (%d,%d,%d)\n",args.t,args.h,args.w);
+    fprintf(stdout,"(t,c,h,w): (%d,%d,%d,%d)\n",args.t,args.c,args.h,args.w);
   }
   
   // init videos 
   Video<float> cppVideo,pyVideo;
   cppVideo.loadVideo(args.video_paths,args.first_frame,args.last_frame,args.frame_step);
-  cppPtr = cppVideo.data.data();
+  float* cppPtr = cppVideo.data.data();
   int size = cppVideo.sz.whcf;
   std::memcpy(args.read_video,cppPtr,size*sizeof(float));
-
-  // pyVideo.loadVideoFromPtr(args.test_video,args.w,args.h,args.c,args.t);
-  // // compute difference 
-  // float delta = 0;
-  // int size = cppVideo.sz.whcf;
-  // auto cppData = cppVideo.data;
-  // auto pyData = pyVideo.data;
-  // for (int i = 0; i < size; ++i){
-  //   float delta_i = (cppData[i]-pyData[i]);
-  //   delta += (delta_i * delta_i);
-  // }
-  // delta /= size;
-
-  // // print report 
-  // if (args.verbose){
-  //   fprintf(stdout,"[Cpp v. Python]: %2.2e\n",delta);
-  // }
-  // *args.delta = delta;
 
 }
 

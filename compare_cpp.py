@@ -32,16 +32,17 @@ from pathlib import Path
 print(paths['noisy'])
 print(Path(paths['noisy'][0]).parents[0])
 video_paths = Path(paths['noisy'][0]).parents[0] / "%03d.tif"
-delta = pyvnlb.testLoadVideo(noisy,video_paths,{'verbose':True})
-print("Delta: ",delta)
-delta = pyvnlb.testIIORead(noisy,video_paths,{'verbose':True})
-exit()
+noisyForVnlb = pyvnlb.readVideoForVnlb(noisy.shape,video_paths,{'verbose':False})
+print("Delta: ",np.sum(np.abs(noisy - noisyForVnlb)))
+noisy_bw = pyvnlb.rgb2bw(noisy)
+noisyForFlow = pyvnlb.readVideoForFlow(noisy_bw.shape,video_paths,{'verbose':False})
+print("Delta: ",np.sum(np.abs(noisy_bw - noisyForFlow)))
 
 # -- exec python --
 pyargs = {"nproc":0,"tau":0.25,"lambda":0.2,"theta":0.3,"nscales":100,
           "fscale":1,"zfactor":0.5,"nwarps":5,"epsilon":0.01,
-          "verbose":False,"testing":False,'bw':True}
-fflow,bflow = pyvnlb.runPyFlow(noisy,std,pyargs)
+          "verbose":False,"testing":False,'bw':False}
+fflow,bflow = pyvnlb.runPyFlow(noisyForFlow,std,pyargs)
 pyargs = {'fflow':fflow,'bflow':bflow,'testing':True}
 # pyargs = {'testing':True}
 # pyargs['fflow'] = np.ascontiguousarray(res_vnlb.fflow)

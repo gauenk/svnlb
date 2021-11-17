@@ -154,21 +154,17 @@ struct ReadVideoParams {
 ReadVideoParams() :
   // --> image details <--
   t(0),h(0),w(0),c(0),
-    test_video(nullptr),
     read_video(nullptr),
     video_paths(""),
     first_frame(0),
     last_frame(0),
     frame_step(1),
-    delta(nullptr),
     verbose(0) {}
   
   // -- image params --
   bool verbose;
-  float* delta;
   int t,h,w,c;
   int first_frame,last_frame,frame_step;
-  const float* test_video;
   float* read_video;
   const char* video_paths;
 };
@@ -177,6 +173,6 @@ ReadVideoParams() :
 void runVnlb(const PyVnlbParams& args);
 void runTV1Flow(const PyTvFlowParams& args);
 /* void testLoadVideo(const ReadVideoParams& args); */
-void testIIORead(const ReadVideoParams& args);
-void readVideoIIO(const ReadVideoParams& args);
-void loadVideo(const ReadVideoParams& args);
+/* void testIIORead(const ReadVideoParams& args); */
+void readVideoForVnlb(const ReadVideoParams& args);
+void readVideoForFlow(const ReadVideoParams& args);
