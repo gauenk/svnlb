@@ -1,8 +1,8 @@
 import cv2
-import torch
+import vnlb
 import numpy as np
 from einops import rearrange
-import vnlb
+
 
 def ndarray_ctg_dtype(ndarray,dtype,verbose):
     in_dtype = ndarray.dtype

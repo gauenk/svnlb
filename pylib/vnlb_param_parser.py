@@ -1,5 +1,4 @@
 
-import torch
 import numpy as np
 from einops import rearrange
 from easydict import EasyDict as edict

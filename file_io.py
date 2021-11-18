@@ -6,10 +6,6 @@ from pathlib import Path
 from einops import rearrange
 from easydict import EasyDict as edict
 
-# -- pytorch imports --
-import torch
-import torchvision.utils as tvUtils
-
 
 # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 #  
@@ -102,6 +98,16 @@ def format_vnlb_results(results):
         fmts[key] = results[key][2]
     return data,paths,fmts
 
+def merge_images(image_batch, size):
+    h,w = image_batch.shape[1], image_batch.shape[2]
+    c = image_batch.shape[3]
+    img = np.zeros((int(h*size[0]), w*size[1], c))
+    for idx, im in enumerate(image_batch):
+        i,j = idx % size[1],idx // size[1]
+        img[j*h:j*h+h, i*w:i*w+w,:] = im
+    img = img.astype(image_batch.dtype)
+    return img
+
 def save_images(tensor,fn,imax=255.):
     # -- swap string and tensor --
     if isinstance(tensor,str):
@@ -109,7 +115,19 @@ def save_images(tensor,fn,imax=255.):
         tensor = fn
         fn = tmp
 
-    # -- save torch image --
-    tensor = torch.FloatTensor(tensor.copy())/imax
-    tvUtils.save_image(tensor,fn)
+    # -- squash image values --
+    nframes = len(tensor)
+    tensor = tensor.astype(np.float32) / imax 
+    tensor = np.clip(255.*tensor,0,255)
+    tensor = np.uint8(tensor)
+
+    # -- arange --
+    tensor = rearrange(tensor,'t c h w -> t h w c')
+    save_img = merge_images(tensor, (1,nframes))
+
+    # -- format for cv2 --
+    if save_img.shape[-1] == 3:
+        save_img = cv2.cvtColor(save_img,cv2.COLOR_RGB2BGR)
+    cv2.imwrite(str(fn),save_img)
+
 

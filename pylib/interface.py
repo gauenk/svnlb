@@ -1,6 +1,5 @@
 
 # -- python imports --
-import torch
 import numpy
 from einops import rearrange
 
@@ -20,8 +19,6 @@ from .videoio_param_parser import parse_args as parse_videoio_args
 # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 def runPyVnlb(noisy,sigma,pyargs=None):
-    if torch.is_tensor(noisy):
-        noisy = noisy.cpu().numpy()
     res = runVnlb_np(noisy,sigma,pyargs)
     return res
 
@@ -96,8 +93,6 @@ def runPyFlowFB(noisy,sigma,pyargs=None):
     return fflow,bflow
 
 def runPyTvL1Flow(noisy,sigma,pyargs=None):
-    if torch.is_tensor(noisy):
-        noisy = noisy.cpu().numpy()
     res = runPyTvL1Flow_np(noisy,sigma,pyargs)
     return res
 

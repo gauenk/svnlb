@@ -6,7 +6,6 @@ from pathlib import Path
 import vnlb.pylib as pyvnlb
 from data_loader import load_dataset
 from file_io import save_images
-from timer_cm import Timer
 
 # -- get data --
 clean = load_dataset("davis_64x64",vnlb=False)[0]['clean']
@@ -32,7 +31,7 @@ noisy_psnrs = pyvnlb.compute_psnrs(clean,noisy)
 # -- report outputs --
 # 
 
-print_report = False
+print_report = True
 if print_report:
 
     # -- print psnrs --
