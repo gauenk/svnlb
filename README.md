@@ -69,7 +69,7 @@ The script prints the below table. Each element of the table is the sum of the a
 | Total Error (cpp) |    0           |              0 |   0     |   0     |       0 |          0 |
 
 
-Details can be found in [COMPARE.md](https://github.com/gauenk/pyvnlb/blob/master/COMPARE.md)
+Details can be found in [docs/COMPARE.md](https://github.com/gauenk/pyvnlb/blob/master/docs/COMPARE.md)
 
 Dependencies
 --------
