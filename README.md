@@ -68,8 +68,7 @@ Dependencies
 --------
 
 The code depends on the following packages:
-* [CBLAS](http://www.netlib.org/blas/#_cblas),
-* [LAPACKE](https://www.netlib.org/lapack/lapacke.html): operations with matrices
+* [CBLAS](http://www.netlib.org/blas/#_cblas), [LAPACKE](https://www.netlib.org/lapack/lapacke.html): operations with matrices
 * OpenMP: parallelization [optional, but recommended]
 * libpng, libtiff and libjpeg: image i/o
 
