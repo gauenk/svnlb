@@ -8,7 +8,7 @@ import vnlb
 
 # -- local imports --
 from ..utils import optional
-from .param_parser import parse_args
+from .parser import parse_args
 
 # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 #
