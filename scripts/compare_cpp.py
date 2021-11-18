@@ -54,7 +54,8 @@ def run_method(vnlb_dataset,ioForFlow):
     
     omp_nthreads = os.getenv('OMP_NUM_THREADS')
     omp_nthreads = 0 if omp_nthreads is None else int(omp_nthreads)
-    assert omp_nthreads == 4,"run `export OMP_NUM_THREADS=4`"
+    if omp_nthreads != 4:
+        print("Please run `export OMP_NUM_THREADS=4` before running this file.")
     flow_params = {"nproc":0,"tau":0.25,"lambda":0.2,"theta":0.3,"nscales":100,
                    "fscale":1,"zfactor":0.5,"nwarps":5,"epsilon":0.01,
                    "verbose":False,"testing":False,'bw':False}
