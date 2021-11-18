@@ -1,7 +1,9 @@
 #!/bin/bash
 
+
 mkdir -p data/davis_baseball_64x64/
 cd data/davis_baseball_64x64/
+echo "Fetching data..."
 echo "clean images."
 wget -q https://github.com/gauenk/files/raw/master/pyvnlb/davis_baseball_64x64/00000.jpg
 wget -q https://github.com/gauenk/files/raw/master/pyvnlb/davis_baseball_64x64/00001.jpg

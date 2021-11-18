@@ -2,7 +2,7 @@
 
 mkdir -p data/davis_baseball/
 cd data/davis_baseball/
-echo "Fetching..."
+echo "Fetching data..."
 echo "clean images."
 wget -q https://github.com/gauenk/files/raw/master/pyvnlb/davis_baseball/00000.jpg
 wget -q https://github.com/gauenk/files/raw/master/pyvnlb/davis_baseball/00001.jpg
