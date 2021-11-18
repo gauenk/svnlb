@@ -3,6 +3,6 @@
 cmake -B build
 make -C build -j swigvnlb
 cd ./build/vnlb/python
-pip install . --user
+python -m pip install . --user
 cd ../../../
 
