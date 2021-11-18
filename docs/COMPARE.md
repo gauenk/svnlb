@@ -6,7 +6,7 @@ This code is a Python API for Video Non-Local Bayesian Denoising ([C++ code orig
 Numerical Comparison
 ---
 
-To demonstrate this claim, we provide the `compare_cpp.py` script. We have two examples from the [C++ Code](https://github.com/pariasm/vnlb) provided in the `data/` folder. For reproducibility, details to re-create the C++ Code results are included in the [VNLB.md](https://github.com/gauenk/pyvnlb/blob/master/VNLB.md) file. To run the comparison with the provided C++ outputs, type:
+To demonstrate this claim, we provide the `compare_cpp.py` script. We have two examples from the [C++ Code](https://github.com/pariasm/vnlb) provided in the `data/` folder. For reproducibility, details to re-create the C++ Code results are included in the [docs/VNLB.md](https://github.com/gauenk/pyvnlb/blob/master/docs/VNLB.md) file. To run the comparison with the provided C++ outputs, type:
 
 ```
 $ export OMP_NUM_THREADS=4
@@ -39,7 +39,7 @@ noisyForFlow -> (fflow, bflow)
 
 In the above table, the two rows identify two methods used to read image data. The first row uses opencv (`cv2`) and the second row uses the original, wrapped C++ functions (`cpp`). Images for optical flow (`noisyForFlow`) are read with the [iio library](https://github.com/pariasm/vnlb/tree/master/lib/iio). Images for the VNLB method (`noisyForVnlb`) are read with the [VidUtils library](https://github.com/pariasm/vnlb/tree/master/src/VidUtils). 
 
-For optical flow, images read with opencv are slightly different from the images read using the C++ function, as indicated by the 0.087 under the `noisyForFlow` column. This yields a small change in the the optical flow outputs (`fflow` and `bflow`). However, this small change in optical flow yields no difference in the final denoising results (`basic` and `denoising`). 
+For optical flow, images read with opencv are slightly different from the images read using the C++ function, as indicated by the 0.0005 under the `noisyForFlow` column. This yields a change in the the optical flow outputs (`fflow` and `bflow`). However, this small change in optical flow yields no difference in the final denoising results (`basic` and `denoising`). 
 
 For the VNLB method, images read with opencv are exactly equal the images read using the C++ function, as indicated by the 0 in the `noisyForVnlb` column.
 
