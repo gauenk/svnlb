@@ -17,7 +17,6 @@ import glob
 shutil.rmtree("vnlb", ignore_errors=True)
 os.mkdir("vnlb")
 shutil.copytree("pylib", "vnlb/pylib")
-shutil.copytree("benchmarks", "vnlb/benchmarks")
 shutil.copyfile("__init__.py", "vnlb/__init__.py")
 shutil.copyfile("loader.py", "vnlb/loader.py")
 
@@ -56,7 +55,7 @@ setup(
     license='MIT',
     keywords='video non-local bayes',
     install_requires=['numpy'],
-    packages=['vnlb', 'vnlb.pylib', 'vnlb.benchmarks'],
+    packages=['vnlb', 'vnlb.pylib'],
     package_data={
         'vnlb': ['*.so', '*.pyd'],
     },
