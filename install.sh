@@ -6,3 +6,4 @@ cd ./build/vnlb/python
 python -m pip install . --user
 cd ../../../
 export OMP_NUM_THREADS=4
+echo "Be sure OMP_NUM_THREADS=4 so this program executes quickly."

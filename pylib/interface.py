@@ -44,7 +44,7 @@ def runVnlb_np(noisy,sigma,pyargs=None):
 
     return res
 
-def runVnlbTimed(noisy,sigma,pyargs=None):
+def runPyVnlbTimed(noisy,sigma,pyargs=None):
     
     # -- extract info --
     t,c,h,w  = noisy.shape
