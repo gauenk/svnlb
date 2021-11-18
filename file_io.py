@@ -79,6 +79,15 @@ def get_dataset_info(name):
         print(menu)
         raise ValueError(f"Uknown dataset name {name}")
 
+def print_davis_message():
+    if not path.exists():
+        print("Please run the following commands")
+        print("mkdir data/davis_baseball/")
+        print("cd data/davis_baseball/")
+        print("wget http://dev.ipol.im/~pariasm/video_nlbayes/videos/gmobile.avi")
+        print("ffmpeg -i gmobile.avi -f image2 %03d.png")
+        sys.exit(1)
+
 def print_gmobile_message():
     if not path.exists():
         print("Please run the following commands")
