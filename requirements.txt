@@ -1,0 +1,10 @@
+easydict==1.9
+einops==0.3.0
+numpy==1.17.4
+opencv_python==4.5.3.56
+pandas==1.1.1
+Pillow==8.4.0
+setuptools==45.2.0
+timer_cm==1.1
+torch==1.10.0
+torchvision==0.11.1
