@@ -171,6 +171,7 @@ ReadVideoParams() :
 
 
 void runVnlb(const PyVnlbParams& args);
+void runVnlbTimed(const PyVnlbParams& args);
 void runTV1Flow(const PyTvFlowParams& args);
 /* void testLoadVideo(const ReadVideoParams& args); */
 /* void testIIORead(const ReadVideoParams& args); */

@@ -1,7 +1,7 @@
 Comparing with C++ Code
 ---
 
-This code is a Python API for Video Non-Local Bayesian Denoising ([C++ code originally from Pablo Arias](https://github.com/pariasm/vnlb)). The numerical outputs from the Python API and the C++ Code are exactly equal. The runtime for both sets of code is ...
+This code is a Python API for Video Non-Local Bayesian Denoising ([C++ code originally from Pablo Arias](https://github.com/pariasm/vnlb)). The numerical outputs from the Python API and the C++ Code are exactly equal. The Python code takes about 3 seconds longer than the C++ Code to execute.
 
 Numerical Comparison
 ---
@@ -54,12 +54,32 @@ To time the algorithms, one can execute both methods within a `time` bracket.
 ```
 $ cd vnlb/build/bin/
 $ time `./vnlb-gt.sh $PYVNLB_HOME/data/davis_baseball_64x64/%05d.jpg 0 4 20 $PYVNLB_HOME/data/davis_baseball_64x64/vnlb/ "-px1 7 -pt1 2 -px2 7 -pt2 2 -verbose"`
+
+#davis_64x64
+real	0m5.917s
+user	0m30.099s
+sys	0m7.698s
+
+#davis
+real	2m25.276s
+user	12m25.894s
+sys	3m5.471s
 ```
 
 ```
 $ cd pyvnlb/
 $ rm -r ./__pycache__
 $ time `python ./example.py`
+
+#davis_64x64 
+real	0m8.867s
+user	0m41.212s
+sys	0m10.648s
+
+#davis
+real	2m28.202s
+user	12m18.676s
+sys	3m10.941s
 ```
 
-On my computer, the results are ..
+The original C++ Code performance is 5.917 seconds versus our Python API's performance of 8.867 seconds. This increase in time is from an increase in execution time within the C++ routines themselves, rather than the Python wrapper. See the `example.py` and the `runVnlbTimed` function for more information.
