@@ -61,15 +61,19 @@ def read_flo_file(filename):
 
 # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 #  
-#             Misc
+#       Wiring: Data <-> Paths
 #
 # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 def get_dataset_info(name):
     if name == "davis_64x64":
-        return Path("data/davis_baseball_64x64/"),5,"%05d.jpg"
+        path = Path("data/davis_baseball_64x64/")
+        print_davis_64x64_message(path)
+        return path,5,"%05d.jpg"
     elif name == "davis":
-        return Path("data/davis_baseball/"),10,"%05d.jpg"
+        path = Path("data/davis_baseball/")
+        print_davis_message(path)
+        return path,10,"%05d.jpg"
     elif name == "gmobile":
         path = Path("data/gmobile/")
         print_gmobile_message(path)
@@ -79,23 +83,34 @@ def get_dataset_info(name):
         print(menu)
         raise ValueError(f"Uknown dataset name {name}")
 
-def print_davis_message():
+def print_davis_64x64_message(path):
     if not path.exists():
         print("Please run the following commands")
-        print("mkdir data/davis_baseball/")
-        print("cd data/davis_baseball/")
-        print("wget http://dev.ipol.im/~pariasm/video_nlbayes/videos/gmobile.avi")
-        print("ffmpeg -i gmobile.avi -f image2 %03d.png")
+        print("./scripts/download_davis_64x64.sh")
+        sys.exit(1)
+
+def print_davis_message(path):
+    if not path.exists():
+        print("Please run the following commands")
+        print("./scripts/download_davis.sh")
         sys.exit(1)
 
 def print_gmobile_message():
     if not path.exists():
         print("Please run the following commands")
+        print("./scripts/download_gmobile.sh")
+        print("Or run the following commands")
         print("mkdir data/gmobile/")
         print("cd data/gmobile/")
         print("wget http://dev.ipol.im/~pariasm/video_nlbayes/videos/gmobile.avi")
         print("ffmpeg -i gmobile.avi -f image2 %03d.png")
         sys.exit(1)
+
+# -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+#  
+#             Misc
+#
+# -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 def format_vnlb_results(results):
     # -- reshape --
