@@ -217,6 +217,7 @@ unsigned processNLBayes(
 	Video<float> const& bflow,
 	Video<float> &imBasic,
 	Video<float> &imFinal,
+	bool& interrupt,
 	nlbParams const& params,
 	VideoUtils::TilePosition crop = VideoUtils::TilePosition(),
 	Video<float> const &imClean = Video<float>());

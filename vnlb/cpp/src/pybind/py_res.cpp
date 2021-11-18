@@ -63,6 +63,14 @@ void runVnlb(const PyVnlbParams& args) {
   groupsRatio = VideoNLB::runNLBayesThreads(noisy, fflow, bflow, basic, final,
   					    params1, params2, oracle);
 
+  end = std::chrono::system_clock::now();
+  std::chrono::duration<double> elapsed_seconds = end - start;
+  std::time_t end_time = std::chrono::system_clock::to_time_t(end);
+  
+  std::cout << "finished computation at " << std::ctime(&end_time)
+  	    << "elapsed time: " << elapsed_seconds.count() << "s\n";
+
+
   if (args.testing){
     basic.saveVideoToPtr(const_cast<float*>(args.basic));
   }
@@ -72,16 +80,9 @@ void runVnlb(const PyVnlbParams& args) {
 
   params1.sizePatch = 0;
   params2.sizePatch = tmp;
-  // noisy.loadVideoFromPtr(args.noisy,w,h,c,t);
+  noisy.loadVideoFromPtr(args.noisy,w,h,c,t);
   groupsRatio = VideoNLB::runNLBayesThreads(noisy, fflow, bflow, basic, final,
   					    params1, params2, oracle);
-
-  end = std::chrono::system_clock::now();
-  std::chrono::duration<double> elapsed_seconds = end - start;
-  std::time_t end_time = std::chrono::system_clock::to_time_t(end);
-  
-  std::cout << "finished computation at " << std::ctime(&end_time)
-	    << "elapsed time: " << elapsed_seconds.count() << "s\n";
 
   if (args.verbose)
     printf("Done. Processed %5.2f%% of possible patch groups in 1st step, and\n"

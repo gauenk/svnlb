@@ -52,7 +52,8 @@ def run_method(vnlb_dataset,ioForFlow):
     #  ---------------- Setup Parameters ----------------
     #
     
-    omp_nthreads = int(os.getenv('OMP_NUM_THREADS'))
+    omp_nthreads = os.getenv('OMP_NUM_THREADS')
+    omp_nthreads = 0 if omp_nthreads is None else int(omp_nthreads)
     assert omp_nthreads == 4,"run `export OMP_NUM_THREADS=4`"
     flow_params = {"nproc":0,"tau":0.25,"lambda":0.2,"theta":0.3,"nscales":100,
                    "fscale":1,"zfactor":0.5,"nwarps":5,"epsilon":0.01,
@@ -102,12 +103,12 @@ def run_method(vnlb_dataset,ioForFlow):
 if __name__ == "__main__":
 
     # -- dataset example 1 --
-    # vnlb_dataset = "davis_64x64"
-    # run_comparison(vnlb_dataset)
+    vnlb_dataset = "davis_64x64"
+    run_comparison(vnlb_dataset)
 
     # -- dataset example 2 --
-    vnlb_dataset = "davis"
-    run_comparison(vnlb_dataset)
+    # vnlb_dataset = "davis"
+    # run_comparison(vnlb_dataset)
 
     # -- dataset example 3 --
     # vnlb_dataset = "gmobil"

@@ -9,28 +9,24 @@ from file_io import save_images
 from timer_cm import Timer
 
 # -- get data --
-with Timer("load data"):
-    clean = load_dataset("davis_64x64",vnlb=False)[0]['clean']
+clean = load_dataset("davis_64x64",vnlb=False)[0]['clean']
 
 # -- add noise --
 std = 20.
 noisy = np.random.normal(clean,scale=std)
 
 # -- TV-L1 Optical Flow --
-with Timer("optical flow"):
-    fflow,bflow = pyvnlb.runPyFlow(noisy,std)
+fflow,bflow = pyvnlb.runPyFlow(noisy,std)
 
 # -- Video Non-Local Bayes --
-with Timer("vnlb"):
-    result = pyvnlb.runPyVnlb(noisy,std,{'fflow':fflow,'bflow':bflow})
-    denoised = result['denoised']
+result = pyvnlb.runPyVnlb(noisy,std,{'fflow':fflow,'bflow':bflow})
+denoised = result['denoised']
 
-with Timer("psnr"):
-    # -- compute denoising quality --
-    psnrs = pyvnlb.compute_psnrs(clean,denoised)
+# -- compute denoising quality --
+psnrs = pyvnlb.compute_psnrs(clean,denoised)
 
-    # -- compare with original  --
-    noisy_psnrs = pyvnlb.compute_psnrs(clean,noisy)
+# -- compare with original  --
+noisy_psnrs = pyvnlb.compute_psnrs(clean,noisy)
 
 print_report = False
 if print_report:
