@@ -7,7 +7,7 @@
 set(VNLB_SRC
   cpp/lib/io.cpp
   cpp/lib/iio/iio.c
-  cpp/lib/tvl1flow/tvl1flow_lib.cpp
+  cpp/lib/tvl1flow/tvl1flow_lib.c
   cpp/lib/tvl1flow/xmalloc.c
   cpp/src/pybind/py_res.cpp
   cpp/src/pybind/py_params.cpp

@@ -16,9 +16,9 @@
 #include <vnlb/cpp/src/pybind/py_res.h>
 #include <vnlb/cpp/src/pybind/py_params.h>
 #include <vnlb/cpp/src/VNLBayes/VideoNLBayes.hpp>
-#include <vnlb/cpp/lib/tvl1flow/tvl1flow_lib.h>
 
 extern "C" {
+#include <vnlb/cpp/lib/tvl1flow/tvl1flow_lib.h>
 #include <vnlb/cpp/lib/iio/iio.h>
 }
 
@@ -68,7 +68,7 @@ void runVnlb(const PyVnlbParams& args) {
   // -- 2nd step --
   params1.sizePatch = 0;
   params2.sizePatch = tmp;
-  // re-load noisy image, see git issue #8 in pariasm/vnlb
+  // re-load noisy image, see git issue #9 in pariasm/vnlb
   noisy.loadVideoFromPtr(args.noisy,w,h,c,t); 
   groupsRatio = VideoNLB::runNLBayesThreads(noisy, fflow, bflow, basic, final,
   					    params1, params2, oracle);
@@ -136,8 +136,8 @@ void runVnlbTimed(const PyVnlbParams& args) {
 
   params1.sizePatch = 0;
   params2.sizePatch = tmp;
+  // re-load noisy image, see git issue #9 in pariasm/vnlb
   noisy.loadVideoFromPtr(args.noisy,w,h,c,t);
-
   start = std::chrono::system_clock::now();
   groupsRatio = VideoNLB::runNLBayesThreads(noisy, fflow, bflow, basic, final,
   					    params1, params2, oracle);

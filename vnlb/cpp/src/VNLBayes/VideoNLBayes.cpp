@@ -50,17 +50,6 @@
 #define ANSI_BWHT "\x1b[37;01m"
 #define ANSI_RST  "\x1b[0m"
 
-void plain_print_char(Video<char> const& imVid){
-  const VideoSize sz = imVid.sz;
-  FILE* fp;
-  fp = fopen("plain_print_char.txt","w");
-  char* data = const_cast<char*>(&(imVid.data[0]));
-  for (int i = 0; i < sz.whcf; ++i){
-    fprintf(fp,"%d\n",*(data+i));
-  }
-  fclose(fp);
-}
-
 
 namespace VideoNLB
 {
@@ -609,8 +598,6 @@ unsigned processNLBayes(
 				computeAggregation(step1 ? imBasic : imFinal, weight, mask, groupNoisy,
 						indices, params, nSimP);
 		}
-
-	plain_print_char(mask);
 
 	// Weighted aggregation
 	computeWeightedAggregation(imNoisy, step1 ? imBasic : imFinal, weight);

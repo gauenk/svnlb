@@ -28,6 +28,10 @@ psnrs = pyvnlb.compute_psnrs(clean,denoised)
 # -- compare with original  --
 noisy_psnrs = pyvnlb.compute_psnrs(clean,noisy)
 
+#
+# -- report outputs --
+# 
+
 print_report = False
 if print_report:
 
@@ -46,3 +50,15 @@ if print_report:
     save_images(denoised,output/"denoised.png",imax=255.)
     save_images(pyvnlb.flow2burst(fflow),"output/fflow.png")
     save_images(pyvnlb.flow2burst(bflow),"output/bflow.png")
+
+#
+# -- show vnlb's timing --
+#
+
+show_cpp_timing = False
+if show_cpp_timing:
+    print("The decrease in speed seems to be due to slower C++ functions.")
+    pyvnlb.runVnlbTimed(noisy,std,{'fflow':fflow,'bflow':bflow})
+    msg = "In the original C++ Code, the elapsed time "
+    msg += "is ~2.5 and ~3.1 seconds, respectively."
+    print(msg)

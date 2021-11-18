@@ -3,7 +3,6 @@
 import torch
 import numpy
 from einops import rearrange
-from timer_cm import Timer
 
 # -- vnlb imports --
 import vnlb
@@ -84,17 +83,15 @@ def runPyFlowFB(noisy,sigma,pyargs=None):
     # -- extract info --
     t,c,h,w = noisy.shape
     assert c in [1,3,4],"must have the color channel be 1, 3, or 4"
-    with Timer("parse args"):
-        args,sargs = parse_flow_args(noisy,sigma,pyargs)
+    args,sargs = parse_flow_args(noisy,sigma,pyargs)
 
     # -- exec using numpy --
-    with Timer("c++ code"):
-        sargs.direction = 0
-        fflow = args.fflow
-        vnlb.runTV1Flow(sargs)
-        sargs.direction = 1
-        vnlb.runTV1Flow(sargs)
-        bflow = args.bflow
+    sargs.direction = 0
+    fflow = args.fflow
+    vnlb.runTV1Flow(sargs)
+    sargs.direction = 1
+    vnlb.runTV1Flow(sargs)
+    bflow = args.bflow
     
     return fflow,bflow
 
