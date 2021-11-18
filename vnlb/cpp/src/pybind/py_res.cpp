@@ -5,6 +5,9 @@
 #include <stdlib.h>
 #include <fstream>
 
+#include <chrono>
+#include <ctime>
+
 #include <string>
 #include <sstream>
 #include <float.h>
@@ -150,6 +153,9 @@ void runTV1Flow(const PyTvFlowParams& args) {
     float *u = flow + _t*(h*w*2);
     float *v = u + h*w;
 
+    std::chrono::time_point<std::chrono::system_clock> start, end;
+    start = std::chrono::system_clock::now();
+
     //compute the optical flow
     Dual_TVL1_optic_flow_multiscale(image1, image2, u, v,
 				    w, h, params.tau,
@@ -158,14 +164,12 @@ void runTV1Flow(const PyTvFlowParams& args) {
 				    params.zfactor, params.nwarps,
 				    params.epsilon, params.verbose);
 
-    //save the optical flow
-    // ostringstream temp;
-    // temp << (_t+1);
-    // auto str = temp.str();
-    // auto result = name + str + ending;
-    // strcpy(outfile,result.c_str());
-    
-    // iio_save_image_float_split(outfile, u, w, h, 2);
+    end = std::chrono::system_clock::now();
+    std::chrono::duration<double> elapsed_seconds = end - start;
+    std::time_t end_time = std::chrono::system_clock::to_time_t(end);
+  
+    std::cout << "finished computation at " << std::ctime(&end_time)
+	      << "elapsed time: " << elapsed_seconds.count() << "s\n";
 
   }
 

@@ -10,7 +10,7 @@ def ndarray_ctg_dtype(ndarray,dtype,verbose):
         if verbose:
             print(f"Warning: converting burst image from {in_dtype} to {dtype}.")
         ndarray = ndarray.astype(np.float32)
-    ndarray = np.ascontiguousarray(ndarray.copy())
+    # ndarray = np.ascontiguousarray(ndarray.copy())
     return ndarray
 
 def rgb2bw(burst):
@@ -18,12 +18,12 @@ def rgb2bw(burst):
     burst_bw = []
     for t in range(burst.shape[0]):
         frame = burst[t]
-        frame = np.ascontiguousarray(rearrange(frame,'c h w -> h w c')).copy()
+        frame = rearrange(frame,'c h w -> h w c')
         # frame = .299 * frame[...,0] + .587 * frame[...,1] + .114 * frame[...,2]
         frame = cv2.cvtColor(frame,cv2.COLOR_RGB2GRAY)
         frame = rearrange(frame,'h w -> 1 h w')
         burst_bw.append(frame)
-    burst_bw = np.stack(burst_bw).copy()
+    burst_bw = np.stack(burst_bw)
     return burst_bw
 
 def compute_psnrs(img1,img2,imax=255.):

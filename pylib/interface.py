@@ -3,6 +3,7 @@
 import torch
 import numpy
 from einops import rearrange
+from timer_cm import Timer
 
 # -- vnlb imports --
 import vnlb
@@ -18,6 +19,12 @@ from .videoio_param_parser import parse_args as parse_videoio_args
 # --      Exec VNLB Denoiser --
 #
 # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+def init_python_swig():
+    # run some py-swig function to run init compile 
+    sample = numpy.random.rand(2,3,16,16)
+    runPyVnlb(sample,20.)
+    runPyFlow(sample,20.)
 
 def runPyVnlb(noisy,sigma,pyargs=None):
     if torch.is_tensor(noisy):
@@ -57,19 +64,22 @@ def runPyFlow(noisy,sigma,pyargs=None):
     return runPyFlowFB(noisy,sigma,pyargs)
 
 def runPyFlowFB(noisy,sigma,pyargs=None):
-    if pyargs is None: pyargs = {}
 
-    # -- exec --
-    pyargs['direction'] = 0
-    resFwd = runPyTvL1Flow(noisy,sigma,pyargs)
-    pyargs['direction'] = 1
-    resBwd = runPyTvL1Flow(noisy,sigma,pyargs)
+    # -- extract info --
+    t,c,h,w = noisy.shape
+    assert c in [1,3,4],"must have the color channel be 1, 3, or 4"
+    with Timer("parse args"):
+        args,sargs = parse_flow_args(noisy,sigma,pyargs)
 
-    # -- format --
-    fflow,bflow = resFwd['fflow'],resBwd['bflow']
-    fflow = numpy.ascontiguousarray(fflow.copy())
-    bflow = numpy.ascontiguousarray(bflow.copy())
-
+    # -- exec using numpy --
+    with Timer("c++ code"):
+        sargs.direction = 0
+        fflow = args.fflow
+        vnlb.runTV1Flow(sargs)
+        sargs.direction = 1
+        vnlb.runTV1Flow(sargs)
+        bflow = args.bflow
+    
     return fflow,bflow
 
 def runPyTvL1Flow(noisy,sigma,pyargs=None):

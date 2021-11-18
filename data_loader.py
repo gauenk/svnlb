@@ -14,19 +14,24 @@ from file_io import get_dataset_info,read_result,format_vnlb_results
 #
 # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-def load_dataset(name,fstart=0,nframes=5):
+def load_dataset(name,fstart=0,nframes=5,vnlb=True):
     path,fmax,fmt = get_dataset_info(name)
-    return load_data(path,fmax,fmt,fstart,nframes)
+    return load_data(path,fmax,fmt,fstart,nframes,vnlb)
 
-def load_data(path,fmax,fmt,fstart,nframes):
+def load_data(path,fmax,fmt,fstart,nframes,vnlb):
 
     # -- check if path exists --
     if not path.exists():
         print("Please download the davis baseball file from the git repo.")
 
-    # -- read files using PIL --
+    # -- read images using opencv --
     clean,cpaths,cfmt = read_result(path,fmt,fstart,nframes)
-    data,paths,fmts = load_vnlb_results(path,fstart,nframes)
+
+    # -- read vnlb output files --
+    if vnlb:
+        data,paths,fmts = load_vnlb_results(path,fstart,nframes)
+    else:
+        data,paths,fmts = {},{},{}
 
     # -- combine results --
     data['clean'] = clean
