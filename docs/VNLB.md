@@ -1,24 +1,23 @@
 VNLB
 ---
 
-This file describes how to create the output files to compate the C++ Code with this Python API. In this mini-tutorial, the Python API repo is called `pyvnlb` and the original C++ code is called `vnlb`.
-
-First, the original C++ code must be installed separately [from this link](https://github.com/pariasm/vnlb). 
+This file describes how to create the output files to compate the C++ Code with this Python API. First, the original C++ code must be installed separately [from this link](https://github.com/pariasm/vnlb). 
 
 ```
 $ git clone https://github.com/pariasm/vnlb
 $ mkdir build; cd build
 $ cmake ..
 $ make
+$ cd ..
 ```
 
 Next we show how to use this code to create the ground-truth images. We first move to the directory with the executable files,
 
 ```
-$ cd vnlb/build/bin/
+$ cd ./build/bin/
 ```
 
-Then we run the C++ Code. This particular execution uses frames from 0 to (and including) 4 for a total of 5 frames. The noise level is 20. 
+Then we run the C++ Code. This particular execution uses frames from 0 to 4 for a total of 5 frames. The noise level is 20. 
 
 ```
 $ export OMP_NUM_THREADS=4
