@@ -1,12 +1,14 @@
 #!/bin/bash
 
-mkdir data/davis_baseball/
+mkdir -p data/davis_baseball/
 cd data/davis_baseball/
 wget https://github.com/gauenk/files/blob/master/pyvnlb/davis_baseball/00000.jpg
 wget https://github.com/gauenk/files/blob/master/pyvnlb/davis_baseball/00001.jpg
 wget https://github.com/gauenk/files/blob/master/pyvnlb/davis_baseball/00002.jpg
 wget https://github.com/gauenk/files/blob/master/pyvnlb/davis_baseball/00003.jpg
 wget https://github.com/gauenk/files/blob/master/pyvnlb/davis_baseball/00004.jpg
+mkdir vnlb
+cd vnlb
 wget https://github.com/gauenk/files/blob/master/pyvnlb/davis_baseball/vnlb/000.tif
 wget https://github.com/gauenk/files/blob/master/pyvnlb/davis_baseball/vnlb/001.tif
 wget https://github.com/gauenk/files/blob/master/pyvnlb/davis_baseball/vnlb/002.tif
@@ -35,4 +37,4 @@ wget https://github.com/gauenk/files/blob/master/pyvnlb/davis_baseball/vnlb/tvl1
 wget https://github.com/gauenk/files/blob/master/pyvnlb/davis_baseball/vnlb/tvl1_003_f.flo
 wget https://github.com/gauenk/files/blob/master/pyvnlb/davis_baseball/vnlb/tvl1_004_b.flo
 wget https://github.com/gauenk/files/blob/master/pyvnlb/davis_baseball/vnlb/tvl1_004_f.flo
-cd ../../
+cd ../../../
