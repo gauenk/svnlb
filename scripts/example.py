@@ -6,6 +6,8 @@ from pathlib import Path
 import vnlb.pylib as pyvnlb
 from data_loader import load_dataset
 from file_io import save_images
+print("Running example script.")
+
 
 # -- get data --
 clean = load_dataset("davis_64x64",vnlb=False)[0]['clean']
