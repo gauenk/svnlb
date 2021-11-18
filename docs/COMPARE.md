@@ -6,16 +6,14 @@ This code is a Python API for Video Non-Local Bayesian Denoising ([C++ code orig
 Numerical Comparison
 ---
 
-To demonstrate this claim, we provide the `compare_cpp.py` script. We have two examples from the [C++ Code](https://github.com/pariasm/vnlb) provided in the `data/` folder. For reproducibility, details to re-create the C++ Code results are included in the [VNLB.md](https://github.com/gauenk/pyvnlb/blob/master/VNLB.md) file. 
-
-To run the comparison with the provided C++ outputs, type:
+To demonstrate this claim, we provide the `compare_cpp.py` script. We have two examples from the [C++ Code](https://github.com/pariasm/vnlb) provided in the `data/` folder. For reproducibility, details to re-create the C++ Code results are included in the [VNLB.md](https://github.com/gauenk/pyvnlb/blob/master/VNLB.md) file. To run the comparison with the provided C++ outputs, type:
 
 ```
 $ export OMP_NUM_THREADS=4
 $ python compare_cpp.py
 ```
 
-The script prints the below table. Each element of the table is the sum of the absolute error between the outputs from the Python API and C++ Code.
+The script prints the below table. Each element of the table is the sum of the relative error between the outputs from the Python API and C++ Code.
 
 |                   |   noisyForFlow |   noisyForVnlb |   fflow |   bflow |   basic |   denoised |
 |:------------------|---------------:|---------------:|--------:|--------:|--------:|-----------:|
@@ -49,7 +47,7 @@ For the VNLB method, images read with opencv are exactly equal the images read u
 Compute Time Comparison
 ---
 
-To time the algorithms, one can execute both methods within a `time` bracket. 
+The Python code takes about 3 seconds longer than the C++ Code to execute. To time the algorithms, one can execute both methods within a `time` bracket. 
 
 ```
 $ cd vnlb/build/bin/
@@ -82,4 +80,4 @@ user	12m18.676s
 sys	3m10.941s
 ```
 
-The original C++ Code performance is 5.917 seconds versus our Python API's performance of 8.867 seconds. This increase in time is from an increase in execution time within the C++ routines themselves, rather than the Python wrapper. See the `example.py` and the `runVnlbTimed` function for more information.
+On the `davis` example, the original execution time of the C++ Code and Python API is 2:25 and 2:28, respectively. This increase in time is from an increase in execution time within the C++ routines themselves, rather than the Python wrapper. See the `scripts/example.py` and the `runVnlbTimed` function for more information.
