@@ -48,14 +48,20 @@ print(psnrs)
 Comparing with C++ Code
 ---
 
-The outputs from the Python-API and the C++ Code are exactly equal. To demonstrate this claim, we provide the `compare_cpp.py` script. We have two examples from the [C++ Code](https://github.com/pariasm/vnlb) provided in the `data/` folder. To run the comparison, type:
+The outputs from the Python API and the C++ Code are exactly equal. To demonstrate this claim, we provide the `scripts/compare_cpp.py` script. We have two examples of the [C++ Code](https://github.com/pariasm/vnlb) output ready for download using the respective `scripts/download_davis*.sh` files. To run the data downloading scripts, type:
+
+```
+$ ./scripts/download_davis_64x64.sh
+```
+
+To run the comparison, type:
 
 ```
 $ export OMP_NUM_THREADS=4
-$ python compare_cpp.py
+$ python scripts/compare_cpp.py
 ```
 
-The script prints the below table. Each element of the table is the sum of the absolute relative error between the outputs from the Python-API and C++ Code.
+The script prints the below table. Each element of the table is the sum of the absolute relative error between the outputs from the Python API and C++ Code.
 
 |                   |   noisyForFlow |   noisyForVnlb |   fflow |   bflow |   basic |   denoised |
 |:------------------|---------------:|---------------:|--------:|--------:|--------:|-----------:|
