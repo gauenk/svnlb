@@ -69,7 +69,7 @@ sys	3m5.471s
 ```
 $ cd pyvnlb/
 $ rm -r ./__pycache__
-$ time `python ./example.py`
+$ time `python ./scripts/example.py`
 
 #davis_64x64 
 real	0m8.867s
