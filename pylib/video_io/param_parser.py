@@ -6,7 +6,7 @@ from collections.abc import Iterable
 
 import vnlb
 
-from .utils import optional,optional_swig_ptr
+from ..utils import optional,optional_swig_ptr
 
 
 def verify_video_paths(video_paths,fstart,fstep,nframes):

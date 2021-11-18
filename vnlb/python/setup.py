@@ -55,48 +55,9 @@ setup(
     license='MIT',
     keywords='video non-local bayes',
     install_requires=['numpy'],
-    packages=['vnlb', 'vnlb.pylib'],
+    packages=find_packages(include=['vnlb','vnlb.pylib*']),
     package_data={
         'vnlb': ['*.so', '*.pyd'],
     },
 
 )
-
-# -- path to installed file --
-def binaries_directory():
-    """Return the installation directory, or None"""
-    if '--user' in sys.argv:
-        paths = (site.getusersitepackages(),)
-    else:
-        py_version = '%s.%s' % (sys.version_info[0], sys.version_info[1])
-        paths = (s % (py_version) for s in (
-            sys.prefix + '/lib/python%s/dist-packages/',
-            sys.prefix + '/lib/python%s/site-packages/',
-            sys.prefix + '/local/lib/python%s/dist-packages/',
-            sys.prefix + '/local/lib/python%s/site-packages/',
-            '/Library/Python/%s/site-packages/',
-        ))
-
-    for path in paths:
-        if os.path.exists(path):
-            return path
-    print('no installation path found', file=sys.stderr)
-    return None
-fpath = binaries_directory()
-gpath = glob.glob(os.path.join(fpath,"vnlb*"))
-msg = f"Please remove old install at path [{fpath}] before finishing Python install"
-print(msg)
-# assert len(gpath) == 1, msg
-print(gpath)
-# fpath = gpath[0]
-# run chmod 775 on the installed egg.
-# os.chmod(fpath,
-#          stat.S_IRUSR |
-#          stat.S_IWUSR |
-#          stat.S_IXUSR |
-#          stat.S_IRGRP |
-#          stat.S_IWGRP |
-#          stat.S_IXGRP |
-#          stat.S_IROTH |
-#          stat.S_IXOTH )
-

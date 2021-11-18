@@ -16,8 +16,13 @@ PyVnlbParams() :
 	  h(0),
 	  w(0),
 	  c(0),
-	  ps(0),
-	  k(0),
+	  ps_x(nullptr),
+	  ps_t(nullptr),
+	  num_patches(nullptr),
+	  sizeSearchWindow(nullptr),
+	  sizeSearchTimeFwd(nullptr),
+	  sizeSearchTimeBwd(nullptr),
+	  tau(nullptr),
 	  use_clean(0),
 	  use_flow(0),
 	  fflow(nullptr),
@@ -28,15 +33,15 @@ PyVnlbParams() :
 	  clean(nullptr),
 	  final(nullptr), 
 	  // --> vnlb tuning params <--
-	  search_space(nullptr),
-	  num_patches(nullptr),
+	  use_default(0),
 	  rank(nullptr),
+	  var_mode(0),
 	  thresh(nullptr),
 	  beta(nullptr),
 	  flat_areas(nullptr),
 	  couple_ch(nullptr),
-	  aggeBoost(nullptr),
-	  patch_step(nullptr),
+	  aggreBoost(nullptr),
+	  procStep(nullptr),
 	  sigmaBasic(nullptr),
 	  sigma(nullptr),
 	  testing(0){}
@@ -52,10 +57,16 @@ PyVnlbParams() :
     int h; // height
     int w; // width
     int c; // color
-    int ps; // patchsize radius on one direction
-    int k; // the num of neighbors
+    int* ps_x; // patchsize [spatial]
+    int* ps_t; // patchsize [temporal]
+    int* num_patches; // the num of neighbors for denoising
+    int* sizeSearchWindow; // Spatial search diameter
+    int* sizeSearchTimeFwd; // Number of search frames (forward)
+    int* sizeSearchTimeBwd; // Number of search fraems (backward)
+    float* tau; // patch distance threshold
     bool use_clean;
     bool use_flow;
+    bool var_mode; // use H or S
 
     // noisy image to denoise
     const float* oracle;
@@ -74,16 +85,15 @@ PyVnlbParams() :
 
     float* sigma;
     float* sigmaBasic;
-    unsigned* search_space;
-    unsigned* num_patches;
-    unsigned* rank;
+    int* rank;
     float* thresh;
     float* beta;
-    unsigned* patch_step;
+    int* procStep;
     bool* flat_areas;
     bool* couple_ch;
-    bool* aggeBoost;
+    bool* aggreBoost;
     bool verbose;
+    bool use_default;
     unsigned print_params;
     bool testing;
 

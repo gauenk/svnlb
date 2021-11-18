@@ -12,8 +12,8 @@ from collections.abc import Iterable
 import vnlb
 
 # from .ptr_utils import py2swig
-from .image_utils import est_sigma
-from .utils import optional,optional_swig_ptr,ndarray_ctg_dtype,rgb2bw
+from ..image_utils import est_sigma
+from ..utils import optional,optional_swig_ptr,ndarray_ctg_dtype,rgb2bw
 
 def set_optional_params(args,pyargs):
 

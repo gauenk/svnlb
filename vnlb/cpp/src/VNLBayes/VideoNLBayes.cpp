@@ -307,15 +307,22 @@ std::vector<float> runNLBayesThreads(
 	// Print compiler options
 	if (prms1.verbose)
 	{
-#if !defined(CLIPPED_VARIANCE) && !defined(PAUL_VARIANCE) && !defined(PAUL_SIMPLE_VARIANCE)
-		printf(ANSI_BCYN "NEGATIVE_VARIANCES > Allowing negative variances\n" ANSI_RST);
-#endif
-#ifdef PAUL_VARIANCE
-		printf(ANSI_BCYN "PAUL_VARIANCE > Full inverse of Paul expected eigenvalue\n" ANSI_RST);
-#endif
-#ifdef PAUL_SIMPLE_VARIANCE
-		printf(ANSI_BCYN "PAUL_SIMPLE_VARIANCE > Approximate inverse of Paul expected eigenvalue\n" ANSI_RST);
-#endif
+	  if(prms1.var_mode == FAT_OG){
+	    printf(ANSI_BCYN
+		   "NEGATIVE_VARIANCES > Allowing negative variances\n"
+		   ANSI_RST);
+	  }
+	  else if(prms1.var_mode == PAUL_VAR){
+	    printf(ANSI_BCYN
+		   "PAUL_VARIANCE > Full inverse of Paul expected eigenvalue\n"
+		   ANSI_RST);
+	  }else if(prms1.var_mode == PAUL_SIMPLE){
+	    printf(ANSI_BCYN "PAUL_SIMPLE_VARIANCE > Approximate inverse "
+		   "of Paul expected eigenvalue\n" ANSI_RST);
+	  }else if(prms1.var_mode == CLIPPED){
+	    printf(ANSI_BCYN "CLIPPED_VARIANCE > "
+		   "Only big eigs allowed.\n" ANSI_RST);
+	  }
 	}
 
 	// Determine steps (0 means both steps, 1 iteration one only, 2 iter two only, -1 none)
@@ -1046,43 +1053,14 @@ float computeBayesEstimate_LR(
 			covarianceMatrix(*gBasic, mat.covMat, nSimP, pdim);
 
 			// Compute leading eigenvectors
-			int info = matrixEigs(mat.covMat, pdim, r, mat.covEigVals, mat.covEigVecs);
+			int info = matrixEigs(mat.covMat, pdim, r,
+					      mat.covEigVals, mat.covEigVecs);
 
 			// Convariance matrix is noisy, either because it has been computed
 			// from the noisy patches, or because we model the noise in the basic
 			// estimate
-			if (sigmab2)
-			{
-				int rr = 0; // final rank (rr = r, except if variThres != 0)
-				for (int i = 0; i < r; ++i)
-				{
-#ifdef CLIPPED_VARIANCE
-					mat.covEigVals[i] -= std::min(mat.covEigVals[i], sigmab2);
-
-#elif defined(PAUL_VARIANCE)
-					/* variance estimate obtained by inverting Debashis Paul asymptotic
-					 * limit for the expected value of the eigenvalues.
-					 */
-					float tmp, gamma = (float)pdim/(float)nSimP;
-
-					if (mat.covEigVals[i] > sigmab2 * (tmp = (1 + sqrtf(gamma)))*tmp)
-					{
-						tmp = mat.covEigVals[i] - sigmab2 * (1 + gamma);
-						mat.covEigVals[i] = tmp * 0.5
-						                  * (1. + sqrtf(std::max(0., 1. - 4.*gamma*sigmab2*sigmab2/tmp/tmp)));
-					}
-					else
-						mat.covEigVals[i] = 0;
-
-#elif defined(PAUL_SIMPLE_VARIANCE)
-					float gamma = (float)pdim/(float)nSimP;
-					mat.covEigVals[i] -= std::min(mat.covEigVals[i], (1 + gamma) * sigmab2);
-
-#else
-					mat.covEigVals[i] -= sigmab2;
-
-#endif
-				}
+			if (sigmab2){
+			  modifyEigVals(mat,sigmab2, r, pdim, nSimP, params.var_mode);
 			}
 
 			// Compute eigenvalues-based coefficients of Bayes' filter
@@ -1154,6 +1132,33 @@ float computeBayesEstimate_LR(
 	return rank_variance;
 
 }
+
+void modifyEigVals(matWorkspace & mat,
+		   float sigmab2, int rank, 
+		   int pdim, int nSimP, VAR_MODE mode){
+
+  for (int i = 0; i < rank; ++i){
+      if (mode == CLIPPED){
+	mat.covEigVals[i] -= std::min(mat.covEigVals[i], sigmab2);
+      }else if(mode == PAUL_VAR){
+	float tmp, gamma = (float)pdim/(float)nSimP;
+	if (mat.covEigVals[i] > sigmab2 * (tmp = (1 + sqrtf(gamma)))*tmp){
+	  tmp = mat.covEigVals[i] - sigmab2 * (1 + gamma);
+	  mat.covEigVals[i] = tmp * 0.5
+	    * (1. + sqrtf(std::max(0., 1. - 4.*gamma*sigmab2*sigmab2/tmp/tmp)));
+	}else{
+	  mat.covEigVals[i] = 0;
+	}
+      }else if(mode == PAUL_SIMPLE){
+	float gamma = (float)pdim/(float)nSimP;
+	mat.covEigVals[i] -= std::min(mat.covEigVals[i], (1 + gamma) * sigmab2);
+      }else if (mode == FAT_OG){
+	mat.covEigVals[i] -= sigmab2;
+      }
+  }
+}
+
+
 
 float computeBayesEstimate(
 	std::vector<float> &groupNoisy,

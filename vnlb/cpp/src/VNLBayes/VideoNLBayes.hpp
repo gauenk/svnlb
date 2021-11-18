@@ -15,23 +15,27 @@
 
 #define VNLB_H_VERSION
 //#define VNLB_S_VERSION
-#if defined(VNLB_H_VERSION)
+// #if defined(VNLB_H_VERSION)
 
-//	#pragma message ( " Compiling VNLB_H_VERSION " )
-	#define CLIPPED_VARIANCE
-	#undef PAUL_VARIANCE
-	#undef PAUL_SIMPLE_VARIANCE
-	#undef FAT_ORIGINAL
+// //	#pragma message ( " Compiling VNLB_H_VERSION " )
+// 	#define CLIPPED_VARIANCE
+// 	#undef PAUL_VARIANCE
+// 	#undef PAUL_SIMPLE_VARIANCE
+// 	#undef FAT_ORIGINAL
 
-#elif defined(VNLB_S_VERSION)
+// #elif defined(VNLB_S_VERSION)
 
-//	#pragma message ( " Compiling VNLB_S_VERSION " )
-	#undef CLIPPED_VARIANCE
-	#define PAUL_VARIANCE
-	#undef PAUL_SIMPLE_VARIANCE
-	#undef FAT_ORIGINAL
+// //	#pragma message ( " Compiling VNLB_S_VERSION " )
+// 	#undef CLIPPED_VARIANCE
+// 	#define PAUL_VARIANCE
+// 	#undef PAUL_SIMPLE_VARIANCE
+// 	#undef FAT_ORIGINAL
 
-#endif
+// #endif
+
+// allow for use input to change denoising mode
+enum VAR_MODE { CLIPPED, PAUL_VAR, PAUL_SIMPLE, FAT_OG };
+
 
 /* Variance estimation method.
  *
@@ -109,6 +113,7 @@ struct nlbParams
 	bool aggreBoost;            // if true, patches near denoised patches will be skipped
 	int onlyFrame;              // denoise only onlyFrame (-1 means process all frames)
 	bool verbose;               // verbose output
+        VAR_MODE var_mode;
 };
 
 /* Structure containing memory buffers used in the Bayesian estimation.
@@ -329,6 +334,14 @@ void computeWeightedAggregation(
 	Video<float> const& im,
 	Video<float> &outIm,
 	Video<float> const& weight);
+
+/*
+  Modify the eigenvalues based on "mode".
+  This is the logic to switch between "H" and "S"
+ */
+void modifyEigVals(matWorkspace & mat,
+		   float sigmab2, int rank, 
+		   int pdim, int nSimP, VAR_MODE mode);
 
 } // namespace
 
