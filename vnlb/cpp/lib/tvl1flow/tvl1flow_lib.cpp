@@ -142,9 +142,9 @@ void Dual_TVL1_optic_flow(
 		p21[i] = p22[i] = 0.0;
 	}
 
-	if (interrupt || vnlb::InterruptCallback::is_interrupted()) {
-	  interrupt = true;
-	}
+	// if (interrupt || vnlb::InterruptCallback::is_interrupted()) {
+	//   interrupt = true;
+	// }
 
 	for (int warpings = 0; warpings < warps; warpings++)
 	{
@@ -156,9 +156,9 @@ void Dual_TVL1_optic_flow(
 #pragma omp parallel for
 		for (int i = 0; i < size; i++)
 		{
-		  if (interrupt || vnlb::InterruptCallback::is_interrupted()) {
-		    interrupt = true;
-		  }
+		  // if (interrupt || vnlb::InterruptCallback::is_interrupted()) {
+		  //   interrupt = true;
+		  // }
 		  if(!interrupt){
 
 			const float Ix2 = I1wx[i] * I1wx[i];
@@ -183,9 +183,9 @@ void Dual_TVL1_optic_flow(
 #pragma omp parallel for
 			for (int i = 0; i < size; i++)
 			{
-  			  if (interrupt || vnlb::InterruptCallback::is_interrupted()) {
-			    interrupt = true;
-			  }
+  			  // if (interrupt || vnlb::InterruptCallback::is_interrupted()) {
+			  //   interrupt = true;
+			  // }
 
 			  if(!interrupt){
 				const float rho = rho_c[i]
@@ -234,9 +234,9 @@ void Dual_TVL1_optic_flow(
 #pragma omp parallel for reduction(+:error)
 			for (int i = 0; i < size; i++)
 			{
-  			  if (interrupt || vnlb::InterruptCallback::is_interrupted()) {
-			    interrupt = true;
-			  }
+  			  // if (interrupt || vnlb::InterruptCallback::is_interrupted()) {
+			  //   interrupt = true;
+			  // }
 			  if(!interrupt){
 
 				const float u1k = u1[i];
@@ -259,9 +259,9 @@ void Dual_TVL1_optic_flow(
 #pragma omp parallel for
 			for (int i = 0; i < size; i++)
 			{
-  			  if (interrupt || vnlb::InterruptCallback::is_interrupted()) {
-			    interrupt = true;
-			  }
+  			  // if (interrupt || vnlb::InterruptCallback::is_interrupted()) {
+			  //   interrupt = true;
+			  // }
 			  if (!interrupt){
 
 				const float taut = tau / theta;
@@ -307,9 +307,9 @@ void Dual_TVL1_optic_flow(
 	free(u2x);
 	free(u2y);
 
-	if (interrupt) {
-	  VNLB_THROW_MSG("interrupted");
-	}
+	// if (interrupt) {
+	//   VNLB_THROW_MSG("interrupted");
+	// }
 }
 
 /**

@@ -8,11 +8,6 @@ from data_loader import load_dataset
 from file_io import save_images
 from timer_cm import Timer
 
-
-# -- init swig --
-with Timer("init swig"):
-    pyvnlb.init_python_swig()
-
 # -- get data --
 with Timer("load data"):
     clean = load_dataset("davis_64x64",vnlb=False)[0]['clean']

@@ -20,12 +20,6 @@ from .videoio_param_parser import parse_args as parse_videoio_args
 #
 # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-def init_python_swig():
-    # run some py-swig function to run init compile 
-    sample = numpy.random.rand(2,3,16,16)
-    runPyVnlb(sample,20.)
-    runPyFlow(sample,20.)
-
 def runPyVnlb(noisy,sigma,pyargs=None):
     if torch.is_tensor(noisy):
         noisy = noisy.cpu().numpy()

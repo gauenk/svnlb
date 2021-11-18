@@ -17,6 +17,7 @@
 #include <vnlb/cpp/src/pybind/py_params.h>
 #include <vnlb/cpp/src/VNLBayes/VideoNLBayes.hpp>
 #include <vnlb/cpp/lib/tvl1flow/tvl1flow_lib.h>
+
 extern "C" {
 #include <vnlb/cpp/lib/iio/iio.h>
 }
@@ -55,6 +56,10 @@ void runVnlb(const PyVnlbParams& args) {
   // Run denoising algorithm
   auto tmp = params2.sizePatch;
   params2.sizePatch = 0;
+
+  std::chrono::time_point<std::chrono::system_clock> start, end;
+  start = std::chrono::system_clock::now();
+
   groupsRatio = VideoNLB::runNLBayesThreads(noisy, fflow, bflow, basic, final,
   					    params1, params2, oracle);
 
@@ -67,9 +72,17 @@ void runVnlb(const PyVnlbParams& args) {
 
   params1.sizePatch = 0;
   params2.sizePatch = tmp;
-  noisy.loadVideoFromPtr(args.noisy,w,h,c,t);
+  // noisy.loadVideoFromPtr(args.noisy,w,h,c,t);
   groupsRatio = VideoNLB::runNLBayesThreads(noisy, fflow, bflow, basic, final,
   					    params1, params2, oracle);
+
+  end = std::chrono::system_clock::now();
+  std::chrono::duration<double> elapsed_seconds = end - start;
+  std::time_t end_time = std::chrono::system_clock::to_time_t(end);
+  
+  std::cout << "finished computation at " << std::ctime(&end_time)
+	    << "elapsed time: " << elapsed_seconds.count() << "s\n";
+
   if (args.verbose)
     printf("Done. Processed %5.2f%% of possible patch groups in 1st step, and\n"
 		       "%5.2f%% in 2nd step.\n", groupsRatio[0], groupsRatio[1]);
@@ -153,9 +166,6 @@ void runTV1Flow(const PyTvFlowParams& args) {
     float *u = flow + _t*(h*w*2);
     float *v = u + h*w;
 
-    std::chrono::time_point<std::chrono::system_clock> start, end;
-    start = std::chrono::system_clock::now();
-
     //compute the optical flow
     Dual_TVL1_optic_flow_multiscale(image1, image2, u, v,
 				    w, h, params.tau,
@@ -163,13 +173,6 @@ void runTV1Flow(const PyTvFlowParams& args) {
 				    params.nscales, params.fscale,
 				    params.zfactor, params.nwarps,
 				    params.epsilon, params.verbose);
-
-    end = std::chrono::system_clock::now();
-    std::chrono::duration<double> elapsed_seconds = end - start;
-    std::time_t end_time = std::chrono::system_clock::to_time_t(end);
-  
-    std::cout << "finished computation at " << std::ctime(&end_time)
-	      << "elapsed time: " << elapsed_seconds.count() << "s\n";
 
   }
 
