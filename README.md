@@ -10,6 +10,7 @@ Install
 $ git clone https://github.com/gauenk/pyvnlb/
 $ cd pyvnlb
 $ ./install.sh
+$ python -m pip install -r requirements.txt
 ```
 
 Usage
