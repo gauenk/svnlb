@@ -14,8 +14,7 @@
 #include <stdio.h>
 #include <math.h>
 
-#include <pyvnlb/cpp/utils/xmalloc.h>
-
+#include <pyvnlb/cpp/utils/xmalloc.c>
 
 #define BOUNDARY_CONDITION_DIRICHLET 0
 #define BOUNDARY_CONDITION_REFLECTING 1

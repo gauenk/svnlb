@@ -15,11 +15,11 @@
 #include <stdbool.h>
 #include <omp.h>
 
-#include  <pyvnlb/cpp/utils/xmalloc.h>
-#include "tvl1flow_lib.h"
+#include  <pyvnlb/cpp/utils/xmalloc.c>
 #include "mask.c"
 #include "bicubic_interpolation.c"
 #include "zoom.c"
+#include "tvl1flow_lib.h"
 
 #define MAX_ITERATIONS 300
 #define PRESMOOTHING_SIGMA 0.8

@@ -3,7 +3,7 @@
 # -- imports --
 import numpy as np
 from pathlib import Path
-import vnlb.pylib as pyvnlb
+import pyvnlb.pylib as pyvnlb
 from data_loader import load_dataset
 from file_io import save_images
 print("Running example script.")

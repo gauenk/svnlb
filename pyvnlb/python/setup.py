@@ -14,38 +14,39 @@ import glob
 
 
 # -- file paths --
-shutil.rmtree("vnlb", ignore_errors=True)
-os.mkdir("vnlb")
-shutil.copytree("pylib", "vnlb/pylib")
-shutil.copyfile("__init__.py", "vnlb/__init__.py")
-shutil.copyfile("loader.py", "vnlb/loader.py")
+print("CWD",os.getcwd())
+shutil.rmtree("pyvnlb", ignore_errors=True)
+os.mkdir("pyvnlb")
+shutil.copytree("pylib", "pyvnlb/pylib")
+shutil.copyfile("__init__.py", "pyvnlb/__init__.py")
+shutil.copyfile("loader.py", "pyvnlb/loader.py")
 
 ext = ".pyd" if platform.system() == 'Windows' else ".so"
 prefix = "Release/" * (platform.system() == 'Windows')
 
-swigvnlb_generic_lib = f"{prefix}_swigvnlb{ext}"
-swigvnlb_avx2_lib = f"{prefix}_swigvnlb_avx2{ext}"
+swigpyvnlb_generic_lib = f"{prefix}_swigpyvnlb{ext}"
+swigpyvnlb_avx2_lib = f"{prefix}_swigpyvnlb_avx2{ext}"
 
-found_swigvnlb_generic = os.path.exists(swigvnlb_generic_lib)
-found_swigvnlb_avx2 = os.path.exists(swigvnlb_avx2_lib)
+found_swigpyvnlb_generic = os.path.exists(swigpyvnlb_generic_lib)
+found_swigpyvnlb_avx2 = os.path.exists(swigpyvnlb_avx2_lib)
 
-assert (found_swigvnlb_generic or found_swigvnlb_avx2), \
-    f"Could not find {swigvnlb_generic_lib} or " \
-    f"{swigvnlb_avx2_lib}. Vnlb may not be compiled yet."
+assert (found_swigpyvnlb_generic or found_swigpyvnlb_avx2), \
+    f"Could not find {swigpyvnlb_generic_lib} or " \
+    f"{swigpyvnlb_avx2_lib}. Pyvnlb may not be compiled yet."
 
-if found_swigvnlb_generic:
-    print(f"Copying {swigvnlb_generic_lib}")
-    shutil.copyfile("swigvnlb.py", "vnlb/swigvnlb.py")
-    shutil.copyfile(swigvnlb_generic_lib, f"vnlb/_swigvnlb{ext}")
+if found_swigpyvnlb_generic:
+    print(f"Copying {swigpyvnlb_generic_lib}")
+    shutil.copyfile("swigpyvnlb.py", "pyvnlb/swigpyvnlb.py")
+    shutil.copyfile(swigpyvnlb_generic_lib, f"pyvnlb/_swigpyvnlb{ext}")
 
-if found_swigvnlb_avx2:
-    print(f"Copying {swigvnlb_avx2_lib}")
-    shutil.copyfile("swigvnlb_avx2.py", "vnlb/swigvnlb_avx2.py")
-    shutil.copyfile(swigvnlb_avx2_lib, f"vnlb/_swigvnlb_avx2{ext}")
+if found_swigpyvnlb_avx2:
+    print(f"Copying {swigpyvnlb_avx2_lib}")
+    shutil.copyfile("swigpyvnlb_avx2.py", "pyvnlb/swigpyvnlb_avx2.py")
+    shutil.copyfile(swigpyvnlb_avx2_lib, f"pyvnlb/_swigpyvnlb_avx2{ext}")
 
-long_description="""Vnlb is a library for video denising."""
+long_description="""Pyvnlb is a library for video denising."""
 setup(
-    name='vnlb',
+    name='pyvnlb',
     version='1.0.0',
     description='A library for video image denoising.',
     long_description=long_description,
@@ -55,9 +56,9 @@ setup(
     license='MIT',
     keywords='video non-local bayes',
     install_requires=['numpy'],
-    packages=find_packages(include=['vnlb','vnlb.pylib*']),
+    packages=find_packages(include=['pyvnlb','pyvnlb.pylib*']),
     package_data={
-        'vnlb': ['*.so', '*.pyd'],
+        'pyvnlb': ['*.so', '*.pyd'],
     },
 
 )

@@ -10,7 +10,7 @@ import pandas as pd
 from collections import defaultdict
 
 # -- this package --
-import vnlb.pylib as pyvnlb
+import pyvnlb.pylib as pyvnlb
 
 # -- local imports --
 from data_loader import load_dataset

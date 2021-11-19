@@ -58,6 +58,6 @@ if has_AVX2:
 
 if not has_AVX2:
     # we import * so that the symbol X can be accessed as vnlb.X
-    logger.info("Loading vnlb.")
-    from .swigvnlb import *
-    logger.info("Successfully loaded vnlb.")
+    logger.info("Loading pyvnlb.")
+    from .swigpyvnlb import *
+    logger.info("Successfully loaded pyvnlb.")

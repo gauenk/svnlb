@@ -11,7 +11,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include "xmalloc.h"
+#include <pyvnlb/cpp/utils/xmalloc.h>
 
 // this function is like "malloc", but it returns always a valid pointer
 static void *xmalloc(size_t size)

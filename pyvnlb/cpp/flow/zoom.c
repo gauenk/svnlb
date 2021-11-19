@@ -10,7 +10,7 @@
 #ifndef ZOOM_C
 #define ZOOM_C
 
-#include  <pyvnlb/cpp/utils/xmalloc.h>
+#include  <pyvnlb/cpp/utils/xmalloc.c>
 #include "mask.c"
 #include "bicubic_interpolation.c"
 

@@ -30,7 +30,7 @@
 #include <string.h>
 #include <stdarg.h>
 
-// #include <vnlb/cpp/lib/tvl1flow/xmalloc.h>
+#include <pyvnlb/cpp/utils/xmalloc.h>
 #include "iio.h" // only for IIO_MAX_DIMENSION
 
 

@@ -3,7 +3,7 @@
 # Copyright (C) Kent Gauen, Purdue University
 #
 
-set(VNLB_SRC
+set(PYVNLB_SRC
   cpp/utils/mt19937ar.c
   cpp/utils/VnlbException.cpp
   cpp/utils/VnlbInterrupt.cpp
@@ -18,7 +18,7 @@ set(VNLB_SRC
   cpp/pybind/py_params.cpp
 )
 
-set(VNLB_HEADERS
+set(PYVNLB_HEADERS
   cpp/utils/mt19937ar.h
   cpp/utils/platform_macros.h
   cpp/utils/xmalloc.h
@@ -38,92 +38,92 @@ set(VNLB_HEADERS
 )
 
 
-set(VNLB_HEADERS ${VNLB_HEADERS} PARENT_SCOPE)
-add_library(vnlb ${VNLB_SRC})
-add_library(vnlb_avx2 ${VNLB_SRC})
+set(PYVNLB_HEADERS ${PYVNLB_HEADERS} PARENT_SCOPE)
+add_library(pyvnlb ${PYVNLB_SRC})
+add_library(pyvnlb_avx2 ${PYVNLB_SRC})
 
-# Handle `#include <vnlb/foo.h>`.
-target_include_directories(vnlb PUBLIC
+# Handle `#include <pyvnlb/foo.h>`.
+target_include_directories(pyvnlb PUBLIC
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}>)
-# Handle `#include <vnlb/foo.h>`.
-target_include_directories(vnlb_avx2 PUBLIC
+# Handle `#include <pyvnlb/foo.h>`.
+target_include_directories(pyvnlb_avx2 PUBLIC
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}>)
 
-set_target_properties(vnlb PROPERTIES
+set_target_properties(pyvnlb PROPERTIES
   POSITION_INDEPENDENT_CODE ON
   WINDOWS_EXPORT_ALL_SYMBOLS ON
 )
-set_target_properties(vnlb_avx2 PROPERTIES
+set_target_properties(pyvnlb_avx2 PROPERTIES
   POSITION_INDEPENDENT_CODE ON
   WINDOWS_EXPORT_ALL_SYMBOLS ON
 )
 
 if(WIN32)
-  target_compile_definitions(vnlb PRIVATE VNLB_MAIN_LIB)
-  target_compile_definitions(vnlb_avx2 PRIVATE VNLB_MAIN_LIB)
+  target_compile_definitions(pyvnlb PRIVATE PYVNLB_MAIN_LIB)
+  target_compile_definitions(pyvnlb_avx2 PRIVATE PYVNLB_MAIN_LIB)
 endif()
 
-target_compile_definitions(vnlb PRIVATE FINTEGER=int)
-target_compile_definitions(vnlb_avx2 PRIVATE FINTEGER=int)
+target_compile_definitions(pyvnlb PRIVATE FINTEGER=int)
+target_compile_definitions(pyvnlb_avx2 PRIVATE FINTEGER=int)
 
 find_package(OpenMP REQUIRED)
-target_link_libraries(vnlb PRIVATE OpenMP::OpenMP_CXX)
-target_link_libraries(vnlb_avx2 PRIVATE OpenMP::OpenMP_CXX)
+target_link_libraries(pyvnlb PRIVATE OpenMP::OpenMP_CXX)
+target_link_libraries(pyvnlb_avx2 PRIVATE OpenMP::OpenMP_CXX)
 
 find_package( TIFF REQUIRED )
 find_package( JPEG REQUIRED )
 find_package( PNG  REQUIRED )
-target_link_libraries(vnlb PRIVATE png tiff)
-target_link_libraries(vnlb_avx2 PRIVATE png tiff jpeg)
+target_link_libraries(pyvnlb PRIVATE png tiff)
+target_link_libraries(pyvnlb_avx2 PRIVATE png tiff jpeg)
 
 find_package(BLAS REQUIRED)
-target_link_libraries(vnlb PRIVATE ${BLAS_LIBRARIES})
-target_link_libraries(vnlb_avx2 PRIVATE ${BLAS_LIBRARIES})
+target_link_libraries(pyvnlb PRIVATE ${BLAS_LIBRARIES})
+target_link_libraries(pyvnlb_avx2 PRIVATE ${BLAS_LIBRARIES})
 
 find_package(LAPACKE REQUIRED )
-target_link_libraries(vnlb PRIVATE ${LAPACK_LIBRARIES})
-target_link_libraries(vnlb_avx2 PRIVATE ${LAPACK_LIBRARIES})
+target_link_libraries(pyvnlb PRIVATE ${LAPACK_LIBRARIES})
+target_link_libraries(pyvnlb_avx2 PRIVATE ${LAPACK_LIBRARIES})
 
-install(TARGETS vnlb
-  EXPORT vnlb-targets
+install(TARGETS pyvnlb
+  EXPORT pyvnlb-targets
   RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
   ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
   LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
   INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
 )
-if(VNLB_OPT_LEVEL STREQUAL "avx2")
-  install(TARGETS vnlb_avx2
-    EXPORT vnlb-targets
+if(PYVNLB_OPT_LEVEL STREQUAL "avx2")
+  install(TARGETS pyvnlb_avx2
+    EXPORT pyvnlb-targets
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
   )
 endif()
 
-foreach(header ${VNLB_HEADERS})
+foreach(header ${PYVNLB_HEADERS})
   get_filename_component(dir ${header} DIRECTORY )
   install(FILES ${header}
-    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/vnlb/${dir}
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/pyvnlb/${dir}
   )
 endforeach()
 
 include(CMakePackageConfigHelpers)
 write_basic_package_version_file(
-  "${PROJECT_BINARY_DIR}/cmake/vnlb-config-version.cmake"
+  "${PROJECT_BINARY_DIR}/cmake/pyvnlb-config-version.cmake"
   VERSION ${CMAKE_PROJECT_VERSION}
   COMPATIBILITY AnyNewerVersion
 )
 
-configure_file(${PROJECT_SOURCE_DIR}/cmake/vnlb-config.cmake.in
-  ${PROJECT_BINARY_DIR}/cmake/vnlb-config.cmake
+configure_file(${PROJECT_SOURCE_DIR}/cmake/pyvnlb-config.cmake.in
+  ${PROJECT_BINARY_DIR}/cmake/pyvnlb-config.cmake
   COPYONLY
 )
-install(FILES ${PROJECT_BINARY_DIR}/cmake/vnlb-config.cmake
-  ${PROJECT_BINARY_DIR}/cmake/vnlb-config-version.cmake
-  DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/vnlb
+install(FILES ${PROJECT_BINARY_DIR}/cmake/pyvnlb-config.cmake
+  ${PROJECT_BINARY_DIR}/cmake/pyvnlb-config-version.cmake
+  DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/pyvnlb
 )
 
-install(EXPORT vnlb-targets
-  DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/vnlb
+install(EXPORT pyvnlb-targets
+  DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/pyvnlb
 )
 
 
