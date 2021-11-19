@@ -21,7 +21,7 @@ pixel values in range `[0,...,255.]`. The color channels are ordered RGB. Common
 
 ```python
 import numpy as np
-import vnlb.pylib as pyvnlb
+import pyvnlb.pylib as pyvnlb
 
 # -- get data --
 clean = 255.*np.random.rand(5,3,64,64)
