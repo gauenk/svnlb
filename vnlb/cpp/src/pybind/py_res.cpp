@@ -59,7 +59,7 @@ void runVnlb(const PyVnlbParams& args) {
   					    params1, params2, oracle);
 
   if (args.testing){
-    basic.saveVideoToPtr(const_cast<float*>(args.basic));
+    basic.saveVideoToPtr(args.basic);
   }
   if (args.verbose)
     printf("Done. Processed %5.2f%% of possible patch groups in 1st step, and\n"
@@ -78,7 +78,7 @@ void runVnlb(const PyVnlbParams& args) {
 		       "%5.2f%% in 2nd step.\n", groupsRatio[0], groupsRatio[1]);
 
   // copy back to arrays
-  final.saveVideoToPtr(const_cast<float*>(args.final));
+  final.saveVideoToPtr(args.final);
 }
 
 void runVnlbTimed(const PyVnlbParams& args) {
@@ -128,7 +128,7 @@ void runVnlbTimed(const PyVnlbParams& args) {
 
 
   if (args.testing){
-    basic.saveVideoToPtr(const_cast<float*>(args.basic));
+    basic.saveVideoToPtr(args.basic);
   }
   if (args.verbose)
     printf("Done. Processed %5.2f%% of possible patch groups in 1st step, and\n"
@@ -154,7 +154,7 @@ void runVnlbTimed(const PyVnlbParams& args) {
 		       "%5.2f%% in 2nd step.\n", groupsRatio[0], groupsRatio[1]);
 
   // copy back to arrays
-  final.saveVideoToPtr(const_cast<float*>(args.final));
+  final.saveVideoToPtr(args.final);
 
 }
 
@@ -168,10 +168,10 @@ void runTV1Flow(const PyTvFlowParams& args) {
   int c = args.c;
   int t = args.t;
 
-  // remove const cast needed (i think) by SWIG-Python
-  float *burst = const_cast<float*>(args.burst);
-  float *fflow = const_cast<float*>(args.fflow);
-  float *bflow = const_cast<float*>(args.bflow);
+  // shorten names
+  float *burst = args.burst;
+  float *fflow = args.fflow;
+  float *bflow = args.bflow;
 
   // set flow by direction
   float *flow;

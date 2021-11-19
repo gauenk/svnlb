@@ -69,13 +69,13 @@ PyVnlbParams() :
     bool var_mode; // use H or S
 
     // noisy image to denoise
-    const float* oracle;
-    const float* noisy;
-    const float* basic;
-    const float* clean;
-    const float* final;
-    const float* fflow;
-    const float* bflow;
+    float* oracle;
+    float* noisy;
+    float* basic;
+    float* clean;
+    float* final;
+    float* fflow;
+    float* bflow;
 
     /***
 
@@ -96,6 +96,22 @@ PyVnlbParams() :
     bool use_default;
     unsigned print_params;
     bool testing;
+
+};
+
+struct PySimSearchParams {
+PySimSearchParams() :
+    gNoisy(nullptr),
+    gBasic(nullptr),
+    indices(nullptr),
+    pixel_index(nullptr),
+    whole_image(0){}
+
+  float* gNoisy;
+  float* gBasic;
+  unsigned* indices;
+  unsigned* pixel_index;
+  bool whole_image;
 
 };
 
@@ -134,9 +150,9 @@ PyTvFlowParams() :
 
   // image for flow
 
-  const float* burst;
-  const float* fflow;
-  const float* bflow;
+  float* burst;
+  float* fflow;
+  float* bflow;
   
   /***
 
