@@ -39,7 +39,7 @@ result = pyvnlb.runPyVnlb(noisy,std,{'fflow':fflow,'bflow':bflow})
 denoised = result['denoised']
 
 # -- compute denoising quality --
-psnrs = pyvnlb.psnr(clean,denoised)
+psnrs = pyvnlb.compute_psnrs(clean,denoised)
 print("PSNRs:")
 print(psnrs)
 
