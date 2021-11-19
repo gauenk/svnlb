@@ -14,8 +14,13 @@ set(PYVNLB_SRC
   cpp/flow/tvl1flow_lib.c
   cpp/vnlb/VideoNLBayes.cpp
   cpp/vnlb/LibMatrix.cpp
-  cpp/pybind/py_res.cpp
-  cpp/pybind/py_params.cpp
+  cpp/pybind/video_io/read_flow.cpp
+  cpp/pybind/video_io/read_vnlb.cpp
+  cpp/pybind/flow/parser.cpp
+  cpp/pybind/flow/tvl1flow.cpp
+  cpp/pybind/vnlb/parser.cpp
+  cpp/pybind/vnlb/vnlb.cpp
+  cpp/pybind/vnlb/vnlb_timed.cpp
 )
 
 set(PYVNLB_HEADERS
@@ -33,8 +38,9 @@ set(PYVNLB_HEADERS
   cpp/flow/tvl1flow_lib.h
   cpp/vnlb/VideoNLBayes.hpp
   cpp/vnlb/LibMatrix.h
-  cpp/pybind/py_res.h
-  cpp/pybind/py_params.h
+  cpp/pybind/video_io/interface.h
+  cpp/pybind/flow/interface.h
+  cpp/pybind/vnlb/interface.h
 )
 
 

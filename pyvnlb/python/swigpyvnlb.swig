@@ -113,11 +113,15 @@ typedef uint64_t size_t;
 
 %{
 
-#include <pyvnlb/cpp/pybind/py_res.h>
+#include <pyvnlb/cpp/pybind/video_io/interface.h>
+#include <pyvnlb/cpp/pybind/flow/interface.h>
+#include <pyvnlb/cpp/pybind/vnlb/interface.h>
 
 %}
 
-%include <pyvnlb/cpp/pybind/py_res.h>
+%include <pyvnlb/cpp/pybind/video_io/interface.h>
+%include <pyvnlb/cpp/pybind/flow/interface.h>
+%include <pyvnlb/cpp/pybind/vnlb/interface.h>
 %include <pyvnlb/cpp/video_io/io.h>
 %include <pyvnlb/cpp/utils/VnlbVersion.h>
 

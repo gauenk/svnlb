@@ -1,12 +1,6 @@
 
-#pragma once
 
-/****
-
-The insertion point for the Python API
-
-****/
-
+#pragma once 
 
 /// Arguments for video denoising
 struct PyVnlbParams {
@@ -99,6 +93,7 @@ PyVnlbParams() :
 
 };
 
+
 struct PySimSearchParams {
 PySimSearchParams() :
     gNoisy(nullptr),
@@ -115,91 +110,5 @@ PySimSearchParams() :
 
 };
 
-
-/// Arguments for video denoising
-struct PyTvFlowParams {
-PyTvFlowParams() :
-  // --> image details <--
-  t(0),h(0),w(0),c(0),
-    burst(nullptr),
-    fflow(nullptr),
-    bflow(nullptr),
-  // --> vnlb tuning params <--
-    direction(-1),
-    nproc(-1),
-    tau(-1),
-    plambda(-1),
-    nscales(-1),
-    fscale(-1),
-    zfactor(-1),
-    nwarps(-1),
-    epsilon(-1),
-    verbose(0),
-    testing(0) {}
-
-  /***
-
-      --->   Image Info   <---
-
-  ***/
-
-  int t; // nframes
-  int h; // height
-  int w; // width
-  int c; // color
-
-  // image for flow
-
-  float* burst;
-  float* fflow;
-  float* bflow;
-  
-  /***
-
-      --->  VNLB Tuning Params  <---
-
-  ***/
-
-  int   direction;
-  int   nproc;
-  float tau;
-  float plambda;
-  float theta;
-  int   nscales;
-  int   fscale;
-  float zfactor;
-  int   nwarps;
-  float epsilon;
-  int   verbose;
-  bool  testing;
-
-};
-
-/// Arguments for checking "loadvideo" and "readiio"
-struct ReadVideoParams {
-ReadVideoParams() :
-  // --> image details <--
-  t(0),h(0),w(0),c(0),
-    read_video(nullptr),
-    video_paths(""),
-    first_frame(0),
-    last_frame(0),
-    frame_step(1),
-    verbose(0) {}
-  
-  // -- image params --
-  bool verbose;
-  int t,h,w,c;
-  int first_frame,last_frame,frame_step;
-  float* read_video;
-  const char* video_paths;
-};
-
-
 void runVnlb(const PyVnlbParams& args);
 void runVnlbTimed(const PyVnlbParams& args);
-void runTV1Flow(const PyTvFlowParams& args);
-/* void testLoadVideo(const ReadVideoParams& args); */
-/* void testIIORead(const ReadVideoParams& args); */
-void readVideoForVnlb(const ReadVideoParams& args);
-void readVideoForFlow(const ReadVideoParams& args);
