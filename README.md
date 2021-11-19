@@ -20,8 +20,8 @@ We expect the images to be shaped `(nframes,channels,height,width)` with
 pixel values in range `[0,...,255.]`. The color channels are ordered RGB. Common examples of noise levels are 10, 20 and 50. See [scripts/example.py](https://github.com/gauenk/pyvnlb/blob/master/scripts/example.py) for more details.
 
 ```python
+import pyvnlb
 import numpy as np
-import pyvnlb.pylib as pyvnlb
 
 # -- get data --
 clean = 255.*np.random.rand(5,3,64,64)
