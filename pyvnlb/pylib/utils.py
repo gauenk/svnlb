@@ -1,8 +1,19 @@
+import os,sys
 import cv2
 import pyvnlb
 import numpy as np
 from einops import rearrange
 
+def check_omp_num_threads():
+    omp_nthreads = omp_num_threads()
+    if (omp_nthreads != 4):
+        print("Please run `export OMP_NUM_THREADS=4` before running this file.")
+        sys.exit(1)
+
+def omp_num_threads():
+    omp_nthreads = os.getenv('OMP_NUM_THREADS')
+    omp_nthreads = 0 if omp_nthreads is None else int(omp_nthreads)
+    return omp_nthreads
 
 def ndarray_ctg_dtype(ndarray,dtype,verbose):
     in_dtype = ndarray.dtype

@@ -4,7 +4,7 @@ Compare the Python API with the C++ Results
 """
 
 # -- python imports --
-import os
+import os,sys
 import numpy as np
 import pandas as pd
 from collections import defaultdict
@@ -51,11 +51,8 @@ def run_method(vnlb_dataset,ioForFlow):
     #
     #  ---------------- Setup Parameters ----------------
     #
-    
-    omp_nthreads = os.getenv('OMP_NUM_THREADS')
-    omp_nthreads = 0 if omp_nthreads is None else int(omp_nthreads)
-    if omp_nthreads != 4:
-        print("Please run `export OMP_NUM_THREADS=4` before running this file.")
+
+    pyvnlb.check_omp_num_threads()
     flow_params = {"nproc":0,"tau":0.25,"lambda":0.2,"theta":0.3,"nscales":100,
                    "fscale":1,"zfactor":0.5,"nwarps":5,"epsilon":0.01,
                    "verbose":False,"testing":False,'bw':False}
