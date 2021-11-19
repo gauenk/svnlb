@@ -1,14 +1,22 @@
 
 
-# -- imports --
+# -- python imports --
 import numpy as np
 from pathlib import Path
-import pyvnlb.pylib as pyvnlb
+
+# -- this package --
+import pyvnlb
+
+# -- helper imports --
 from data_loader import load_dataset
 from file_io import save_images
-print("Running example script.")
+
+#
+# -- load & denoise a video --
+#
 
 # -- check omp --
+print("Running example script.")
 pyvnlb.check_omp_num_threads()
 
 # -- get data --

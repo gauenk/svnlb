@@ -14,8 +14,8 @@ set(PYVNLB_SRC
   cpp/flow/tvl1flow_lib.c
   cpp/vnlb/VideoNLBayes.cpp
   cpp/vnlb/LibMatrix.cpp
-  cpp/pybind/video_io/read_flow.cpp
-  cpp/pybind/video_io/read_vnlb.cpp
+  cpp/pybind/video_io/read_video_for_flow.cpp
+  cpp/pybind/video_io/read_video_for_vnlb.cpp
   cpp/pybind/flow/parser.cpp
   cpp/pybind/flow/tvl1flow.cpp
   cpp/pybind/vnlb/parser.cpp

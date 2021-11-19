@@ -29,5 +29,5 @@ ReadVideoParams() :
   const char* video_paths;
 };
 
-void readVideoForVnlb(const ReadVideoParams& args);
-void readVideoForFlow(const ReadVideoParams& args);
+void readVideoForVnlbCpp(const ReadVideoParams& args);
+void readVideoForFlowCpp(const ReadVideoParams& args);

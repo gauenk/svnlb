@@ -28,7 +28,7 @@ def readVideoForVnlb(shape,video_paths,pyargs=None):
     args,sargs = parse_args(shape,video_paths,pyargs)
 
     # -- exec function --
-    pyvnlb.readVideoForVnlb(sargs)
+    pyvnlb.readVideoForVnlbCpp(sargs)
 
     return args.read_video
 
@@ -46,7 +46,7 @@ def readVideoForFlow(shape,video_paths,pyargs=None):
     args,sargs = parse_args(shape,video_paths,pyargs)
 
     # -- exec function --
-    pyvnlb.readVideoForFlow(sargs)
+    pyvnlb.readVideoForFlowCpp(sargs)
 
     return args.read_video
 
