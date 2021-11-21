@@ -33,9 +33,6 @@
 
 // #endif
 
-// allow for use input to change denoising mode
-enum VAR_MODE { CLIPPED, PAUL_VAR, PAUL_SIMPLE, FAT_OG };
-
 
 /* Variance estimation method.
  *
@@ -72,11 +69,12 @@ enum VAR_MODE { CLIPPED, PAUL_VAR, PAUL_SIMPLE, FAT_OG };
 //#undef  FAT_ORIGINAL
 
 
-
 #include <pyvnlb/cpp/video_io/LibVideoT.hpp>
+#include <pyvnlb/cpp/vnlb/vnlb_params.h>
 
 namespace VideoNLB
 {
+
 
 /* Structures of parameters dedicated to NL-Bayes process
  *
@@ -90,30 +88,6 @@ namespace VideoNLB
  * - procStep and aggreBoost are speed ups by reducing the number of processed
  *   patch groups
  */
-struct nlbParams
-{
-	float sigma;                // noise standard deviation
-	float sigmaBasic;           // std. dev. of remanent noise in the basic estimate
-	unsigned sizePatch;         // spatial patch size
-	unsigned sizePatchTime;     // temporal patch size
-	unsigned nSimilarPatches;   // number of similar patches
-	unsigned sizeSearchWindow;  // spatial size of search window (w x w)
-	unsigned sizeSearchTimeFwd; // how many forward  frames in search window
-	unsigned sizeSearchTimeBwd; // how many backward frames in search window
-	bool flatAreas;             // use flat area trick
-	float gamma;                // threshold parameter to detect flat areas
-	bool coupleChannels;        // joint Gaussian model for all channels
-	float variThres;            // variance threshold
-	unsigned rank;              // rank of covariance matrix
-	float beta;                 // noise multiplier
-	float tau;                  // patch distance threshold
-	bool isFirstStep;           // which step is it?
-	unsigned procStep;          // step used to skip reference patches
-	bool aggreBoost;            // if true, patches near denoised patches will be skipped
-	int onlyFrame;              // denoise only onlyFrame (-1 means process all frames)
-	bool verbose;               // verbose output
-        VAR_MODE var_mode;
-};
 
 /* Structure containing memory buffers used in the Bayesian estimation.
  */

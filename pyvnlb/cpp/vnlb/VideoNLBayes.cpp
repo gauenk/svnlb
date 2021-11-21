@@ -24,6 +24,7 @@
 
 #include <stdio.h>     // getchar() for debugging
 
+#include "vnlb_params.h"
 #include "VideoNLBayes.hpp"
 #include "LibMatrix.h"
 

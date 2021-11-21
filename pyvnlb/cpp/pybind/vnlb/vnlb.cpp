@@ -24,7 +24,9 @@ extern "C" {
 }
 
 
-void runVnlb(const PyVnlbParams& args, const VnlbTensors& tensors) {
+// void runVnlb(const PyVnlbParams& args, const VnlbTensors& tensors) {
+void runVnlb(VideoNLB::nlbParams& params1, VideoNLB::nlbParams& params2,
+             const VnlbTensors& tensors) {
 
   // Declarations
   Video<float> oracle, noisy, basic, final;
@@ -36,21 +38,26 @@ void runVnlb(const PyVnlbParams& args, const VnlbTensors& tensors) {
   int c = tensors.c;
   int t = tensors.t;
 
+  fprintf(stdout,"heey: (%d,%d,%d,%d)\n",t,c,h,w);
   // load video from ptr
   noisy.loadVideoFromPtr(tensors.noisy,w,h,c,t);
+  fprintf(stdout,"hooo-heey\n");
   basic.loadVideoFromPtr(tensors.basic,w,h,c,t);
+  fprintf(stdout,"hooo\n");
   if (tensors.use_flow){
     fflow.loadVideoFromPtr(tensors.fflow,w,h,2,t);
     bflow.loadVideoFromPtr(tensors.bflow,w,h,2,t);
   }
+  fprintf(stdout,"haaa\n");
   if (tensors.use_oracle){
     oracle.loadVideoFromPtr(tensors.oracle,w,h,c,t);
   }
 
   // update params
-  VideoNLB::nlbParams params1, params2;
-  setVnlbParams(args,tensors,params1,1);
-  setVnlbParams(args,tensors,params2,2);
+  // VideoNLB::nlbParams params1, params2;
+  // setVnlbParamsCpp(params1,tensors,1);
+  // setVnlbParamsCpp(params2,tensors,2);
+  fprintf(stdout,"hi\n");
 
   // Percentage or processed groups of patches over total number of pixels
   std::vector<float> groupsRatio;
@@ -60,11 +67,12 @@ void runVnlb(const PyVnlbParams& args, const VnlbTensors& tensors) {
   params2.sizePatch = 0;
   groupsRatio = VideoNLB::runNLBayesThreads(noisy, fflow, bflow, basic, final,
                                             params1, params2, oracle);
+  fprintf(stdout,"yo\n");
 
-  if (args.testing){
+  if (params1.testing){
     basic.saveVideoToPtr(tensors.basic);
   }
-  if (args.verbose)
+  if (params1.verbose)
     printf("Done. Processed %5.2f%% of possible patch groups in 1st step, and\n"
 		       "%5.2f%% in 2nd step.\n", groupsRatio[0], groupsRatio[1]);
 
@@ -76,10 +84,11 @@ void runVnlb(const PyVnlbParams& args, const VnlbTensors& tensors) {
   groupsRatio = VideoNLB::runNLBayesThreads(noisy, fflow, bflow, basic, final,
                                             params1, params2, oracle);
 
-  if (args.verbose)
+  if (params2.verbose)
     printf("Done. Processed %5.2f%% of possible patch groups in 1st step, and\n"
 		       "%5.2f%% in 2nd step.\n", groupsRatio[0], groupsRatio[1]);
 
+  fprintf(stdout,"boo\n");
   // copy back to arrays
   final.saveVideoToPtr(tensors.denoised);
 }

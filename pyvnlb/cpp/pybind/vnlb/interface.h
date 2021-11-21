@@ -30,6 +30,9 @@ PyVnlbParams() :
     testing(0),
     verbose(0){}
 
+  // * (nlbParams - PyVnlbParams): gamma,variThres,isFirstStep,onlyFrame,
+  // * (PyVnlbParams - nlbParams): thresh, use_default, testing,
+
   /***
       Sim Search Params
   ***/
@@ -80,8 +83,15 @@ PySimSearchParams() :
 
 };
 
-void runVnlb(const PyVnlbParams& args, const VnlbTensors& tensors);
-void runVnlbTimed(const PyVnlbParams& args, const VnlbTensors& tensors);
-void setVnlbParams(const PyVnlbParams& args, const VnlbTensors& tensors,
-                   VideoNLB::nlbParams& params, int step);
+/* void runVnlb(const PyVnlbParams& args, const VnlbTensors& tensors); */
+/* void runVnlbTimed(const PyVnlbParams& args, const VnlbTensors& tensors); */
+/* void setVnlbParamsCpp(const PyVnlbParams& args, const VnlbTensors& tensors, */
+/*                       VideoNLB::nlbParams& params, int step); */
+void runVnlb(VideoNLB::nlbParams& params1,
+             VideoNLB::nlbParams& params2,
+             const VnlbTensors& tensors);
+/* void runVnlbTimed(VideoNLB::nlbParams& params1, */
+/*              VideoNLB::nlbParams& params2, */
+/*              const VnlbTensors& tensors); */
+void setVnlbParamsCpp(VideoNLB::nlbParams& params, const VnlbTensors& tensors,int step);
 

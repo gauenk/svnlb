@@ -2,13 +2,14 @@
 # -- python imports --
 import numpy
 from einops import rearrange
+from easydict import EasyDict as edict
 
 # -- vnlb imports --
 import pyvnlb
 
 # -- local imports --
-from ..utils import optional
-from .parser import parse_args
+from ..utils import optional,optional_swig_ptr,assign_swig_args
+from .parser import parse_args,parse_params
 
 # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 #
@@ -16,19 +17,19 @@ from .parser import parse_args
 #
 # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-def runPyVnlb(noisy,sigma,pyargs=None):
-    res = runVnlb_np(noisy,sigma,pyargs)
+def runPyVnlb(noisy,sigma,tensors=None,params=None):
+    res = runVnlb_np(noisy,sigma,tensors,params)
     return res
 
-def runVnlb_np(noisy,sigma,pyargs=None):
+def runVnlb_np(noisy,sigma,tensors=None,params=None):
 
     # -- extract info --
     t,c,h,w  = noisy.shape
     assert c in [1,3,4],"must have the color channel be 1, 3, or 4"
-    args,swig_args,tensors,swig_tensors = parse_args(noisy,sigma,pyargs)
+    args,swig_args,tensors,swig_tensors = parse_args(noisy,sigma,tensors,params)
 
     # -- exec using numpy --
-    pyvnlb.runVnlb(swig_args,swig_tensors)
+    pyvnlb.runVnlb(swig_args[0],swig_args[1],swig_tensors)
 
     # -- format & create results --
     res = {}
@@ -39,15 +40,15 @@ def runVnlb_np(noisy,sigma,pyargs=None):
 
     return res
 
-def runPyVnlbTimed(noisy,sigma,pyargs=None):
+def runPyVnlbTimed(noisy,sigma,tensors=None,params=None):
 
     # -- extract info --
     t,c,h,w  = noisy.shape
     assert c in [1,3,4],"must have the color channel be 1, 3, or 4"
-    args,swig_args,tensors,swig_tensors = parse_args(noisy,sigma,pyargs)
+    args,swig_args,tensors,swig_tensors = parse_args(noisy,sigma,params)
 
     # -- exec using numpy --
-    pyvnlb.runVnlbTimed(swig_args,swig_tensors)
+    pyvnlb.runVnlbTimed(swig_args[0],swig_args[1],swig_tensors)
 
     # -- format & create results --
     res = {}
@@ -65,16 +66,45 @@ def runPyVnlbTimed(noisy,sigma,pyargs=None):
 #
 # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-def cppParseVnlbParams(noisy,sigma,pyargs=None):
+# def swig2py_nlb_params(swig_params):
+#     params_1,params_2 = edict(),edict()
+#     py_params = [params_1,params_2]
+#     for i in range(2):
+#         for field in dir(swig_params[i]):
+#             if '__' in field or field in ['this','thisown']:
+#                 continue
+#             py_params[i][field] = getattr(swig_params[i],field)
+#     return py_params,args
+
+# def py2swig_nlb_params(py_params):
+#     swig_params_1 = pyvnlb.nlbParams()
+#     swig_params_2 = pyvnlb.nlbParams()
+#     swig_params = [swig_params_1,swig_params_2]
+#     for i in range(2):
+#         for field in py_params[i].keys():
+#             if '__' in field or field in ['this','thisown']:
+#                 continue
+#             swig_params[i][field] = params[i][field]
+#     return swig_params
+
+# def params2params(params,params):
+#     params = {}
+#     set_function_params(edict(),{})
+#     for key in params.keys():
+
+
+def setVnlbParams(shape,sigma,params=None):
+    # -- create python-params for parser --
+    py_params,swig_params = parse_params(shape,sigma,params)
+    return py_params
+
+def simPatchSearch(noisy,sigma,params=None):
     pass
 
-def simPatchSearch(noisy,sigma,pyargs=None):
+def computeBayesEstimate(noisy,sigma,params=None):
     pass
 
-def computeBayesEstimate(noisy,sigma,pyargs=None):
-    pass
-
-def modifyEigVals(noisy,sigma,pyargs=None):
+def modifyEigVals(noisy,sigma,params=None):
     pass
 
 

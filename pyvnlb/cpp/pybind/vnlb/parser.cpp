@@ -16,58 +16,51 @@
 
 using namespace std;
 
+/// (args,tensors,step) -> (params)
+void setVnlbParamsCpp(VideoNLB::nlbParams& params, const VnlbTensors& tensors, int step){
 
-void setVnlbParams(const PyVnlbParams& args, const VnlbTensors& tensors,
-                   VideoNLB::nlbParams& params, int step){
+  // init
+  float sigma = params.sigma;
+  int search_space = params.sizePatch;
+  int num_patches = params.nSimilarPatches;
+  int rank = params.rank;
+  float thresh = params.variThres;
+  float beta = params.beta;
+  bool flat_areas = params.flatAreas;
+  bool couple_ch = params.coupleChannels;
+  bool aggreBoost = params.aggreBoost;
+  int patch_step = params.procStep;
 
-  // init 
-  int index = step-1;
-  float sigma = args.sigma[index];
+  // bools to set; we don't have "inputs" like in c++
+  bool set_sizePatch = params.set_sizePatch;
+  bool set_sizePatchTime = params.set_sizePatchTime;
+  bool set_nSim = params.set_nSim;
+  bool set_rank = params.set_rank;
+  bool set_aggreBoost = params.set_aggreBoost;
+  bool set_procStep = params.set_procStep;
 
-  // set default 
+  // vars to set default
+  int ps_x = params.sizeSearchWindow;
+  int ps_t = params.sizeSearchTimeFwd;
+  ps_x = (set_sizePatch) ? ps_x : -1;
+  ps_t = (set_sizePatchTime) ? ps_t : -1;
   VideoSize img_sz(tensors.w,tensors.h,tensors.t,tensors.c);
-  VideoNLB::defaultParameters(params, args.ps_x[index], args.ps_t[index],
-			      step, sigma, img_sz, args.verbose);
 
-  // set from args 
-  params.verbose = args.verbose;
-  params.coupleChannels = false;
-  params.var_mode = (args.var_mode == 0) ? CLIPPED : PAUL_VAR;
-  if (!args.use_default){
+  // set default
+  VideoNLB::defaultParameters(params, ps_x, ps_t, step, sigma, img_sz, params.verbose);
 
-    int nsim = args.num_patches[index];
+  // Override with command line parameters
+  if (set_sizePatch) VideoNLB::setSizeSearchWindow(params, (unsigned)search_space);
+  if (set_nSim) VideoNLB::setNSimilarPatches(params, (unsigned)num_patches);
+  if (set_aggreBoost) params.aggreBoost = aggreBoost;
+  if (set_procStep) params.procStep = patch_step;
+  if (set_rank) params.rank = rank;
+  if (thresh        >= 0) params.variThres = thresh;
+  if (beta         >= 0) params.beta = beta;
+  params.flatAreas = flat_areas;
+  params.coupleChannels = couple_ch;
 
-    // Override with command line parameters
-    if (args.sizeSearchWindow[index] >= 0)
-      VideoNLB::setSizeSearchWindow(params, args.sizeSearchWindow[index]);
-    if (args.num_patches[index] >= 0)
-      VideoNLB::setNSimilarPatches(params, args.num_patches[index]);
-
-    // float values for alg 
-    float thresh = args.thresh[index];
-    params.variThres = (thresh > 0) ? thresh : params.variThres;
-    params.rank = (args.rank[index] >= 0) ? args.rank[index] : params.rank;
-    params.beta = (args.beta[index] > 0) ? args.beta[index] : params.beta;
-    params.tau = (args.tau[index] > 0) ? args.tau[index] : params.tau;
-
-    // optionally set these bools
-    int aggreBoost = args.aggreBoost[index];
-    params.aggreBoost = (aggreBoost != -1) ?  aggreBoost : params.aggreBoost;
-    bool legal = (aggreBoost == -1) || (aggreBoost == 0) || (aggreBoost == 1);
-    assert (legal == True);
-
-    int procStep = args.procStep[index];
-    params.procStep = (procStep != -1) ? procStep : params.procStep;
-    legal = (procStep == -1) || (procStep >= 0);
-    assert (legal == True);
-
-    // always set 
-    params.flatAreas = args.flat_areas[index];
-    params.coupleChannels = args.couple_ch[index];
-    params.sigmaBasic = args.sigmaBasic[index];
-
-  }
-  if (args.verbose){
+  if (params.verbose){
     VideoNLB::printNlbParameters(params);
   }
 }

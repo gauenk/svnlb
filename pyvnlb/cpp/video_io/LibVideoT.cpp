@@ -44,7 +44,7 @@ void Video<float>::loadVideoFromPtr(
 	sz.channels  = c;
 	sz.frames    = t;
 	sz.update_fields();
-	
+
 	// allocate memory for video
 	data.resize(sz.whcf);
 

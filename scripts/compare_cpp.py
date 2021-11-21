@@ -28,8 +28,8 @@ def run_comparison(vnlb_dataset):
     res_vnlb,res_pyvnlb_cv2 = run_method(vnlb_dataset,"cv2")
     res_vnlb,res_pyvnlb_cpp = run_method(vnlb_dataset,"cpp") # exactly matches C++ code
     res_vnlb = {'cv2':res_vnlb,'cpp':res_vnlb} # both the same
-    res_pyvnlb = {'cv2':res_pyvnlb_cv2,'cpp':res_pyvnlb_cpp}    
-    
+    res_pyvnlb = {'cv2':res_pyvnlb_cv2,'cpp':res_pyvnlb_cpp}
+
     # -- compare results --
     results = defaultdict(dict)
     for imageIO in ['cv2','cpp']:
@@ -56,11 +56,11 @@ def run_method(vnlb_dataset,ioForFlow):
     flow_params = {"nproc":0,"tau":0.25,"lambda":0.2,"theta":0.3,"nscales":100,
                    "fscale":1,"zfactor":0.5,"nwarps":5,"epsilon":0.01,
                    "verbose":False,"testing":False,'bw':False}
-    
+
     #
     #  ---------------- Read Data (Image & VNLB-C++ Results) ----------------
     #
-    
+
     res_vnlb,paths,fmts = load_dataset(vnlb_dataset)
     clean,noisy,std = res_vnlb.clean,res_vnlb.noisy,res_vnlb.std
     noisyForFlow = pyvnlb.readVideoForFlow(noisy.shape,fmts.noisy)
@@ -71,20 +71,21 @@ def run_method(vnlb_dataset,ioForFlow):
     else:
         flowImages = noisyForFlow
         vnlbImages = noisyForVnlb
-    
+
     #
     #  ---------------- TV-L1 Optical Flow ----------------
     #
-    
+
     fflow,bflow = pyvnlb.runPyFlow(flowImages,std,flow_params)
-    
-    
+
     #
     #  ---------------- Video Non-Local Bayes ----------------
     #
-    
-    vnlb_params = {'fflow':fflow,'bflow':bflow,'testing':True}
-    res_pyvnlb = pyvnlb.runPyVnlb(noisy,std,vnlb_params)
+
+    # vnlb_params = {'fflow':fflow,'bflow':bflow,'testing':True}
+    tensors={'fflow':fflow,'bflow':bflow}
+    vnlb_params={'verbose':False,'testing':True}
+    res_pyvnlb = pyvnlb.runPyVnlb(noisy,std,tensors,vnlb_params)
 
     #
     #  ---------------- Add Noisy Images to Show IO Changes ----------------
@@ -95,7 +96,6 @@ def run_method(vnlb_dataset,ioForFlow):
     res_vnlb['noisyForVnlb'] = noisyForVnlb
     res_pyvnlb['noisyForVnlb'] = vnlbImages
 
-    
     return res_vnlb,res_pyvnlb
 
 if __name__ == "__main__":

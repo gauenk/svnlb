@@ -95,8 +95,10 @@ def parse_args(burst,sigma,pyargs):
 
     # -- copy to swig --
     sargs = pyvnlb.PyTvFlowParams()
-    targs = pyvnlb.VnlbTensors()
     assign_swig_args(args,sargs)
+
+    # -- copy to swig --
+    targs = pyvnlb.VnlbTensors()
     assign_swig_args(tensors,targs)
 
     return args, sargs, tensors, targs

@@ -20,7 +20,7 @@ set(PYVNLB_SRC
   cpp/pybind/flow/tvl1flow.cpp
   cpp/pybind/vnlb/parser.cpp
   cpp/pybind/vnlb/vnlb.cpp
-  cpp/pybind/vnlb/vnlb_timed.cpp
+  # cpp/pybind/vnlb/vnlb_timed.cpp
 )
 
 set(PYVNLB_HEADERS
@@ -36,6 +36,7 @@ set(PYVNLB_HEADERS
   cpp/video_io/LibVideoT.hpp
   cpp/flow/defaults.h
   cpp/flow/tvl1flow_lib.h
+  cpp/vnlb/vnlb_params.h
   cpp/vnlb/VideoNLBayes.hpp
   cpp/vnlb/LibMatrix.h
   cpp/pybind/interface.h

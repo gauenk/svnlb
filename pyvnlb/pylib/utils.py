@@ -17,7 +17,7 @@ def check_and_expand_flows(pyargs,t):
     nbflow = bflow.shape[0]
     assert nfflow == nbflow,"num flows must be equal."
     if nfflow == t-1:
-        expand_flows(pyargs)    
+        expand_flows(pyargs)
     elif nfflow < t-1:
         msg = "The input flows are the wrong shape.\n"
         msg += "(nframes,two,height,width)"
@@ -77,11 +77,20 @@ def compute_psnrs(img1,img2,imax=255.):
     psnr = 10 * log_mse
     return psnr
 
+
 def optional(pydict,key,default,dtype=None):
+
     # -- get elem --
     rtn = default
-    if pydict is None: rtn = default
-    elif key in pydict: rtn = pydict[key]
+    if not(pydict is None):
+        # -- "key" can be a list of options; we take first one. --
+        if isinstance(key,list):
+            for _key in key:
+                if _key in pydict:
+                    rtn = pydict[_key]
+                    break
+        elif key in pydict:
+            rtn = pydict[key]
 
     # -- convert to correct numpy type --
     if isinstance(rtn,list):

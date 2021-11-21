@@ -23,7 +23,7 @@ extern "C" {
 #include <pyvnlb/cpp/video_io/iio.h>
 }
 
-void runVnlbTimed(const PyVnlbParams& args, const VnlbTensors& tensors) {
+void runVnlbTimed(VideoNLB::nlbParams& params, const VnlbTensors& tensors) {
 
   // Declarations
   Video<float> oracle, noisy, basic, final;
@@ -48,8 +48,8 @@ void runVnlbTimed(const PyVnlbParams& args, const VnlbTensors& tensors) {
 
   // update params
   VideoNLB::nlbParams params1, params2;
-  setVnlbParams(args,tensors,params1,1);
-  setVnlbParams(args,tensors,params2,2);
+  setVnlbParamsCpp(args,tensors,params1,1);
+  setVnlbParamsCpp(args,tensors,params2,2);
 
   // Percentage or processed groups of patches over total number of pixels
   std::vector<float> groupsRatio;
