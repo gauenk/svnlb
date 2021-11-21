@@ -30,9 +30,8 @@ noisy = np.random.normal(clean,scale=std)
 fflow,bflow = pyvnlb.runPyFlow(noisy,std)
 
 # -- Video Non-Local Bayes --
-result = pyvnlb.runPyVnlb(noisy,std,
-                          tensors={'fflow':fflow,'bflow':bflow},
-                          params={'verbose':[True,True]})
+result = pyvnlb.runPyVnlb(noisy,std,tensors={'fflow':fflow,'bflow':bflow},
+                          params={'verbose':[False,False]})
 denoised = result['denoised']
 
 # -- compute denoising quality --

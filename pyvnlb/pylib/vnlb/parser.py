@@ -368,7 +368,6 @@ def parse_tensors(noisy,py_tensors,verbose=False):
     t,c,h,w  = noisy.shape
 
     # -- format noisy image --
-    print(py_tensors.keys())
     noisy = ndarray_ctg_dtype(noisy,np.float32,verbose)
 
     # -- format flows for c++ (t-1 -> t) --
