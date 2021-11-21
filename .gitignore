@@ -1,5 +1,7 @@
 build/*
 cmake/*
+data/*
+output/*
 *.py[co]
 __pycache__/
 *~

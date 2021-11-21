@@ -34,7 +34,6 @@ def readFlow(fn):
 
 def writeFlow(filename,uv,v=None):
     """ Write optical flow to file.
-    
     If v is None, uv is assumed to contain both u and v channels,
     stacked in depth.
     Original code by Deqing Sun, adapted from Daniel Scharstein.
@@ -111,8 +110,8 @@ def flow2img(flow_data):
 
     rad = np.sqrt(u ** 2 + v ** 2)
     maxrad = max(-1, np.max(rad))
-    u = u / maxrad + np.finfo(float).eps
-    v = v / maxrad + np.finfo(float).eps
+    u = u / (maxrad + np.finfo(float).eps)
+    v = v / (maxrad + np.finfo(float).eps)
 
     img = compute_color(u, v)
 

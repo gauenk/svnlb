@@ -7,20 +7,13 @@ from collections.abc import Iterable
 
 import pyvnlb
 
-from ..utils import optional,optional_swig_ptr
+from ..utils import optional,optional_swig_ptr,assign_swig_args
 
 
 def verify_video_paths(video_paths,fstart,fstep,nframes):
     for t in range(fstart,nframes,fstep):
         path = str(video_paths) % t
         assert Path(path).exists(),f"path {path} must exist for test."
-
-def create_swig_args(args):
-    sargs = pyvnlb.ReadVideoParams()
-    for key,val in args.items():
-        sval = optional_swig_ptr(val)
-        setattr(sargs,key,sval)
-    return sargs
 
 def parse_args(shape,video_paths,pyargs):
 
@@ -34,22 +27,26 @@ def parse_args(shape,video_paths,pyargs):
     fstep = optional(pyargs,'fstep',1)
     verify_video_paths(video_paths,fstart,fstep,nframes)
 
-    # -- params --
-    args = edict()
-
     # -- set required numeric values --
-    args.c = c
-    args.t = t
-    args.h = h
-    args.w = w
+    args = edict()
     args.video_paths = bytes(str(video_paths),'utf-8')
     args.first_frame = fstart
     args.last_frame = list(range(fstart,nframes,fstep))[-1]
     args.frame_step = fstep
-    args.read_video = np.zeros(shape,dtype=np.float32)
     args.verbose = verbose
 
-    # -- copy to swig --
-    sargs = create_swig_args(args)
+    # -- set tensors --
+    tensors = edict()
+    tensors.c = c
+    tensors.t = t
+    tensors.h = h
+    tensors.w = w
+    tensors.noisy = np.zeros(shape,dtype=np.float32)
 
-    return args, sargs
+    # -- copy to swig --
+    sargs = pyvnlb.ReadVideoParams()
+    assign_swig_args(args,sargs)
+    targs = pyvnlb.VnlbTensors()
+    assign_swig_args(tensors,targs)
+
+    return args, sargs, tensors, targs

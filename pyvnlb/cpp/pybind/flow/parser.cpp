@@ -18,7 +18,6 @@
 
 #include <pyvnlb/cpp/flow/defaults.h>
 #include <pyvnlb/cpp/pybind/flow/interface.h>
-#include <pyvnlb/cpp/pybind/flow/parser.h>
 
 extern "C" {
 #include <pyvnlb/cpp/flow/tvl1flow_lib.h>
@@ -50,6 +49,7 @@ void setTvFlowParams(const PyTvFlowParams& args, tvFlowParams& params){
   params.nwarps = (args.nwarps < 0) ? PAR_DEFAULT_NWARPS : args.nwarps;
   params.epsilon = (args.epsilon < 0) ? PAR_DEFAULT_EPSILON : args.epsilon;
   params.verbose = (args.verbose < 0) ? PAR_DEFAULT_VERBOSE : args.verbose;
+
 
   //check parameters
   if (params.nproc < 0) {

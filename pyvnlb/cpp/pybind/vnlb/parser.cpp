@@ -10,21 +10,22 @@
 #include <pyvnlb/cpp/flow/defaults.h>
 #include <pyvnlb/cpp/vnlb/VideoNLBayes.hpp>
 
+#include <pyvnlb/cpp/pybind/interface.h>
 #include <pyvnlb/cpp/pybind/vnlb/interface.h>
-#include <pyvnlb/cpp/pybind/vnlb/parser.h>
 
 
 using namespace std;
 
 
-void setVnlbParams(const PyVnlbParams& args, VideoNLB::nlbParams& params, int step){
+void setVnlbParams(const PyVnlbParams& args, const VnlbTensors& tensors,
+                   VideoNLB::nlbParams& params, int step){
 
   // init 
   int index = step-1;
   float sigma = args.sigma[index];
 
   // set default 
-  VideoSize img_sz(args.w,args.h,args.t,args.c);
+  VideoSize img_sz(tensors.w,tensors.h,tensors.t,tensors.c);
   VideoNLB::defaultParameters(params, args.ps_x[index], args.ps_t[index],
 			      step, sigma, img_sz, args.verbose);
 

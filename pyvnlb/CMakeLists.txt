@@ -38,6 +38,7 @@ set(PYVNLB_HEADERS
   cpp/flow/tvl1flow_lib.h
   cpp/vnlb/VideoNLBayes.hpp
   cpp/vnlb/LibMatrix.h
+  cpp/pybind/interface.h
   cpp/pybind/video_io/interface.h
   cpp/pybind/flow/interface.h
   cpp/pybind/vnlb/interface.h

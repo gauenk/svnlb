@@ -8,9 +8,18 @@ import pyvnlb
 
 # from .ptr_utils import py2swig
 from ..image_utils import est_sigma
-from ..utils import optional,optional_swig_ptr,expand_flows,ndarray_ctg_dtype,rgb2bw
+from ..utils import optional,optional_swig_ptr,ndarray_ctg_dtype
+from ..utils import check_flows,check_none,assign_swig_args,check_and_expand_flows
 
-def set_optional_params(args,pyargs):
+#
+# --Vnlb Parameters --
+#
+
+def set_function_params(args,pyargs):
+    """
+    args: settings for SWIG
+    pyargs: settings from python
+    """
     # -- set optional numeric vals --
     args.use_default = optional(pyargs,'use_default',True)
 
@@ -41,6 +50,10 @@ def set_optional_params(args,pyargs):
     args.verbose = optional(pyargs,'verbose',False)
     args.print_params = optional(pyargs,'print_params',0)
 
+#
+# -- Tensor Parser Variables --
+#
+
 def np_zero_tensors(t,c,h,w):
     tensors = edict()
     tensors.fflow = np.zeros((t,2,h,w),dtype=np.float32)
@@ -48,35 +61,27 @@ def np_zero_tensors(t,c,h,w):
     tensors.oracle = np.zeros((t,c,h,w),dtype=np.float32)
     tensors.clean = np.zeros((t,c,h,w),dtype=np.float32)
     tensors.basic = np.zeros((t,c,h,w),dtype=np.float32)
-    tensors.final = np.zeros((t,c,h,w),dtype=np.float32)
+    tensors.denoised = np.zeros((t,c,h,w),dtype=np.float32)
     return tensors
 
 def set_tensors(args,pyargs,tensors):
+
+    # -- set tensors --
     args.fflow = optional(pyargs,'fflow',tensors.fflow)
     args.bflow = optional(pyargs,'bflow',tensors.bflow)
     args.oracle = optional(pyargs,'oracle',tensors.oracle)
     args.clean = optional(pyargs,'clean',tensors.clean)
     args.basic = optional(pyargs,'basic',tensors.basic)
-    args.final = optional(pyargs,'final',tensors.final)
+    args.denoised = optional(pyargs,'denoised',tensors.denoised)
 
-def check_and_expand_flows(pyargs,t):
-    fflow,bflow = pyargs['fflow'],pyargs['bflow']
-    nfflow = fflow.shape[0]
-    nbflow = bflow.shape[0]
-    assert nfflow == nbflow,"num flows must be equal."
-    if nfflow == t-1:
-        expand_flows(pyargs)    
-    elif nfflow < t-1:
-        msg = "The input flows are the wrong shape.\n"
-        msg += "(nframes,two,height,width)"
-        raise ValueError(msg)
+    # -- set bools --
+    args.use_flow = check_flows(pyargs)
+    args.use_clean = check_none(optional(pyargs,'clean',None),'neq')
+    args.use_oracle = check_none(optional(pyargs,'oracle',None),'neq')
 
-def create_swig_args(args):
-    sargs = pyvnlb.PyVnlbParams()
-    for key,val in args.items():
-        sval = optional_swig_ptr(val)
-        setattr(sargs,key,sval)
-    return sargs
+#
+# -- Main Parser --
+#
 
 def parse_args(noisy,sigma,pyargs):
 
@@ -88,34 +93,34 @@ def parse_args(noisy,sigma,pyargs):
     # -- format noisy image --
     noisy = ndarray_ctg_dtype(noisy,np.float32,verbose)
 
+    # -- format flows for c++ (t-1 -> t) --
+    if check_flows(pyargs): check_and_expand_flows(pyargs,t)
+
     # -- get sigma --
     sigma = optional(pyargs,'sigma',sigma)
     if sigma is None:
         sigma = est_sigma(noisy)
 
-    # -- params --
+    # -- set function vars --
     args = edict()
-
-    # -- set required numeric values --
-    args.w = w
-    args.h = h
-    args.c = c
-    args.t = t
-    args.noisy = noisy
     args.sigma = np.array([sigma,sigma],dtype=np.float32)
     args.sigmaBasic = np.array([0.,0.],dtype=np.float32)
-    
-    # -- set optional params --
-    set_optional_params(args,pyargs)
+    set_function_params(args,pyargs)
 
-    # -- format flows for c++ --
-    if args.use_flow: check_and_expand_flows(pyargs,t)
-
-    # -- create shell tensors & set arrays --
+    # -- set tensors vars --
+    tensors = edict()
+    tensors.w = w
+    tensors.h = h
+    tensors.c = c
+    tensors.t = t
+    tensors.noisy = noisy
     ztensors = np_zero_tensors(t,c,h,w)
-    set_tensors(args,pyargs,ztensors)
+    set_tensors(tensors,pyargs,ztensors)
 
     # -- copy to swig --
-    sargs = create_swig_args(args)
+    sargs = pyvnlb.PyVnlbParams()
+    assign_swig_args(args,sargs)
+    targs = pyvnlb.VnlbTensors()
+    assign_swig_args(tensors,targs)
 
-    return args, sargs
+    return args, sargs, tensors, targs

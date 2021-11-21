@@ -2,18 +2,19 @@
 
 #pragma once
 
-/// Arguments for video denoising
+
+#include <pyvnlb/cpp/flow/defaults.h>
+#include <pyvnlb/cpp/pybind/interface.h>
+
+
+// Arguments for video denoising
 struct PyTvFlowParams {
 PyTvFlowParams() :
   // --> image details <--
-  t(0),h(0),w(0),c(0),
-    burst(nullptr),
-    fflow(nullptr),
-    bflow(nullptr),
-  // --> vnlb tuning params <--
-    direction(-1),
+  direction(-1),
     nproc(-1),
     tau(-1),
+    theta(-1),
     plambda(-1),
     nscales(-1),
     fscale(-1),
@@ -23,26 +24,10 @@ PyTvFlowParams() :
     verbose(0),
     testing(0) {}
 
+
   /***
 
-      --->   Image Info   <---
-
-  ***/
-
-  int t; // nframes
-  int h; // height
-  int w; // width
-  int c; // color
-
-  // image for flow
-
-  float* burst;
-  float* fflow;
-  float* bflow;
-  
-  /***
-
-      --->  VNLB Tuning Params  <---
+  --->  VNLB Tuning Params  <---
 
   ***/
 
@@ -61,4 +46,5 @@ PyTvFlowParams() :
 
 };
 
-void runTV1Flow(const PyTvFlowParams& args);
+void runTV1Flow(const PyTvFlowParams& args, const VnlbTensors& tensors);
+void setTvFlowParams(const PyTvFlowParams& args, tvFlowParams& params);

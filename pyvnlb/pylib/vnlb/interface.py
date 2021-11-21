@@ -21,46 +21,40 @@ def runPyVnlb(noisy,sigma,pyargs=None):
     return res
 
 def runVnlb_np(noisy,sigma,pyargs=None):
-    
+
     # -- extract info --
     t,c,h,w  = noisy.shape
     assert c in [1,3,4],"must have the color channel be 1, 3, or 4"
-    args,sargs = parse_args(noisy,sigma,pyargs)
+    args,swig_args,tensors,swig_tensors = parse_args(noisy,sigma,pyargs)
 
     # -- exec using numpy --
-    pyvnlb.runVnlb(sargs)
+    pyvnlb.runVnlb(swig_args,swig_tensors)
 
     # -- format & create results --
     res = {}
-    res['final'] = args.final# t c h w 
-    res['basic'] = args.basic
-    res['fflow'] = args.fflow #t c h w
-    res['bflow'] = args.bflow
-
-    # -- alias some vars --
-    res['denoised'] = res['final']
+    res['denoised'] = tensors.denoised# t c h w
+    res['basic'] = tensors.basic
+    res['fflow'] = tensors.fflow #t c h w
+    res['bflow'] = tensors.bflow
 
     return res
 
 def runPyVnlbTimed(noisy,sigma,pyargs=None):
-    
+
     # -- extract info --
     t,c,h,w  = noisy.shape
     assert c in [1,3,4],"must have the color channel be 1, 3, or 4"
-    args,sargs = parse_args(noisy,sigma,pyargs)
+    args,swig_args,tensors,swig_tensors = parse_args(noisy,sigma,pyargs)
 
     # -- exec using numpy --
-    pyvnlb.runVnlbTimed(sargs)
+    pyvnlb.runVnlbTimed(swig_args,swig_tensors)
 
     # -- format & create results --
     res = {}
-    res['final'] = args.final# t c h w 
-    res['basic'] = args.basic
-    res['fflow'] = args.fflow #t c h w
-    res['bflow'] = args.bflow
-
-    # -- alias some vars --
-    res['denoised'] = res['final']
+    res['denoised'] = tensors.denoised# t c h w
+    res['basic'] = tensors.basic
+    res['fflow'] = tensors.fflow #t c h w
+    res['bflow'] = tensors.bflow
 
     return res
 

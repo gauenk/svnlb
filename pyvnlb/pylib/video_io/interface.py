@@ -17,7 +17,7 @@ from .parser import parse_args
 # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 def readVideoForVnlb(shape,video_paths,pyargs=None):
-    
+
     # -- extract info --
     t,c,h,w = shape
     assert c in [1,3,4],"must have the color channel be 1, 3, or 4"
@@ -25,16 +25,16 @@ def readVideoForVnlb(shape,video_paths,pyargs=None):
     assert use_bw == False,"This test shouldn't convert color to bw."
 
     # -- parse args --
-    args,sargs = parse_args(shape,video_paths,pyargs)
+    args,swig_args,tensors,swig_tensors = parse_args(shape,video_paths,pyargs)
 
     # -- exec function --
-    pyvnlb.readVideoForVnlbCpp(sargs)
+    pyvnlb.readVideoForVnlbCpp(swig_args,swig_tensors)
 
-    return args.read_video
+    return tensors.noisy
 
 
 def readVideoForFlow(shape,video_paths,pyargs=None):
-    
+
     # -- extract info --
     t,c,h,w = shape
     if c != 1:
@@ -43,10 +43,9 @@ def readVideoForFlow(shape,video_paths,pyargs=None):
     # assert c == 1,"bw input shapes please."
 
     # -- parse args --
-    args,sargs = parse_args(shape,video_paths,pyargs)
+    args,swig_args,tensors,swig_tensors = parse_args(shape,video_paths,pyargs)
 
     # -- exec function --
-    pyvnlb.readVideoForFlowCpp(sargs)
+    pyvnlb.readVideoForFlowCpp(swig_args,swig_tensors)
 
-    return args.read_video
-
+    return tensors.noisy

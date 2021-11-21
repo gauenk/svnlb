@@ -4,6 +4,25 @@ import pyvnlb
 import numpy as np
 from einops import rearrange
 
+
+def assign_swig_args(args,sargs):
+    for key,val in args.items():
+        sval = optional_swig_ptr(val)
+        setattr(sargs,key,sval)
+    return sargs
+
+def check_and_expand_flows(pyargs,t):
+    fflow,bflow = pyargs['fflow'],pyargs['bflow']
+    nfflow = fflow.shape[0]
+    nbflow = bflow.shape[0]
+    assert nfflow == nbflow,"num flows must be equal."
+    if nfflow == t-1:
+        expand_flows(pyargs)    
+    elif nfflow < t-1:
+        msg = "The input flows are the wrong shape.\n"
+        msg += "(nframes,two,height,width)"
+        raise ValueError(msg)
+
 def check_omp_num_threads():
     omp_nthreads = omp_num_threads()
     if (omp_nthreads != 4):
@@ -80,13 +99,26 @@ def optional_swig_ptr(elem):
     # elem = np.ascontiguousarray(elem)
     return pyvnlb.swig_ptr(elem)
 
+def check_flows(pyargs):
+    fflow = optional(pyargs,'fflow',None)
+    bflow = optional(pyargs,'bflow',None)
+    return check_none(fflow,'neq') and check_none(bflow,'neq')
+
+def check_none(pyobj,mode):
+    if mode == "eq":
+        return type(pyobj) == type(None)
+    elif mode == "neq":
+        return type(pyobj) != type(None)
+    else:
+        raise ValueError(f"unknown mode [{mode}]")
+
 def expand_flows(pydict,axis=0):
     """
     CPP requires the flows be repeated so
     the number of temporal flows matches
     the number of frames in a burst.
     """
-    
+
     # -- unpack --
     fflow,bflow = pydict['fflow'],pydict['bflow']
     np.cat = np.concatenate

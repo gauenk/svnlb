@@ -17,8 +17,8 @@
 #include <pyvnlb/cpp/vnlb/VideoNLBayes.hpp>
 
 #include <pyvnlb/cpp/flow/defaults.h>
+#include <pyvnlb/cpp/pybind/interface.h>
 #include <pyvnlb/cpp/pybind/flow/interface.h>
-#include <pyvnlb/cpp/pybind/flow/parser.h>
 
 extern "C" {
 #include <pyvnlb/cpp/flow/tvl1flow_lib.h>
@@ -26,19 +26,18 @@ extern "C" {
 }
 
 
-void runTV1Flow(const PyTvFlowParams& args) {
-  
-  
-  // unpack shape 
-  int w = args.w;
-  int h = args.h;
-  int c = args.c;
-  int t = args.t;
+void runTV1Flow(const PyTvFlowParams& args, const VnlbTensors& tensors) {
+
+  // unpack shape
+  int w = tensors.w;
+  int h = tensors.h;
+  int c = tensors.c;
+  int t = tensors.t;
 
   // shorten names
-  float *burst = args.burst;
-  float *fflow = args.fflow;
-  float *bflow = args.bflow;
+  float *burst = tensors.noisy;
+  float *fflow = tensors.fflow;
+  float *bflow = tensors.bflow;
 
   // set flow by direction
   float *flow;
@@ -49,13 +48,13 @@ void runTV1Flow(const PyTvFlowParams& args) {
   }else{
     VNLB_THROW_MSG("invalid flow direction.");
   }
-  
 
-  // set params 
+
+  // set params
   tvFlowParams params;
   setTvFlowParams(args,params);
 
-  // correct pyramid size 
+  // correct pyramid size
   const float N = 1 + log(hypot(w, h)/16.0) / log(1/params.zfactor);
   if (N < params.nscales)
     params.nscales = N;
@@ -77,15 +76,15 @@ void runTV1Flow(const PyTvFlowParams& args) {
   int hwc = h*w*c;
   for (int _t = 0; _t < (t-1); ++_t){
 
-    // message 
+    // message
     if (params.verbose){
       fprintf(stdout,"Computing flow %d/%d\n",_t+1,t-1);
     }
-    
+
     // pick offsets
     int mult1 = (args.direction == 0) ? _t : (_t+1);
     int mult2 = (args.direction == 0) ? (_t+1) : _t;
-    
+
     // point to image pairs
     float* image1 = burst + mult1*hwc;
     float* image2 = burst + mult2*hwc;
