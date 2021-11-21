@@ -82,7 +82,6 @@ def run_method(vnlb_dataset,ioForFlow):
     #  ---------------- Video Non-Local Bayes ----------------
     #
 
-    # vnlb_params = {'fflow':fflow,'bflow':bflow,'testing':True}
     tensors={'fflow':fflow,'bflow':bflow}
     vnlb_params={'verbose':False,'testing':True}
     res_pyvnlb = pyvnlb.runPyVnlb(noisy,std,tensors,vnlb_params)

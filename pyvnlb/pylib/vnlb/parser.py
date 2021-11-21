@@ -294,6 +294,11 @@ def combine_dicts(params_1,params_2):
 
 def parse_args(noisy,sigma,tensors,pyargs):
 
+
+    # -- init empty dicts --
+    if tensors is None: tensors = {}
+    if pyargs is None: pyargs = {}
+
     # -- verbose & testing --
     verbose = optional(pyargs,'verbose',False)
     if not(hasattr(verbose,"__len__")): pyargs['verbose'] = [verbose,verbose]
