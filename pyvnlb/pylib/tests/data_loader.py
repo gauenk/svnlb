@@ -6,10 +6,10 @@ import numpy as np
 from easydict import EasyDict as edict
 
 # -- local imports --
-from file_io import get_dataset_info,read_result,format_vnlb_results
+from .file_io import get_dataset_info,read_result,format_vnlb_results
 
 # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-#  
+#
 #       Menu to Selet Images
 #
 # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-

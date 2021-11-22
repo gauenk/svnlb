@@ -1,14 +1,14 @@
 
 # -- python imports --
 import cv2,sys
+import subprocess
 import numpy as np
 from pathlib import Path
 from einops import rearrange
 from easydict import EasyDict as edict
 
-
 # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-#  
+#
 #      Read Files in a Loop
 #
 # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -33,7 +33,7 @@ def read_file(filename):
         img = read_flo_file(filename)
     else:
         img = cv2.imread(str(filename),-1)
-        img = cv2.cvtColor(img,cv2.COLOR_BGR2RGB)        
+        img = cv2.cvtColor(img,cv2.COLOR_BGR2RGB)
     img = rearrange(img,'h w c -> c h w')
     return img
 
@@ -60,7 +60,7 @@ def read_flo_file(filename):
     return data2d
 
 # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-#  
+#
 #       Wiring: Data <-> Paths
 #
 # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -85,15 +85,37 @@ def get_dataset_info(name):
 
 def print_davis_64x64_message(path):
     if not path.exists():
-        print("Please run the following commands")
-        print("./scripts/download_davis_64x64.sh")
-        sys.exit(1)
+        success = True
+        print("Downloading davis_64x64")
+        try:
+            command = "./scripts/download_davis_64x64.sh"
+            process = subprocess.Popen(command,stdout=subprocess.PIPE)
+            output, error = process.communicate()
+        except:
+            print("Failed to download.")
+            success = False
+        if not(success):
+            print("Please run the following commands")
+            print("./scripts/download_davis_64x64.sh")
+            sys.exit(1)
+        return
 
 def print_davis_message(path):
     if not path.exists():
-        print("Please run the following commands")
-        print("./scripts/download_davis.sh")
-        sys.exit(1)
+        success = True
+        print("Downloading davis")
+        try:
+            command = "./scripts/download_davis.sh"
+            process = subprocess.Popen(command,stdout=subprocess.PIPE)
+            output, error = process.communicate()
+        except:
+            print("Failed to download.")
+            success = False
+        if not(success):
+            print("Please run the following commands")
+            print("./scripts/download_davis_64x64.sh")
+            sys.exit(1)
+        return
 
 def print_gmobile_message():
     if not path.exists():
@@ -107,7 +129,7 @@ def print_gmobile_message():
         sys.exit(1)
 
 # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-#  
+#
 #             Misc
 #
 # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-

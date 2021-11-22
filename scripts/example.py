@@ -8,8 +8,8 @@ from pathlib import Path
 import pyvnlb
 
 # -- helper imports --
-from data_loader import load_dataset
-from file_io import save_images
+from pyvnlb.pylib.tests.data_loader import load_dataset
+from pyvnlb.pylib.tests.file_io import save_images
 
 #
 # -- load & denoise a video --

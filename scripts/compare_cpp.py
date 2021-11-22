@@ -13,7 +13,7 @@ from collections import defaultdict
 import pyvnlb
 
 # -- local imports --
-from data_loader import load_dataset
+from pyvnlb.pylib.tests.data_loader import load_dataset
 
 
 #

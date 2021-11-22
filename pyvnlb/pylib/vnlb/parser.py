@@ -35,9 +35,9 @@ def set_function_params_old(args,pyargs):
     args.thresh = optional(pyargs,'thresh',[-1.,-1.],np.float32)
     args.beta = optional(pyargs,'beta',[-1.,-1.],np.float32)
 
-    args.flat_areas = optional(pyargs,'flat_areas',[False,True],bool)
-    args.couple_ch = optional(pyargs,'couple_ch',[False,False],bool)
-    args.aggreBoost = optional(pyargs,'aggre_boost',[True,True],bool)
+    args.flat_areas = optional(pyargs,'flat_areas',[False,True],np.bool_)
+    args.couple_ch = optional(pyargs,'couple_ch',[False,False],np.bool_)
+    args.aggreBoost = optional(pyargs,'aggre_boost',[True,True],np.bool_)
     args.procStep = optional(pyargs,'procStep',[-1,-1],np.int32)
 
     # args.use_clean = not(optional(pyargs,'clean',None) is None)
@@ -94,27 +94,27 @@ def get_param_type():
     types['sizeSearchWindow'] = np.uint32
     types['sizeSearchTimeFwd'] = np.uint32
     types['sizeSearchTimeBwd'] = np.uint32
-    types['flatAreas'] = np.bool
+    types['flatAreas'] = np.bool_
     types['gamma'] = np.float32
-    types['coupleChannels'] = np.bool
+    types['coupleChannels'] = np.bool_
     types['variThres'] = np.float32
     types['rank'] = np.uint32
     types['beta'] = np.float32
     types['tau'] = np.float32
-    types['isFirstStep'] = np.bool
+    types['isFirstStep'] = np.bool_
     types['procStep'] = np.uint32
-    types['aggreBoost'] = np.bool
+    types['aggreBoost'] = np.bool_
     types['onlyFrame'] = np.int32
-    types['verbose'] = np.bool
-    types['testing'] = np.bool
+    types['verbose'] = np.bool_
+    types['testing'] = np.bool_
     types['var_mode'] = np.int32
 
-    types['set_sizePatch'] = np.bool
-    types['set_sizePatchTime'] = np.bool
-    types['set_nSim'] = np.bool
-    types['set_rank'] = np.bool
-    types['set_aggreBoost'] = np.bool
-    types['set_procStep'] = np.bool
+    types['set_sizePatch'] = np.bool_
+    types['set_sizePatchTime'] = np.bool_
+    types['set_nSim'] = np.bool_
+    types['set_rank'] = np.bool_
+    types['set_aggreBoost'] = np.bool_
+    types['set_procStep'] = np.bool_
 
     return types
 
