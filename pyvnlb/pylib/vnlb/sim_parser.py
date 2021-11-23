@@ -71,7 +71,7 @@ def simSizes(params,c,nParts):
     npatches = sWx * sWx * sWt
     # return pNum,pDim,pChn
     # groupShape = (nParts,sPt,sPc,pChn,sPx,sPx,npatches)
-    groupShape = (nParts,sPt,sPc*pChn*sPx*sPx,npatches)
+    groupShape = (nParts,sPt,sPc*pChn,sPx,sPx,npatches)
     # groupShape = (pNum,sPx,sPx,sPt,pChn,sPc)
     return groupShape,npatches
 

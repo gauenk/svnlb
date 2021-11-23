@@ -91,7 +91,6 @@ def simPatchSearch(noisy,sigma,pidx,tensors=None,params=None):
     simParams.nSimP = 0
     simParams.pidx = pidx
     simParams.all_pix = all_pix
-    swig_params[0].verbose = True
     pyvnlb.runSimSearch(swig_params[0], swig_tensors, simParams)
 
     # -- fix-up groups --
@@ -99,6 +98,8 @@ def simPatchSearch(noisy,sigma,pidx,tensors=None,params=None):
     psT = swig_params[0].sizePatchTime
     t,c,h,w = noisy.shape
     nSimP = simParams.nSimP
+    gNoisy_og = tensors.groupNoisy
+    gBasic_og = tensors.groupBasic
     gNoisy = reorder_sim_group(tensors.groupNoisy,psX,psT,c,nSimP)
     gBasic = reorder_sim_group(tensors.groupBasic,psX,psT,c,nSimP)
     indices = rearrange(tensors.indices[:,:nSimP],'nparts nsimp -> (nparts nsimp)')
@@ -107,10 +108,14 @@ def simPatchSearch(noisy,sigma,pidx,tensors=None,params=None):
     results = {}
     results['groupNoisy'] = gNoisy
     results['groupBasic'] = gBasic
+    results['groupNoisy_og'] = gNoisy_og
+    results['groupBasic_og'] = gBasic_og
     results['indices'] = indices
+    results['npatches_og'] = gNoisy_og.shape[-1]
     results['npatches'] = simParams.nSimP
     results['psX'] = psX
     results['psT'] = psT
+    results['nparts_omp'] = nParts
 
     return results
 

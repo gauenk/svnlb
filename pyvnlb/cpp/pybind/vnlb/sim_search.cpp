@@ -100,8 +100,8 @@ void runSimSearch(VideoNLB::nlbParams& params,
 
   // initialize vectors
   int groupSize = patch_num * patch_dim * patch_chnls;
-  fprintf(stdout,"groupSize: %d\n",groupSize);
-  fprintf(stdout,"patch_num: %d\n",patch_num);
+  // fprintf(stdout,"groupSize: %d\n",groupSize);
+  // fprintf(stdout,"patch_num: %d\n",patch_num);
 
   /*****************
 
@@ -111,7 +111,7 @@ void runSimSearch(VideoNLB::nlbParams& params,
 
   // Borders added to each sub-division of the image (for multi-threading)
   const int border = 2*(params.sizeSearchWindow/2)+ params.sizePatch - 1;
-  fprintf(stdout,"border: %d\n",border);
+  // fprintf(stdout,"border: %d\n",border);
 
   // color transform
   VideoUtils::transformColorSpace(imNoisy, true);
@@ -172,7 +172,8 @@ void runSimSearch(VideoNLB::nlbParams& params,
     // write back to tensors
     int gStep = part * groupSize;
     float* dataPtr = groupNoisy.data();
-    std::fprintf(stdout,"gStep: %d | groupNoisy.size(): %ld\n",gStep,groupNoisy.size());
+    // std::fprintf(stdout,"gStep: %d | "
+    //              "groupNoisy.size(): %ld\n",gStep,groupNoisy.size());
     std::memcpy(tensors.groupNoisy+gStep,dataPtr,groupNoisy.size());
     dataPtr = groupBasic.data();
     std::memcpy(tensors.groupBasic+gStep,dataPtr,groupBasic.size());

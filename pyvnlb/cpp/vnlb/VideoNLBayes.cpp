@@ -665,7 +665,7 @@ unsigned estimateSimilarPatches(
 	const VideoSize sz = imNoisy.sz;
 	const int dist_chnls = step1 ? 1 : sz.channels;
 	bool use_flow = (fflow.sz.width > 0);
-    fprintf(stdout,"sz: %d,%d,%d,%d\n",sz.frames,sz.channels,sz.height,sz.width);
+    // fprintf(stdout,"sz: %d,%d,%d,%d\n",sz.frames,sz.channels,sz.height,sz.width);
 
 	// Coordinates of center of search box
 	unsigned px, py, pt, pc;
@@ -775,7 +775,7 @@ unsigned estimateSimilarPatches(
 	std::partial_sort(distance.begin(), distance.begin() + nSimP,
 	                  distance.end(), compareFirst);
 
-    fprintf(stdout,"nSimilarPatches: %d\n",params.nSimilarPatches);
+    // fprintf(stdout,"nSimilarPatches: %d\n",params.nSimilarPatches);
 	if (nSimP < params.nSimilarPatches)
 		printf("SR2 [%d,%d,%d] ~ nsim = %d\n", px,py,pt,nSimP);
 
@@ -813,12 +813,12 @@ unsigned estimateSimilarPatches(
       // 	groupBasic[k] = imBasic(c * wh + indices[n] + ht * whc + hy * w + hx);
 	}
 
-    if (pidx == 968){
-      for(int k = 0; k < 20; ++k){
-        fprintf(stdout,"groupNoisy[k]: %2.2f | indices[k]: %d | imNoisy[k]: %2.2f\n",
-                groupNoisy[k],indices[k],imNoisy.data[k]);
-      }
-    }
+    // if (pidx == 968){
+    //   for(int k = 0; k < 20; ++k){
+    //     fprintf(stdout,"groupNoisy[k]: %2.2f | indices[k]: %d | imNoisy[k]: %2.2f\n",
+    //             groupNoisy[k],indices[k],imNoisy.data[k]);
+    //   }
+    // }
 
 	/* 000  pixels from all patches
 	 * 001  pixels from all patches

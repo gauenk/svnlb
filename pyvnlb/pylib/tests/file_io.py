@@ -20,7 +20,6 @@ def read_result(path,fmt,fstart,nframes):
         if not path_t.exists():
             print(f"Error: the file {str(path_t)} does not exist.")
             sys.exit(1)
-        print(path_t)
         data = read_file(path_t)
         tensors.append(data)
         paths.append(str(path_t))
@@ -162,19 +161,22 @@ def save_images(tensor,fn,imax=255.):
         tensor = fn
         fn = tmp
 
+    # -- shaping --
+    nframes = tensor.shape[-4]
     if tensor.ndim > 4:
         s = tensor.shape[-3:]
         tensor = tensor.reshape(-1,s[0],s[1],s[2])
+    ntotal = len(tensor)
+    nrows = ntotal // nframes
 
     # -- squash image values --
-    nframes = len(tensor)
-    tensor = tensor.astype(np.float32) / imax 
+    tensor = tensor.astype(np.float32) / imax
     tensor = np.clip(255.*tensor,0,255)
     tensor = np.uint8(tensor)
 
     # -- arange --
     tensor = rearrange(tensor,'t c h w -> t h w c')
-    save_img = merge_images(tensor, (1,nframes))
+    save_img = merge_images(tensor, (nrows,nframes))
 
     # -- format for cv2 --
     if save_img.shape[-1] == 3:
