@@ -1,6 +1,6 @@
 
 # -- import inferace files --
-from .vnlb.interface import runPyVnlb,runPyVnlbTimed,setVnlbParams
+from .vnlb.interface import runPyVnlb,runPyVnlbTimed,setVnlbParams,simPatchSearch
 from .flow.interface import runPyTvL1Flow,runPyFlow,runPyFlowFB
 from .video_io.interface import readVideoForVnlb,readVideoForFlow
 from .flow.flow_utils import flow2img,flow2burst

@@ -24,7 +24,6 @@ extern "C" {
 }
 
 
-// void runVnlb(const PyVnlbParams& args, const VnlbTensors& tensors) {
 void runVnlb(VideoNLB::nlbParams& params1, VideoNLB::nlbParams& params2,
              const VnlbTensors& tensors) {
 

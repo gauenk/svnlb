@@ -69,17 +69,12 @@ PyVnlbParams() :
 
 struct PySimSearchParams {
 PySimSearchParams() :
-  gNoisy(nullptr),
-    gBasic(nullptr),
-    indices(nullptr),
-    pixel_index(nullptr),
-    whole_image(0){}
+  nParts(1),nSimP(0),pidx(0),all_pix(0){}
 
-  float* gNoisy;
-  float* gBasic;
-  unsigned* indices;
-  unsigned* pixel_index;
-  bool whole_image;
+  unsigned nParts;
+  unsigned nSimP;
+  unsigned pidx;
+  bool all_pix;
 
 };
 
@@ -94,4 +89,6 @@ void runVnlb(VideoNLB::nlbParams& params1,
 /*              VideoNLB::nlbParams& params2, */
 /*              const VnlbTensors& tensors); */
 void setVnlbParamsCpp(VideoNLB::nlbParams& params, const VnlbTensors& tensors,int step);
-
+void runSimSearch(VideoNLB::nlbParams& params,
+                  const VnlbTensors& tensors,
+                  PySimSearchParams& sim_params);

@@ -22,11 +22,13 @@
 #include <math.h>
 #include <float.h>
 
+
 #include <stdio.h>     // getchar() for debugging
 
 #include "vnlb_params.h"
 #include "VideoNLBayes.hpp"
 #include "LibMatrix.h"
+
 
 #ifdef _OPENMP
 #include <omp.h>
@@ -551,6 +553,11 @@ unsigned processNLBayes(
 	if (step1) imBasic.resize(sz); // output of first step
 	else       imFinal.resize(sz); // output of second step
 
+    // pick which image to read from for similar patches
+    Video<float>* imRead;
+    imRead = const_cast<Video<float>*>(&imNoisy);
+    if (!step1) imRead = const_cast<Video<float>*>(&imBasic);
+
 	// Matrices used for Bayes' estimate
 	vector<float> groupNoisy(            patch_num * patch_dim * patch_chnls);
 	vector<float> groupBasic(step1 ? 0 : patch_num * patch_dim * patch_chnls);
@@ -585,8 +592,8 @@ unsigned processNLBayes(
 
 			// Search for similar patches around the reference one
 			unsigned nSimP = estimateSimilarPatches(imNoisy, imBasic, fflow, bflow,
-					groupNoisy, groupBasic, indices, ij3, params, imClean);
-
+                                                    groupNoisy, groupBasic, indices,
+                                                    ij3, params, imClean, *imRead);
 			// If we use the homogeneous area trick
 			bool flatPatch = false;
 			if (params.flatAreas)
@@ -644,7 +651,8 @@ unsigned estimateSimilarPatches(
 	std::vector<unsigned> &indices,
 	const unsigned pidx,
 	const nlbParams &params,
-	Video<float> const &imClean)
+	Video<float> const &imClean,
+    Video<float> const &imRead)
 {
 	// Initialization
 	bool step1 = params.isFirstStep;
@@ -657,6 +665,7 @@ unsigned estimateSimilarPatches(
 	const VideoSize sz = imNoisy.sz;
 	const int dist_chnls = step1 ? 1 : sz.channels;
 	bool use_flow = (fflow.sz.width > 0);
+    fprintf(stdout,"sz: %d,%d,%d,%d\n",sz.frames,sz.channels,sz.height,sz.width);
 
 	// Coordinates of center of search box
 	unsigned px, py, pt, pc;
@@ -669,9 +678,14 @@ unsigned estimateSimilarPatches(
 
 	ranget[0] = std::max(0, (int)pt - sWt_b - shift_t);
 	ranget[1] = std::min((int)sz.frames - sPt, (int)pt +  sWt_f - shift_t);
+    // fprintf(stdout,"rt: (%d,%d)\n",ranget[0],ranget[1]);
 
 	// Redefine size of temporal search range
 	int sWt = ranget[1] - ranget[0] + 1;
+    // fprintf(stdout,"sWt: %d\n",sWt);
+    // fprintf(stdout,"pt: %d\n",pt);
+    // fprintf(stdout,"(sWt_f,sWt_b): (%d,%d)\n",sWt_f,sWt_b);
+    // fprintf(stdout,"(sPt): %d\n",sPt);
 
 	// Allocate vector of patch distances
 	std::vector<std::pair<float, unsigned> > distance(sWx * sWy * sWt);
@@ -717,6 +731,8 @@ unsigned estimateSimilarPatches(
 		// Spatial search range
 		int rangex[2];
 		int rangey[2];
+        // fprintf(stdout,"rx: (%d,%d) | ry: (%d,%d)\n",
+        //         rangex[0],rangex[1],rangey[0],rangey[1]);
 
 		int shift_x = std::min(0, cx[dt] - (sWx-1)/2);
 		int shift_y = std::min(0, cy[dt] - (sWy-1)/2);
@@ -746,7 +762,7 @@ unsigned estimateSimilarPatches(
 			for (int hx = 0; hx < sPx; hx++)
 				dist += (dif = (*p_im)(px + hx, py + hy, pt + ht, c)
 				             - (*p_im)(qx + hx, qy + hy, qt + ht, c) ) * dif;
-	
+
 			// Save distance and corresponding patch index
 			distance[nsrch++] = std::make_pair(dist, sz.index(qx, qy, qt, 0));
 		}
@@ -759,6 +775,7 @@ unsigned estimateSimilarPatches(
 	std::partial_sort(distance.begin(), distance.begin() + nSimP,
 	                  distance.end(), compareFirst);
 
+    fprintf(stdout,"nSimilarPatches: %d\n",params.nSimilarPatches);
 	if (nSimP < params.nSimilarPatches)
 		printf("SR2 [%d,%d,%d] ~ nsim = %d\n", px,py,pt,nSimP);
 
@@ -774,16 +791,34 @@ unsigned estimateSimilarPatches(
 	const unsigned w   = sz.width;
 	const unsigned wh  = sz.wh;
 	const unsigned whc = sz.whc;
+    // fprintf(stdout,"coupleChannels: %d\n",params.coupleChannels);
+    // fprintf(stdout,"(w,wh,whc): (%d,%d,%d)\n",w,wh,whc);
+    // fprintf(stdout,"(sz.channels,sPt,sPx,sPx,nSimP):"
+    //         " (%d,%d,%d,%d,%d)\n",sz.channels,sPt,sPx,sPx,nSimP);
+    // fprintf(stdout,"(sz.channels,sPt,sPx,sPx,nSimP):"
+    //         " (%d,%d,%d,%d,%d)\n",sz.channels,sPt,sPx,sPx,nSimP);
 	for (unsigned c = 0, k = 0; c < sz.channels; c++)
 	for (unsigned ht = 0; ht < sPt; ht++)
 	for (unsigned hy = 0; hy < sPx; hy++)
 	for (unsigned hx = 0; hx < sPx; hx++)
 	for (unsigned n = 0; n < nSimP; n++, k++)
 	{
-		groupNoisy[k] = imNoisy(c * wh + indices[n] + ht * whc + hy * w + hx);
-		if (!step1)
-			groupBasic[k] = imBasic(c * wh + indices[n] + ht * whc + hy * w + hx);
+      // patch around imNoisy[t_i,c_i,y_i,x_i] @ a constant offset of indices[n]
+      // problem with this interpt is that we always actually index...
+      // t_i = {0,..,sPt}, y_i = {0,..,sPx}, ..
+      // so it always indexes the "volume patch" @ the offset of indices[n]
+      groupNoisy[k] = imRead(c * wh + indices[n] + ht * whc + hy * w + hx);
+      // groupNoisy[k] = imNoisy(c * wh + indices[n] + ht * whc + hy * w + hx);
+      // if (!step1)
+      // 	groupBasic[k] = imBasic(c * wh + indices[n] + ht * whc + hy * w + hx);
 	}
+
+    if (pidx == 968){
+      for(int k = 0; k < 20; ++k){
+        fprintf(stdout,"groupNoisy[k]: %2.2f | indices[k]: %d | imNoisy[k]: %2.2f\n",
+                groupNoisy[k],indices[k],imNoisy.data[k]);
+      }
+    }
 
 	/* 000  pixels from all patches
 	 * 001  pixels from all patches

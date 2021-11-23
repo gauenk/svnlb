@@ -13,6 +13,9 @@ VnlbTensors() :
     bflow(nullptr),
     oracle(nullptr),
     clean(nullptr),
+    groupNoisy(nullptr),
+    groupBasic(nullptr),
+    indices(nullptr),
     use_flow(0),
     use_clean(0),
     use_oracle(0) {}
@@ -33,6 +36,10 @@ VnlbTensors() :
 
   float* oracle;
   float* clean;
+
+  float* groupNoisy;
+  float* groupBasic;
+  unsigned* indices;
 
   bool use_flow;
   bool use_clean;

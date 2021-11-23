@@ -226,7 +226,8 @@ unsigned estimateSimilarPatches(
 	std::vector<unsigned> &indices,
 	const unsigned pidx,
 	const nlbParams &params,
-	Video<float> const &imClean);
+	Video<float> const &imClean,
+    Video<float> const &imRead);
 
 /* Detect flat areas with a statistical test. Flat areas are given a
  * different processing if the flat-area1/2 parameters are set to true.

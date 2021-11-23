@@ -20,6 +20,7 @@ set(PYVNLB_SRC
   cpp/pybind/flow/tvl1flow.cpp
   cpp/pybind/vnlb/parser.cpp
   cpp/pybind/vnlb/vnlb.cpp
+  cpp/pybind/vnlb/sim_search.cpp
   # cpp/pybind/vnlb/vnlb_timed.cpp
 )
 

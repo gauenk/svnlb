@@ -10,6 +10,7 @@ import pyvnlb
 # -- local imports --
 from ..utils import optional,optional_swig_ptr,assign_swig_args
 from .parser import parse_args,parse_params
+from .sim_parser import sim_parser,reorder_sim_group
 
 # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 #
@@ -66,45 +67,57 @@ def runPyVnlbTimed(noisy,sigma,tensors=None,params=None):
 #
 # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-# def swig2py_nlb_params(swig_params):
-#     params_1,params_2 = edict(),edict()
-#     py_params = [params_1,params_2]
-#     for i in range(2):
-#         for field in dir(swig_params[i]):
-#             if '__' in field or field in ['this','thisown']:
-#                 continue
-#             py_params[i][field] = getattr(swig_params[i],field)
-#     return py_params,args
-
-# def py2swig_nlb_params(py_params):
-#     swig_params_1 = pyvnlb.nlbParams()
-#     swig_params_2 = pyvnlb.nlbParams()
-#     swig_params = [swig_params_1,swig_params_2]
-#     for i in range(2):
-#         for field in py_params[i].keys():
-#             if '__' in field or field in ['this','thisown']:
-#                 continue
-#             swig_params[i][field] = params[i][field]
-#     return swig_params
-
-# def params2params(params,params):
-#     params = {}
-#     set_function_params(edict(),{})
-#     for key in params.keys():
-
-
-def setVnlbParams(shape,sigma,params=None):
+def setVnlbParams(shape,sigma,tensors=None,params=None):
     # -- create python-params for parser --
     py_params,swig_params = parse_params(shape,sigma,params)
     return py_params
 
-def simPatchSearch(noisy,sigma,params=None):
+def simPatchSearch(noisy,sigma,pidx,tensors=None,params=None):
+
+    # -- create python-params for parser --
+    # noisy = noisy.copy(order="C")
+    py_params,swig_params = parse_params(noisy.shape,sigma,params)
+    py_params = edict({k:v[0] for k,v in py_params.items()})
+    nParts = 1
+    tensors,swig_tensors = sim_parser(noisy,sigma,nParts,tensors,py_params)
+
+    # -- search everything if a negative pixel index is input --
+    if pidx < 0: all_pix = True
+    else: all_pix = False
+
+    # -- exec search --
+    simParams = pyvnlb.PySimSearchParams()
+    simParams.nParts = nParts
+    simParams.nSimP = 0
+    simParams.pidx = pidx
+    simParams.all_pix = all_pix
+    swig_params[0].verbose = True
+    pyvnlb.runSimSearch(swig_params[0], swig_tensors, simParams)
+
+    # -- fix-up groups --
+    psX = swig_params[0].sizePatch
+    psT = swig_params[0].sizePatchTime
+    t,c,h,w = noisy.shape
+    nSimP = simParams.nSimP
+    gNoisy = reorder_sim_group(tensors.groupNoisy,psX,psT,c,nSimP)
+    gBasic = reorder_sim_group(tensors.groupBasic,psX,psT,c,nSimP)
+    indices = rearrange(tensors.indices[:,:nSimP],'nparts nsimp -> (nparts nsimp)')
+
+    # -- pack results --
+    results = {}
+    results['groupNoisy'] = gNoisy
+    results['groupBasic'] = gBasic
+    results['indices'] = indices
+    results['npatches'] = simParams.nSimP
+    results['psX'] = psX
+    results['psT'] = psT
+
+    return results
+
+def computeBayesEstimate(noisy,sigma,tensors=None,params=None):
     pass
 
-def computeBayesEstimate(noisy,sigma,params=None):
-    pass
-
-def modifyEigVals(noisy,sigma,params=None):
+def modifyEigVals(noisy,sigma,tensors=None,params=None):
     pass
 
 

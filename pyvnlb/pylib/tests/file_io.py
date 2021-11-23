@@ -20,6 +20,7 @@ def read_result(path,fmt,fstart,nframes):
         if not path_t.exists():
             print(f"Error: the file {str(path_t)} does not exist.")
             sys.exit(1)
+        print(path_t)
         data = read_file(path_t)
         tensors.append(data)
         paths.append(str(path_t))
@@ -160,6 +161,10 @@ def save_images(tensor,fn,imax=255.):
         tmp = tensor
         tensor = fn
         fn = tmp
+
+    if tensor.ndim > 4:
+        s = tensor.shape[-3:]
+        tensor = tensor.reshape(-1,s[0],s[1],s[2])
 
     # -- squash image values --
     nframes = len(tensor)

@@ -42,7 +42,8 @@ class TestVnlbDenoiser(unittest.TestCase):
             for field in fields:
                 cppField = res_vnlb[imageIO][field]
                 pyField = res_pyvnlb[imageIO][field]
-                totalError = np.sum(np.abs(cppField - pyField)/(np.abs(cppField)+1e-12))
+                totalError = np.abs(cppField - pyField)/(np.abs(cppField)+1e-12)
+                totalError = np.sum(totalError)
                 totalError = np.around(totalError,9)
                 tgt = 0.
                 if field in imageIO_nz:

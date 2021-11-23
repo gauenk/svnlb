@@ -799,7 +799,7 @@ namespace VideoUtils
 		for (int p = 0, n = 0; p < nH; p++)
 		for (int q = 0;        q < nW; q++, n++)
 		{
-			// Set crop information 
+			// Set crop information
 			tiles[n].source_sz = vid.sz;
 
 			// origin of the crop. the crop contains the tile plus a border

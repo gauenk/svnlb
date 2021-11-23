@@ -21,7 +21,7 @@ void setVnlbParamsCpp(VideoNLB::nlbParams& params, const VnlbTensors& tensors, i
 
   // init
   float sigma = params.sigma;
-  int search_space = params.sizePatch;
+  int search_space = params.sizeSearchWindow;
   int num_patches = params.nSimilarPatches;
   int rank = params.rank;
   float thresh = params.variThres;
@@ -40,8 +40,10 @@ void setVnlbParamsCpp(VideoNLB::nlbParams& params, const VnlbTensors& tensors, i
   bool set_procStep = params.set_procStep;
 
   // vars to set default
-  int ps_x = params.sizeSearchWindow;
-  int ps_t = params.sizeSearchTimeFwd;
+  // int ps_x = params.sizeSearchWindow;
+  // int ps_t = params.sizeSearchTimeFwd;
+  int ps_x = params.sizePatch;
+  int ps_t = params.sizePatchTime;
   ps_x = (set_sizePatch) ? ps_x : -1;
   ps_t = (set_sizePatchTime) ? ps_t : -1;
   VideoSize img_sz(tensors.w,tensors.h,tensors.t,tensors.c);
