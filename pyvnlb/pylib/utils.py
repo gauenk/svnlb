@@ -78,6 +78,12 @@ def compute_psnrs(img1,img2,imax=255.):
     return psnr
 
 
+def optional_pair(pydict,key,default,dtype):
+    value = optional(pydict,key,default,dtype)
+    if not(hasattr(value,"__getitem__")):
+        value = np.array([value,value],dtype=dtype)
+    return value
+
 def optional(pydict,key,default,dtype=None):
 
     # -- get elem --

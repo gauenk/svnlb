@@ -8,7 +8,7 @@ import pyvnlb
 
 # from .ptr_utils import py2swig
 from ..image_utils import est_sigma
-from ..utils import optional,optional_swig_ptr,ndarray_ctg_dtype
+from ..utils import optional,optional_pair,optional_swig_ptr,ndarray_ctg_dtype
 from ..utils import check_flows,check_none,assign_swig_args,check_and_expand_flows
 
 #
@@ -169,7 +169,7 @@ def handle_set_bools(pydict):
     translate = get_param_translations()
     def check_any_exists(field):
         fields = set(translate[field] + [field])
-        any_bool =len(list(set(fields) & pyfields)) > 0
+        any_bool = len(list(set(fields) & pyfields)) > 0
         return [any_bool,any_bool]
 
     # -- enumerate "set" bool --
@@ -218,11 +218,12 @@ def reindex_and_fill_dict(pyargs,step):
     translate = get_param_translations()
     for field,default_pair in defaults.items():
         fields = translate[field] + [field]
-        value = optional(pyargs,fields,default_pair,types[field])[step]
-        params[field] = value.item()
+        value = optional(pyargs,fields,default_pair,types[field])
+        if hasattr(value,"__getitem__"): value = value[step].item()
+        params[field] = value
     return params
 
-def reindex_params_to_py(params,pyargs,overwrite=False):
+def reindex_params_to_py(params,pyargs,overwrite=False,use_pyfield=False):
     """
     some key names used as inputs didn't match the C++ keys.
 
@@ -240,14 +241,15 @@ def reindex_params_to_py(params,pyargs,overwrite=False):
     for cpp_field,_py_fields in translate.items():
         py_fields = set(_py_fields + [cpp_field])
         field = list(py_fields & py_keys)
-        if len(field) > 1:
-            raise ValueError("how did this happend?")
+        param_field = field if use_pyfield else cpp_field
+        if len(field) > 1: # just pick cpp one
+            field = cpp_field
         elif len(field) == 0: continue
         else: field = field[0]
         if overwrite:
-            params[field] = pyargs[field]
+            params[param_field] = pyargs[field]
         else:
-            params[field] = params[cpp_field]
+            params[param_field] = params[cpp_field]
         if field != cpp_field: del params[cpp_field]
 
 
@@ -285,7 +287,17 @@ def combine_dicts(params_1,params_2):
     for key in params_1.keys():
         v1 = params_1[key]
         v2 = params_2[key]
-        py_params[key] = [v1,v2]
+        v1_i = hasattr(v1,"__getitem__")
+        v2_i = hasattr(v2,"__getitem__")
+        both = v1_i and v2_i
+        neither = (not v1_i) and (not v2_i)
+        if both:
+            assert np.sum(np.abs(v1_i-v2_i)) < 1e-12
+            py_params[key] = v1
+        elif neither:
+            py_params[key] = [v1,v2]
+        else:
+            raise ValueError("Can't combine iterable and non-iterable values.")
     return py_params
 
 #
@@ -349,14 +361,17 @@ def parse_params(shape,sigma,pyargs=None):
     params_2 = params2dict(swig_params_2,1)
 
     # -- reindex params back to user-input names --
-    overwrite_cpp = optional(pyargs,'overwrite_cpp',[False,False])
+    overwrite_cpp = optional_pair(pyargs,'overwrite_cpp',[False,False],np.bool_)
     reindex_params_to_py(params_1,pyargs,overwrite=overwrite_cpp[0])
     reindex_params_to_py(params_2,pyargs,overwrite=overwrite_cpp[1])
 
     # -- combine two dicts of values into one dict of pairs --
     py_params = combine_dicts(params_1,params_2)
+    py_params = edict(py_params)
 
-    # -- dict -> nlbParams --
+    # -- [after overwrite] keep a swig-ready set of nlbParams --
+    params_1 = reindex_and_fill_dict(py_params,0)
+    params_2 = reindex_and_fill_dict(py_params,1)
     swig_params_1 = dict2params(params_1)
     swig_params_2 = dict2params(params_2)
     swig_params = [swig_params_1,swig_params_2]
