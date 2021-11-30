@@ -25,10 +25,10 @@ def parse_bayes_params(groupNoisy,groupBasic,nSimP,rank_var,shape,params):
 
     # -- allocate for vectors --
     bayesParams.mat_group = numpy.zeros((p_num,p_dim),dtype=numpy.float32)
-    bayesParams.mat_center = numpy.zeros((p_num,p_chnls),dtype=numpy.float32)
+    bayesParams.mat_center = numpy.zeros((p_chnls,p_dim),dtype=numpy.float32)
     bayesParams.mat_covMat = numpy.zeros((p_dim,p_dim),dtype=numpy.float32)
-    bayesParams.mat_covEigVecs = numpy.zeros((p_dim),dtype=numpy.float32)
-    bayesParams.mat_covEigVals = numpy.zeros((params.rank,p_dim),dtype=numpy.float32)
+    bayesParams.mat_covEigVecs = numpy.zeros((params.rank,p_dim),dtype=numpy.float32)
+    bayesParams.mat_covEigVals = numpy.zeros((p_dim),dtype=numpy.float32)
 
     # -- shape info --
     bayesParams.t = t

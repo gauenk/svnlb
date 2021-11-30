@@ -30,7 +30,7 @@ def runPythonVnlb(noisy,sigma,pidx,tensors,params,0):
 def exec_step(noisy,basic,mask,sigma,tensors,params,step):
 
     # init_mask(mask)
-    npixesl = noisy.size
+    npixels = noisy.size
     for pidx in range(npixels):
         exec_step_at_pixel(noisy,basic,mask,sigma,pidx,tensors,params,step)
 

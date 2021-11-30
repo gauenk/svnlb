@@ -140,9 +140,9 @@ def computeBayesEstimate(groupNoisy,groupBasic,rank_var,nSimP,shape,params=None)
     results['group'] = bayesParams.mat_group
     results['center'] = bayesParams.mat_center
     results['covMat'] = bayesParams.mat_covMat
-    results['covEigVecs'] = bayesParams.mat_covEigVecs
+    results['covEigVecs'] = bayesParams.mat_covEigVecs.T
     results['covEigVals'] = bayesParams.mat_covEigVals
-    results['rank_var'] = bayesParams.rank_var
+    results['rank_var'] = swig_bayesParams.rank_var
     results['psX'] = params.sizePatch
     results['psT'] = params.sizePatchTime
 

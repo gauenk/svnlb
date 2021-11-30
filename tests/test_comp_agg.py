@@ -186,8 +186,8 @@ class TestCompAgg(unittest.TestCase):
             # -- cpp exec --
             cpp_deno = np.zeros_like(noisy)
             cpp_group = cpp_group_og
-            cpp_weights = np.zeros((t,1,h,w),dtype=np.float32)
-            cpp_mask = np.zeros((t,1,h,w),dtype=np.int8)
+            cpp_weights = np.zeros((t,h,w),dtype=np.float32)
+            cpp_mask = np.zeros((t,h,w),dtype=np.int8)
             results = pyvnlb.computeAggregation(cpp_deno,cpp_group,
                                                 indices,cpp_weights,
                                                 cpp_mask,nSimP)
@@ -202,8 +202,8 @@ class TestCompAgg(unittest.TestCase):
             # -- python exec --
             py_deno = np.zeros_like(noisy)
             py_group = cpp_group_og
-            py_weights = np.zeros((t,1,h,w),dtype=np.float32)
-            py_mask = np.zeros((t,1,h,w),dtype=np.int8)
+            py_weights = np.zeros((t,h,w),dtype=np.float32)
+            py_mask = np.zeros((t,h,w),dtype=np.int8)
             py_results = computeAggregation(py_deno,py_group,indices,
                                             py_weights,py_mask,nSimP,params)
 
@@ -220,9 +220,9 @@ class TestCompAgg(unittest.TestCase):
             assert abs(cpp_nmasked - py_nmasked) == 0
 
             # -- compare --
-            np.testing.assert_array_equal(cpp_deno,py_deno)
             np.testing.assert_array_equal(cpp_mask,py_mask)
             np.testing.assert_array_equal(cpp_weights,py_weights)
+            np.testing.assert_array_equal(cpp_deno,py_deno)
 
             # -- allow for swapping of "close" values --
             # try:

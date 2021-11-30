@@ -94,7 +94,11 @@ void runBayesEstimate(VideoNLB::nlbParams& params,
   ptr = bayes_params.mat_covMat;
   std::memcpy(ptr,mat_ws.covMat.data(),patch_dim * patch_dim * sizeof(float));
   ptr = bayes_params.mat_center;
-  std::memcpy(ptr,mat_ws.center.data(),patch_num * patch_chnls * sizeof(float));
+  std::memcpy(ptr,mat_ws.center.data(),patch_dim * patch_chnls * sizeof(float));
+  ptr = bayes_params.mat_covEigVecs;
+  std::memcpy(ptr,mat_ws.covEigVecs.data(),patch_dim * params.rank * sizeof(float));
+  ptr = bayes_params.mat_covEigVals;
+  std::memcpy(ptr,mat_ws.covEigVals.data(),patch_dim * sizeof(float));
 
   ptr = bayes_params.groupNoisy;
   std::memcpy(ptr,groupNoisy.data(), groupSize * sizeof(float));

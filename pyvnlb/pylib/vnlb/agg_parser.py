@@ -21,12 +21,12 @@ def parse_agg_params(deno,group,indices,weights,mask,nSimP,params):
 
     # -- [updated] weights used for division later --
     if weights is None:
-        weights = numpy.zeros((t,1,h,w),dtype=numpy.float32)
+        weights = numpy.zeros((t,h,w),dtype=numpy.float32)
     aggParams.weights = weights
 
     # -- [updated] mask --
     if mask is None:
-        mask = numpy.zeros((t,1,h,w),dtype=numpy.int8)
+        mask = numpy.zeros((t,h,w),dtype=numpy.int8)
     aggParams.mask = mask
 
     # -- [updated] num of "complete" pixels --

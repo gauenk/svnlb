@@ -956,7 +956,7 @@ void centerData(
 	for (unsigned j = 0; j < d; j++) {
 		float sum = 0.f;
 		for (unsigned i = 0; i < n; i++) {
-			sum += group[j * n + i];
+          sum += group[j * n + i];
 		}
 
 		center[j] = sum * inv;
@@ -1095,6 +1095,7 @@ float computeBayesEstimate_LR(
 	{
 		for (unsigned c = 0; c < group_chnls; c++)
 		{
+
 			std::vector<float> gBasic_c;
 			std::vector<float> gNoisy_c;
 			std::vector<float>* gBasic;
@@ -1122,11 +1123,12 @@ float computeBayesEstimate_LR(
 			}
 
 			// Compute the covariance matrix of the set of similar patches
+            fprintf(stdout,"nSimP: %d, pdim: %d\n",nSimP,pdim);
 			covarianceMatrix(*gBasic, mat.covMat, nSimP, pdim);
 
 			// Compute leading eigenvectors
 			int info = matrixEigs(mat.covMat, pdim, r,
-					      mat.covEigVals, mat.covEigVecs);
+                                  mat.covEigVals, mat.covEigVecs);
 
 			// Convariance matrix is noisy, either because it has been computed
 			// from the noisy patches, or because we model the noise in the basic
@@ -1141,6 +1143,7 @@ float computeBayesEstimate_LR(
 			 * filter coefficient is set to zero. Otherwise it is set to
 			 * the clipped Wiener coefficient.
 			 */
+            fprintf(stdout,"thres,sigma2: %2.3f,%2.3f\n",thres,sigma2);
 			for (unsigned k = 0; k < r; ++k)
 			{
 				rank_variance += mat.covEigVals[k];
@@ -1185,6 +1188,7 @@ float computeBayesEstimate_LR(
 
 			// Copy channel back into vector
 			std::copy(gNoisy->begin(), gNoisy->end(), groupNoisy.begin() + pdim*nSimP*c);
+            break;
 		}
 	}
 	else
@@ -1211,7 +1215,8 @@ void modifyEigVals(matWorkspace & mat,
 
   for (int i = 0; i < rank; ++i){
       if (mode == CLIPPED){
-	mat.covEigVals[i] -= std::min(mat.covEigVals[i], sigmab2);
+        // fprintf(stdout,"[clipped] sigmab2: %2.2f\n",sigmab2);
+        mat.covEigVals[i] -= std::min(mat.covEigVals[i], sigmab2);
       }else if(mode == PAUL_VAR){
 	float tmp, gamma = (float)pdim/(float)nSimP;
 	if (mat.covEigVals[i] > sigmab2 * (tmp = (1 + sqrtf(gamma)))*tmp){
