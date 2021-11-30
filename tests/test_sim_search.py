@@ -1,5 +1,6 @@
 
-import cv2
+# -- python --
+import cv2,tqdm
 import numpy as np
 import unittest
 import pyvnlb
@@ -15,8 +16,21 @@ from pyvnlb.pylib.tests.data_loader import load_dataset
 from pyvnlb.pylib.tests.file_io import save_images
 from pyvnlb import groups2patches,patches2groups,patches_at_indices
 
+# -- python impl --
+from pyvnlb.pylib.py_impl import runSimSearch,idx2coords
+
+# -- check if reordered --
+from scipy import optimize
 SAVE_DIR = Path("./output/tests/")
 
+def check_if_reordered(data_a,data_b):
+    delta = np.zeros((len(data_a),len(data_b)))
+    for a_i in range(len(data_a)):
+        for b_i in range(len(data_b)):
+            delta[a_i,b_i] = np.sum(np.abs(data_a[a_i]-data_b[b_i]))
+    row_ind,col_ind = optimize.linear_sum_assignment(delta)
+    perc_nz = (delta[row_ind, col_ind] > 0.).astype(np.float32).mean()*100
+    return perc_nz
 
 def print_value_order(group_og,gt_patches_og,c,psX,psT,nSimP):
 
@@ -70,7 +84,28 @@ def print_neq_values_fix_pix(group_og,gt_patches_og):
             idx = np.where(np.abs(patch_cmp[i] - group_og_f)<1e-10)[0]
             print(gidx,i,idx)
 
+def check_pairwise_diff(vals,tol=1e-4):
+    # all the "same" value;
+    # the order change is
+    # due to small (< tol) differences
+    nvals = vals.shape[0]
+    # delta = np.zeros(nvals,nvals)
+    for i in range(vals.shape[0]):
+        for j in range(vals.shape[0]):
+            # delta[i,j] = np.abs(vals[i] - vals[j])
+            assert np.abs(vals[i] - vals[j]) < tol
+
+#
+#
+# -- Primary Testing Class --
+#
+#
+
 class TestSimSearch(unittest.TestCase):
+
+    #
+    # -- Load Data --
+    #
 
     def do_load_data(self,vnlb_dataset):
 
@@ -93,8 +128,111 @@ class TestSimSearch(unittest.TestCase):
 
         return data,std
 
+    def do_load_rand_data(self,t,c,h,w):
 
-    def do_run_sim_search_patch_indexing(self,vnlb_dataset,in_params,save=True):
+        # -- create data --
+        data = edict()
+        data.noisy = np.random.rand(t,c,h,w)*255.
+        data.fflow = (np.random.rand(t,2,h,w)-0.5)*5.
+        data.bflow = (np.random.rand(t,2,h,w)-0.5)*5.
+        sigma = 20.
+
+        for key,val in data.items():
+            data[key] = data[key].astype(np.float32)
+
+        return data,sigma
+
+
+    #
+    # -- [Exec] Sim Search --
+    #
+
+    def do_run_sim_search(self,tensors,sigma,in_params,save=True):
+
+        # -- init --
+        noisy = tensors.noisy
+        t,c,h,w = noisy.shape
+
+        # -- parse parameters --
+        params = pyvnlb.setVnlbParams(noisy.shape,sigma,params=in_params)
+        tensors = {'fflow':tensors['fflow'],'bflow':tensors['bflow']}
+        tchecks,nchecks = 10,0
+        checks = np.random.permutation(h*w*c*(t-1))[:1000]
+        for pidx in checks:
+
+            # -- check boarder --
+            pidx = pidx.item()
+            step = 0
+            ti,ci,wi,hi = idx2coords(pidx,w,h,c)
+            valid_w = (wi + params.sizePatch[step]) < w
+            valid_h = (hi + params.sizePatch[step]) < h
+            if not(valid_w and valid_h): continue
+            # print(pidx,ti,ci,wi,hi)
+
+            # -- cpp exec --
+            cpp_data = pyvnlb.simPatchSearch(noisy,sigma,pidx,tensors,params)
+
+            # -- unpack --
+            cpp_group = cpp_data["groupNoisy"]
+            cpp_group_og = cpp_data["groupNoisy_og"]
+            cpp_indices = cpp_data['indices']
+            cpp_psX,cpp_psT = cpp_data['psX'],cpp_data['psT']
+            cpp_nSimP = cpp_data['npatches']
+            cpp_nSimOG = cpp_data['npatches_og']
+            cpp_nParts = cpp_data['nparts_omp']
+
+            # -- python exec --
+            py_data = runSimSearch(noisy,sigma,pidx,tensors,params)
+
+            # -- unpack --
+            groups = py_data[0]
+            py_vals = py_data[1]
+            py_indices = py_data[2]
+            # py_group = py_data["groupNoisy"]
+            # py_group_og = py_data["groupNoisy_og"]
+            # py_indices = py_data['indices']
+            # py_psX,py_psT = py_data['psX'],py_data['psT']
+            # py_nSimP = py_data['npatches']
+            # py_nSimOG = py_data['npatches_og']
+            # py_nParts = py_data['nparts_omp']
+
+            # -- neq messages --
+            # neq_idx = np.where(cpp_indices != py_indices)
+            # print(neq_idx[0])
+            # perc_nz = check_if_reordered(py_indices[neq_idx],cpp_indices[neq_idx])
+            # perc_ic = len(neq_idx[0]) / (1.*len(py_indices)) * 100.
+            # print(perc_nz,perc_ic)
+
+            # -- expore --
+            # print(cpp_indices)
+            # print(py_indices)
+            # print(py_indices[neq_idx[0]])
+            # print(cpp_indices[neq_idx[0]])
+            # print(py_indices[neq_idx])
+            # print(cpp_indices[neq_idx])
+            # examples = np.stack([py_indices[:3],cpp_indices[:3]],axis=-1).T
+            # print(examples)
+
+            # -- compare --
+            # np.testing.assert_array_equal(py_group,cpp_group)
+
+            # -- allow for swapping of "close" values --
+            try:
+                np.testing.assert_array_equal(py_indices,cpp_indices)
+            except:
+                print("SWAPPED!")
+                neq_idx = np.where(cpp_indices != py_indices)
+                check_pairwise_diff(py_vals[neq_idx])
+
+            # -- check to break --
+            nchecks += 1
+            if nchecks >= tchecks: break
+
+    #
+    # -- [Exec] Patches2Groups and Groups2Patches --
+    #
+
+    def do_run_patches_xfer_groups(self,vnlb_dataset,in_params,save=True):
 
         # -- data --
         tensors,sigma = self.do_load_data(vnlb_dataset)
@@ -103,8 +241,18 @@ class TestSimSearch(unittest.TestCase):
 
         # -- parse parameters --
         params = pyvnlb.setVnlbParams(noisy.shape,sigma,params=in_params)
+        tchecks,nchecks = 10,0
+        checks = np.random.permutation(h*w*c*(t-1))[:100]
 
-        for pidx in range(900,1000):
+        for pidx in checks:
+
+            # -- check boarder --
+            pidx = pidx.item()
+            step = 0
+            ti,ci,wi,hi = idx2coords(pidx,w,h,c)
+            valid_w = (wi + params.sizePatch[step]) < w
+            valid_h = (hi + params.sizePatch[step]) < h
+            if not(valid_w and valid_h): continue
 
             # -- cpp exec --
             cpp_data = pyvnlb.simPatchSearch(noisy,sigma,pidx,
@@ -136,6 +284,10 @@ class TestSimSearch(unittest.TestCase):
             np.testing.assert_array_equal(gt_patches_og,group_og)
             np.testing.assert_array_equal(gt_patches_rs,group)
 
+            # -- check to break --
+            nchecks += 1
+            if nchecks >= tchecks: break
+
         # -- save [the pretty] results --
         if save:
             save_images(noisy,SAVE_DIR / "./noisy.png",imax=255.)
@@ -143,7 +295,11 @@ class TestSimSearch(unittest.TestCase):
             save_images(gt_patches,SAVE_DIR / f"./patches_gt.png",imax=255.)
 
 
-    def test_sim_search(self):
+    #
+    # -- Call the Tests --
+    #
+
+    def test_patches_xfer_groups(self):
 
         # -- init save path --
         save_dir = SAVE_DIR
@@ -153,16 +309,37 @@ class TestSimSearch(unittest.TestCase):
         # -- no args --
         pyargs = {}
         vnlb_dataset = "davis_64x64"
-        self.do_run_sim_search_patch_indexing(vnlb_dataset,pyargs)
+        self.do_run_patches_xfer_groups(vnlb_dataset,pyargs)
 
         # -- modify patch size --
         pyargs = {'ps_x':3,'ps_t':2}
-        self.do_run_sim_search_patch_indexing(vnlb_dataset,pyargs)
+        self.do_run_patches_xfer_groups(vnlb_dataset,pyargs)
 
-        # # -- modify number of elems --
-        # pyargs = {'k':3}
-        # self.do_run_sim_search(vnlb_dataset,pyargs)
+    def test_sim_search(self):
 
-        # # -- modify patch size & number of elems --
-        # pyargs = {'ps_x':11,'k':3}
-        # self.do_run_sim_search(vnlb_dataset,pyargs)
+        # -- init save path --
+        np.random.seed(123)
+        save_dir = SAVE_DIR
+        if not save_dir.exists():
+            save_dir.mkdir(parents=True)
+
+        # -- no args --
+        pyargs = {}
+        vnlb_dataset = "davis_64x64"
+        tensors,sigma = self.do_load_data(vnlb_dataset)
+        self.do_run_sim_search(tensors,sigma,pyargs)
+
+        # -- modify patch size --
+        pyargs = {'ps_x':3,'ps_t':2}
+        self.do_run_sim_search(tensors,sigma,pyargs)
+
+        # -- random data & modified patch size --
+        pyargs = {}
+        tensors,sigma = self.do_load_rand_data(5,3,32,32)
+        self.do_run_sim_search(tensors,sigma,pyargs)
+
+        # -- random data & modified patch size --
+        pyargs = {'ps_x':3,'ps_t':2}
+        tensors,sigma = self.do_load_rand_data(5,3,32,32)
+        self.do_run_sim_search(tensors,sigma,pyargs)
+

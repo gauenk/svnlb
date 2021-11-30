@@ -29,32 +29,61 @@ extern "C" {
 #include <pyvnlb/cpp/video_io/iio.h>
 }
 
-template <>
-void Video<float>::loadVideoFromPtr(
-	const float* dataBuf,
-	int w, int h, int c, int t)
-{
 
-        // run "clear"
-	clear();
+// template <>
+// void Video<float>::loadVideoFromPtr(
+// 	const float* dataBuf,
+// 	int w, int h, int c, int t)
+// {
 
-	// set video size
-	sz.width     = w;
-	sz.height    = h;
-	sz.channels  = c;
-	sz.frames    = t;
-	sz.update_fields();
+//         // run "clear"
+// 	clear();
 
-	// allocate memory for video
-	data.resize(sz.whcf);
+// 	// set video size
+// 	sz.width     = w;
+// 	sz.height    = h;
+// 	sz.channels  = c;
+// 	sz.frames    = t;
+// 	sz.update_fields();
 
-	// copy first frame
-	for (unsigned k = 0; k < w * h * c * t; ++k){
-	  data[k] = dataBuf[k];
-	}
+// 	// allocate memory for video
+// 	data.resize(sz.whcf);
 
-	return;
-}
+// 	// copy first frame
+// 	for (unsigned k = 0; k < w * h * c * t; ++k){
+// 	  data[k] = dataBuf[k];
+// 	}
+
+// 	return;
+// }
+
+// template <>
+// void Video<char>::loadVideoFromPtr(
+// 	const char* dataBuf,
+// 	int w, int h, int c, int t)
+// {
+
+//         // run "clear"
+// 	clear();
+
+// 	// set video size
+// 	sz.width     = w;
+// 	sz.height    = h;
+// 	sz.channels  = c;
+// 	sz.frames    = t;
+// 	sz.update_fields();
+
+// 	// allocate memory for video
+// 	data.resize(sz.whcf);
+
+// 	// copy first frame
+// 	for (unsigned k = 0; k < w * h * c * t; ++k){
+// 	  data[k] = dataBuf[k];
+// 	}
+
+// 	return;
+// }
+
 
 template <>
 void Video<float>::saveVideoToPtr(float* dataBuf)
@@ -65,7 +94,7 @@ void Video<float>::saveVideoToPtr(float* dataBuf)
 	h = sz.height;
 	c = sz.channels;
 	t = sz.frames;
-	
+
 	for (unsigned k = 0; k < w * h * c * t; ++k){
 	  dataBuf[k] = data[k];
 	}
@@ -203,3 +232,22 @@ void Video<float>::saveVideoAscii(
 	return;
 }
 
+
+//
+// Initialize Templates
+//
+
+
+// template <>
+// void Video<float>::loadVideoFromPtr(
+// 	const float* dataBuf,
+// 	int w, int h, int c, int t){
+//   loadVideoFromPtr(dataBuf,w,h,c,t);
+// }
+
+// template <>
+// void Video<char>::loadVideoFromPtr(
+// 	const char* dataBuf,
+// 	int w, int h, int c, int t){
+//  loadVideoFromPtr(dataBuf,w,h,c,t);
+// }

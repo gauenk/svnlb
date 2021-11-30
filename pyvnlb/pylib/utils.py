@@ -5,6 +5,20 @@ import numpy as np
 from einops import rearrange
 
 
+def get_patch_shapes_from_params(params,channels):
+    step1 = params.isFirstStep
+    sWx = params.sizeSearchWindow
+    sWt_f = params.sizeSearchTimeFwd
+    sWt_b = params.sizeSearchTimeBwd
+    sWt = sWt_f + sWt_b + 1
+    sPx = params.sizePatch
+    sPt = params.sizePatchTime
+    patch_num = sWx * sWx * sWt
+    patch_dim_c = channels if params.coupleChannels else 1
+    patch_dim = sPx * sPx * sPt * patch_dim_c
+    patch_chnls = 1 if params.coupleChannels else channels
+    return patch_num,patch_dim,patch_chnls
+
 def assign_swig_args(args,sargs):
     for key,val in args.items():
         sval = optional_swig_ptr(val)

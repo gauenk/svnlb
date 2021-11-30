@@ -76,7 +76,7 @@ struct VideoSize
 	}
 
 	inline bool operator != (const VideoSize& sz) const
-	{ 
+	{
 		return !operator==(sz);
 	}
 
@@ -98,7 +98,7 @@ struct VideoSize
 
 	inline unsigned index(VideoBC bc_type, unsigned x, unsigned y, unsigned t, unsigned c) const
 	{
-		assert(c >= 0 && c < sz.channels);
+		assert(c >= 0 && c < channels);
 
 		switch (bc_type)
 		{
@@ -308,13 +308,6 @@ void Video<T>::loadVideo(
 	                         "for T = float");
 }
 
-template <class T>
-void Video<T>::loadVideoFromPtr(
-	const T* dataBuf,
-	int w, int h, int c, int t){
-  throw std::runtime_error("Video<T>::loadVideoFromPtr(...) is only implemented "
-			   "for T = float");
-}
 
 template <class T>
 void Video<T>::saveVideoToPtr(T* dataBuf){
@@ -322,10 +315,48 @@ void Video<T>::saveVideoToPtr(T* dataBuf){
 			   "for T = float");
 }
 
-template <>
-void Video<float>::loadVideoFromPtr(
-	const float* dataBuf,int w,
-	int h, int c, int t);
+// template <class T>
+// void Video<T>::loadVideoFromPtr(
+// 	const T* dataBuf,
+// 	int w, int h, int c, int t){
+//   throw std::runtime_error("Video<T>::loadVideoFromPtr(...) is only implemented "
+// 			   "for T = float");
+// }
+
+template <class T>
+void Video<T>::loadVideoFromPtr(
+	const T* dataBuf,
+	int w, int h, int c, int t)
+{
+
+        // run "clear"
+	clear();
+
+	// set video size
+	sz.width     = w;
+	sz.height    = h;
+	sz.channels  = c;
+	sz.frames    = t;
+	sz.update_fields();
+
+	// allocate memory for video
+	data.resize(sz.whcf);
+
+	// copy first frame
+	for (unsigned k = 0; k < w * h * c * t; ++k){
+	  data[k] = dataBuf[k];
+	}
+
+	return;
+}
+
+// template<>
+// void Video<float>::loadVideoFromPtr(
+//     const float* dataBuf, int w, int h, int c, int t);
+
+// template <>
+// void Video<char>::loadVideoFromPtr(
+//     const char* dataBuf, int w, int h, int c, int t);
 
 template <>
 void Video<float>::saveVideoToPtr(float* dataBuf);

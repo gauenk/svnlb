@@ -219,7 +219,9 @@ def reindex_and_fill_dict(pyargs,step):
     for field,default_pair in defaults.items():
         fields = translate[field] + [field]
         value = optional(pyargs,fields,default_pair,types[field])
-        if hasattr(value,"__getitem__"): value = value[step].item()
+        if hasattr(value,"__getitem__"):
+            try: value = value[step].item()
+            except: value = value[step]
         params[field] = value
     return params
 
@@ -250,7 +252,8 @@ def reindex_params_to_py(params,pyargs,overwrite=False,use_pyfield=False):
             params[param_field] = pyargs[field]
         else:
             params[param_field] = params[cpp_field]
-        if field != cpp_field: del params[cpp_field]
+        if param_field != cpp_field:
+            del params[cpp_field]
 
 
 #
@@ -337,7 +340,7 @@ def parse_params(shape,sigma,pyargs=None):
 
     # -- set python parameters --
     pyargs = edict(pyargs)
-    pyargs.sigma = [sigma,sigma]
+    pyargs.sigma = sigma if hasattr(sigma,'__getitem__') else [sigma,sigma]
     handle_set_bools(pyargs) # set bools before copying over
     params_1 = reindex_and_fill_dict(pyargs,0)
     params_2 = reindex_and_fill_dict(pyargs,1)

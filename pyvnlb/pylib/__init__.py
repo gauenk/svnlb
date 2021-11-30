@@ -1,6 +1,7 @@
 
 # -- import inferace files --
-from .vnlb.interface import runPyVnlb,runPyVnlbTimed,setVnlbParams,simPatchSearch
+from .vnlb.interface import runPyVnlb,runPyVnlbTimed,setVnlbParams
+from .vnlb.interface import simPatchSearch,computeBayesEstimate,computeAggregation
 from .vnlb.sim_utils import groups2patches,patches2groups,patches_at_indices
 from .flow.interface import runPyTvL1Flow,runPyFlow,runPyFlowFB
 from .video_io.interface import readVideoForVnlb,readVideoForFlow

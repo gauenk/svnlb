@@ -579,7 +579,7 @@ unsigned processNLBayes(
 			{
 				int ntiles = crop.ntiles_t * crop.ntiles_x * crop.ntiles_y;
 				int part_idx = crop.tile_t * crop.ntiles_x * crop.ntiles_y +
-				               crop.tile_y * crop.ntiles_x + 
+				               crop.tile_y * crop.ntiles_x +
 				               crop.tile_x;
 
 				printf("\x1b[%dF[%d,%d,%d] %05.1f\x1b[%dE", ntiles - part_idx,
@@ -602,7 +602,7 @@ unsigned processNLBayes(
 			// Bayesian estimate
 #ifdef FAT_ORIGINAL
 			// The Bayesian estimation is skipped with the original Flat Area
-			// trick, since the denoising has been done already in the 
+			// trick, since the denoising has been done already in the
 			// computeFlatArea function.
 			if (flatPatch == false)
 #endif
@@ -610,8 +610,8 @@ unsigned processNLBayes(
 
 			// Aggregation
 			remaining_groups -=
-				computeAggregation(step1 ? imBasic : imFinal, weight, mask, groupNoisy,
-						indices, params, nSimP);
+				computeAggregation(step1 ? imBasic : imFinal, weight, mask,
+                                   groupNoisy, indices, params, nSimP);
 		}
 
 	// Weighted aggregation
@@ -670,6 +670,7 @@ unsigned estimateSimilarPatches(
 	// Coordinates of center of search box
 	unsigned px, py, pt, pc;
 	sz.coords(pidx, px, py, pt, pc);
+    // std::fprintf(stdout,"(px,py,pt,pc): (%d,%d,%d,%d)\n",px, py, pt, pc);
 
 	// Temporal search range
 	int ranget[2];
@@ -699,6 +700,13 @@ unsigned estimateSimilarPatches(
 	for (int qt = pt+1; qt <= ranget[1]; ++qt) srch_ranget.push_back(qt);
 	for (int qt = pt-1; qt >= ranget[0]; --qt) srch_ranget.push_back(qt);
 
+    // print search frames
+    // fprintf(stdout,"\nsrch_ranget: ");
+    // for (std::vector<int>::iterator it=srch_ranget.begin();it!=srch_ranget.end();it++){
+    //   fprintf(stdout,"%d,",*it);
+    // }
+    // fprintf(stdout,"... [shift = %d]\n",shift_t);
+
 	// Trajectory of search center
 	std::vector<int> cx(sWt,0), cy(sWt,0), ct(sWt,0);
 
@@ -708,8 +716,9 @@ unsigned estimateSimilarPatches(
 		int qt = srch_ranget[ii]; // video frame number
 		int dt = qt - ranget[0]; // search region frame number
 		int dir = std::max(-1, std::min(1, qt - (int)pt)); // direction (forward or backwards from pt)
+        // std::fprintf(stdout,"(qt,dt,dir): (%d,%d,%d)\n",qt,dt,dir);
 
-		// Integrate optical flow to new center
+		// Include optical flow to new center
 		if (dir != 0)
 		{
 			int cx0 = cx[dt - dir];
@@ -717,6 +726,8 @@ unsigned estimateSimilarPatches(
 			int ct0 = ct[dt - dir];
 			float cx_f = cx0 + (use_flow ? (dir > 0 ? fflow(cx0,cy0,ct0,0) : bflow(cx0,cy0,ct0,0)) : 0.f);
 			float cy_f = cy0 + (use_flow ? (dir > 0 ? fflow(cx0,cy0,ct0,1) : bflow(cx0,cy0,ct0,1)) : 0.f);
+            // std::fprintf(stdout,"(cx0,cy0,ct0): (%d,%d,%d)\n",cx0,cy0,ct0);
+            // std::fprintf(stdout,"(cx_f,cy_f): (%2.3f,%2.3f)\n",cx_f,cy_f);
 			cx[dt] = std::max(0.f, std::min((float)sz.width  - 1, roundf(cx_f)));
 			cy[dt] = std::max(0.f, std::min((float)sz.height - 1, roundf(cy_f)));
 			ct[dt] = qt;
@@ -746,11 +757,20 @@ unsigned estimateSimilarPatches(
 		rangex[1] = std::min((int)sz.width  - sPx, cx[dt] + (sWx-1)/2 - shift_x);
 		rangey[1] = std::min((int)sz.height - sPx, cy[dt] + (sWy-1)/2 - shift_y);
 
+        // std::fprintf(stdout,"(cx,cy,cz): (%d,%d,%d)\n",cx[dt],cy[dt],ct[dt]);
+        // std::fprintf(stdout,"(shift_x,shift_y): (%d,%d)\n",shift_x,shift_y);
+        // std::fprintf(stdout,"rangex[0,1] = (%d,%d,%d,%d)\n",rangex[0],rangex[1],shift_x,cx[dt]);
+        // std::fprintf(stdout,"rangey[0,1] = (%d,%d,%d,%d)\n",rangey[0],rangey[1],shift_y,cy[dt]);
+
 		// Check if oracle has been provided
 		const Video<float> *p_im = imClean.sz.whcf ? &imClean :
 		                           (step1 ? &imNoisy : &imBasic);
 
 		// Compute distance between patches in search range
+        // fprintf(stdout,"(height,width): (%d,%d)\n",sz.height,sz.width);
+        // int pair = sz.index(px + sPx-1, py + sPx-1, pt + sPt-1,0);
+        // fprintf(stdout,"(px+hx,py+hy,pt+ht,pair): (%d,%d,%d,%d)\n",px + sPx-1, py + sPx-1, pt + sPt-1,pair);
+
 		for (int qy = rangey[0], dy = 0; qy <= rangey[1]; qy++, dy++)
 		for (int qx = rangex[0], dx = 0; qx <= rangex[1]; qx++, dx++)
 		{
@@ -762,6 +782,22 @@ unsigned estimateSimilarPatches(
 			for (int hx = 0; hx < sPx; hx++)
 				dist += (dif = (*p_im)(px + hx, py + hy, pt + ht, c)
 				             - (*p_im)(qx + hx, qy + hy, qt + ht, c) ) * dif;
+            // print for debug
+            // int pair_idx = sz.index(qx, qy, qt, 0);
+            // std::fprintf(stdout,"pair_idx: %d\n",pair_idx);
+            // if (pair_idx == 26068){
+            //   std::fprintf(stdout,"(qx,qy,qt): (%d,%d,%d)\n",qx, qy, qt);
+            //   std::fprintf(stdout,"dist: %2.2f\n",dist);
+            //   for (int ht = 0; ht < sPt; ht++){
+            //     for (int hx = 0; hx < sPx; hx++){
+            //       for (int hy = 0; hy < sPx; hy++){
+            //         for (int c = 0; c < dist_chnls; c++){
+            //           std::fprintf(stdout,"%3.1f %d %d %d %d\n",(*p_im)(qx + hx, qy + hy, qt + ht, c),qt+ht,qy+hy,qx+hx,c);
+            //         }
+            //       }
+            //     }
+            //   }
+            // }
 
 			// Save distance and corresponding patch index
 			distance[nsrch++] = std::make_pair(dist, sz.index(qx, qy, qt, 0));
@@ -1123,7 +1159,7 @@ float computeBayesEstimate_LR(
 			 * with the filter coefficients.
 			 *
 			 * Matrix U is stored (column-major) in mat.covEigVecs. Since we have X^T
-			 * we compute 
+			 * we compute
 			 * hX' = X' * U * (W * U')
 			 */
 
@@ -1170,7 +1206,7 @@ float computeBayesEstimate_LR(
 }
 
 void modifyEigVals(matWorkspace & mat,
-		   float sigmab2, int rank, 
+		   float sigmab2, int rank,
 		   int pdim, int nSimP, VAR_MODE mode){
 
   for (int i = 0; i < rank; ++i){
@@ -1285,7 +1321,7 @@ int computeAggregation(
 			for (unsigned c = 0; c < chnls; c++)
 			{
 				const unsigned ij = ind  + c * wh;
-				im(ij + pt * whc + py * w + px) += 
+				im(ij + pt * whc + py * w + px) +=
 					group[c * nsPC + (pt * sPx*sPx + py * sPx + px) * nSimP + n];
 			}
 			weight(ind1 + pt * wh + py * w + px)++;

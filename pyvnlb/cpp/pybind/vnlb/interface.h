@@ -78,6 +78,60 @@ PySimSearchParams() :
 
 };
 
+
+struct PyBayesEstimateParams {
+PyBayesEstimateParams() :
+  t(0),c(0),h(0),w(0),
+  groupNoisy(nullptr),groupBasic(nullptr),
+    mat_group(nullptr),mat_center(nullptr),
+    mat_covMat(nullptr),mat_covEigVecs(nullptr),
+    mat_covEigVals(nullptr),nSimP(0),rank_var(0) {}
+
+  // --> to denoise <--
+  float* groupNoisy;
+  float* groupBasic;
+  int t,c,h,w;
+
+  // --> mat workspace <--
+  float* mat_group;
+  float* mat_center;
+  float* mat_covMat;
+  float* mat_covEigVecs;
+  float* mat_covEigVals;
+
+  // --> num of similar patches <--
+  unsigned nSimP;
+
+  // -> an output <-
+  float rank_var;
+
+};
+
+struct PyAggParams {
+PyAggParams() :
+  t(0),c(0),h(0),w(0),
+    imDeno(nullptr),weights(nullptr),mask(nullptr),
+    group(nullptr),indices(nullptr), nmasked(0),nSimP(0) {}
+
+  // --> shapes <--
+  int t,c,h,w;
+
+  // --> to denoise <--
+  float* imDeno;
+  float* weights;
+  void* mask;
+
+  // --> patches <--
+  float* group;
+  unsigned* indices;
+
+  // --> num of similar patches <--
+  unsigned nSimP; // num of similar patches
+  unsigned nmasked; // num of masked indices
+
+};
+
+
 /* void runVnlb(const PyVnlbParams& args, const VnlbTensors& tensors); */
 /* void runVnlbTimed(const PyVnlbParams& args, const VnlbTensors& tensors); */
 /* void setVnlbParamsCpp(const PyVnlbParams& args, const VnlbTensors& tensors, */
@@ -92,3 +146,6 @@ void setVnlbParamsCpp(VideoNLB::nlbParams& params, const VnlbTensors& tensors,in
 void runSimSearch(VideoNLB::nlbParams& params,
                   const VnlbTensors& tensors,
                   PySimSearchParams& sim_params);
+void runBayesEstimate(VideoNLB::nlbParams& params,PyBayesEstimateParams& bayes_params);
+void runAggregation(VideoNLB::nlbParams& params, PyAggParams& agg_params);
+

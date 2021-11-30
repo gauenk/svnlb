@@ -64,9 +64,9 @@ void runSimSearch(VideoNLB::nlbParams& params,
   imNoisy.loadVideoFromPtr(tensors.noisy,w,h,c,t);
   imNoisyRGB.loadVideoFromPtr(tensors.noisy,w,h,c,t);
   if (params.isFirstStep){
-    imBasic.loadVideoFromPtr(tensors.basic,w,h,c,t);
-  } else{
     imBasic.loadVideoFromPtr(tensors.noisy,w,h,c,t);
+  } else{
+    imBasic.loadVideoFromPtr(tensors.basic,w,h,c,t);
   }
   if (tensors.use_clean){
     imClean.loadVideoFromPtr(tensors.clean,w,h,c,t);

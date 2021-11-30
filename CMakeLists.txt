@@ -22,6 +22,13 @@ option(PYVNLB_ENABLE_PYTHON "Build Python extension." ON)
 set(CMAKE_BUILD_TYPE Release)
 set(CMAKE_VERBOSE_MAKEFILE OFF)
 
+########################################
+
+# set(CMAKE_C_FLAGS_RELEASE_INIT "/MT /O2 /Ob2")
+# set(CMAKE_CXX_FLAGS_RELEASE_INIT "/MT /O2 /Ob2")
+set(CMAKE_C_FLAGS_RELEASE "")
+set(CMAKE_CXX_FLAGS_RELEASE "")
+
 
 ########################################
 

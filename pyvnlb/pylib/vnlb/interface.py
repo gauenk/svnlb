@@ -11,6 +11,8 @@ import pyvnlb
 from ..utils import optional,optional_swig_ptr,assign_swig_args
 from .parser import parse_args,parse_params
 from .sim_parser import sim_parser,reorder_sim_group
+from .bayes_parser import parse_bayes_params
+from .agg_parser import parse_agg_params
 
 # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 #
@@ -119,86 +121,57 @@ def simPatchSearch(noisy,sigma,pidx,tensors=None,params=None):
 
     return results
 
-def computeBayesEstimate(noisy,sigma,tensors=None,params=None):
-    pass
+def computeBayesEstimate(groupNoisy,groupBasic,rank_var,nSimP,shape,params=None):
+
+    # -- create python-params for parser --
+    empty = numpy.zeros(shape,dtype=numpy.float32)
+    params,swig_params,_,_ = parse_args(empty,0.,None,params)
+    params = edict({k:v[0] for k,v in params.items()})
+
+    # -- exec search --
+    bayesParams,swig_bayesParams = parse_bayes_params(groupNoisy,groupBasic,nSimP,
+                                                      rank_var,shape,params)
+    pyvnlb.runBayesEstimate(swig_params[0], swig_bayesParams)
+
+    # -- pack results --
+    results = {}
+    results['groupNoisy'] = bayesParams.groupNoisy
+    results['groupBasic'] = bayesParams.groupBasic
+    results['group'] = bayesParams.mat_group
+    results['center'] = bayesParams.mat_center
+    results['covMat'] = bayesParams.mat_covMat
+    results['covEigVecs'] = bayesParams.mat_covEigVecs
+    results['covEigVals'] = bayesParams.mat_covEigVals
+    results['rank_var'] = bayesParams.rank_var
+    results['psX'] = params.sizePatch
+    results['psT'] = params.sizePatchTime
+
+
+    return results
+
+def computeAggregation(deno,group,indices,weights,mask,nSimP,params=None):
+
+    # -- create python-params for parser --
+    params,swig_params,_,_ = parse_args(deno,0.,None,params)
+    params = edict({k:v[0] for k,v in params.items()})
+
+    # -- exec search --
+    aggParams,swig_aggParams = parse_agg_params(deno,group,indices,weights,
+                                                mask,nSimP,params)
+    pyvnlb.runAggregation(swig_params[0], swig_aggParams)
+
+    # -- pack results --
+    results = {}
+    results['deno'] = aggParams.imDeno
+    results['mask'] = aggParams.mask
+    results['weights'] = aggParams.weights
+    results['nmasked'] = aggParams.nmasked
+    results['psX'] = params.sizePatch
+    results['psT'] = params.sizePatchTime
+
+    return results
 
 def modifyEigVals(noisy,sigma,tensors=None,params=None):
     pass
 
 
-"""
-estimateSimilarPatches
-	# vector<float> groupNoisy(            patch_num * patch_dim * patch_chnls);
-	# vector<float> groupBasic(step1 ? 0 : patch_num * patch_dim * patch_chnls);
-
-float* noisy
-float* basic
-float* fflow
-float* bflow
-float* gNoisy
-float* gBasic
-uint32* indices
-uint32 pidx
-
-
-	bool step1 = params.isFirstStep;
-	int sWx   = params.sizeSearchWindow;
-	int sWy   = params.sizeSearchWindow;
-	const int sWt_f = params.sizeSearchTimeFwd;
-	const int sWt_b = params.sizeSearchTimeBwd;
-	const int sPx   = params.sizePatch;
-	const int sPt   = params.sizePatchTime;
-        params.tau
-        params.nSimilarPatches
-
-	const bool step1 = params.isFirstStep;
-	const unsigned sWx = params.sizeSearchWindow;
-	const unsigned sWt = params.sizeSearchTimeFwd +
-	                     params.sizeSearchTimeBwd + 1;// VIDEO
-	const unsigned sPx = params.sizePatch;
-	const unsigned sPt = params.sizePatchTime;
-	const VideoSize sz = imNoisy.sz;
-
-	vector<unsigned> indices(patch_num);
-
-
-
-// add in a list of pixels
-nlbParams params
-
-
-estimateSimilarPatches(
-	Video<float> const& imNoisy,
-	Video<float> const& imBasic,
-	Video<float> const& fflow,
-	Video<float> const& bflow,
-	std::vector<float> &groupNoisy,//output
-	std::vector<float> &groupBasic, //output
-	std::vector<unsigned> &indices, //output
-	const unsigned pidx,
-	const nlbParams &params,
-	Video<float> const &imClean)
-
-
-	# matWorkspace mat;
-	# mat.group     .resize(patch_num * patch_dim);
-	# mat.covMat    .resize(patch_dim * patch_dim);
-	# mat.center.resize(patch_dim * patch_chnls);
-computeBayesEstimate
-	std::vector<float> &groupNoisy,
-	std::vector<float> &groupBasic,
-	matWorkspace &mat, //output
-	nlbParams const& params,
-	const unsigned nSimP,
-	const unsigned channels,
-	const bool flatPatch)
-
-
-
-modifyEigVals
-void modifyEigVals(matWorkspace & mat,
-		   float sigmab2, int rank, 
-		   int pdim, int nSimP, VAR_MODE mode){
-
-
-"""
