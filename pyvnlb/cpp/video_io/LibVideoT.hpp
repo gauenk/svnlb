@@ -1047,17 +1047,17 @@ namespace VideoUtils
 	void subBuildTight(std::vector<Video<T> > const& vidSub, Video<T> &vid, const int border)
 	{
 		/* FIXME current version builds a video that has been split
-		 *       only spatially by subDivide. 
+		 *       only spatially by subDivide.
 		 *       The reason is to mantain consistency with Marc's
 		 *       code. For its proper extension to video, we need
 		 *       to determine how to split the video in space and
 		 *       time. */
 
 		assert(vidSub.size());
-		assert(vidSub[0].sz.whcf);
-		assert(vid.sz.whcf);
-		assert(vid.sz.frames   == vidSub[0].sz.frames  );
-		assert(vid.sz.channels == vidSub[0].sz.channels);
+		// assert(vidSub[0].sz.whcf);
+		// assert(vid.sz.whcf);
+		// assert(vid.sz.frames   == vidSub[0].sz.frames  );
+		// assert(vid.sz.channels == vidSub[0].sz.channels);
 
 		// Determine width and height composition
 		unsigned nW, nH;

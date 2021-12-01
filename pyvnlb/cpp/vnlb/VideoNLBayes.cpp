@@ -422,11 +422,14 @@ std::vector<float> runNLBayesThreads(
 			shared(imNoisySub, imBasicSub, imFinalSub) \
 			firstprivate (prms_cpy)
 #endif
-			for (int n = 0; n < (int)nParts; n++)
+			for (int n = 0; n < (int)nParts; n++){
+              // fprintf(stdout,"n: %d,%d,%d\n",n,
+              //         imNoisySub[n].sz.width,imNoisySub[n].sz.whcf);
 				groupsProcessedSub[n] =
 					processNLBayes(imNoisySub[n], fflowSub[n], bflowSub[n],
 					               imBasicSub[n], imFinalSub[n], prms[iter], imCrops[n],
 					               imCleanSub[n]);
+            }
 
 			for (int n = 0; n < (int)nParts; n++)
 				groupsRatio[iter] += 100.f * (float)groupsProcessedSub[n]/(float)size.whf;
@@ -843,10 +846,10 @@ unsigned estimateSimilarPatches(
       // problem with this interpt is that we always actually index...
       // t_i = {0,..,sPt}, y_i = {0,..,sPx}, ..
       // so it always indexes the "volume patch" @ the offset of indices[n]
-      groupNoisy[k] = imRead(c * wh + indices[n] + ht * whc + hy * w + hx);
-      // groupNoisy[k] = imNoisy(c * wh + indices[n] + ht * whc + hy * w + hx);
-      // if (!step1)
-      // 	groupBasic[k] = imBasic(c * wh + indices[n] + ht * whc + hy * w + hx);
+      // groupNoisy[k] = imRead(c * wh + indices[n] + ht * whc + hy * w + hx);
+      groupNoisy[k] = imNoisy(c * wh + indices[n] + ht * whc + hy * w + hx);
+      if (!step1)
+      	groupBasic[k] = imBasic(c * wh + indices[n] + ht * whc + hy * w + hx);
 	}
 
     // if (pidx == 968){
@@ -1123,7 +1126,7 @@ float computeBayesEstimate_LR(
 			}
 
 			// Compute the covariance matrix of the set of similar patches
-            fprintf(stdout,"nSimP: %d, pdim: %d\n",nSimP,pdim);
+            // fprintf(stdout,"nSimP: %d, pdim: %d\n",nSimP,pdim);
 			covarianceMatrix(*gBasic, mat.covMat, nSimP, pdim);
 
 			// Compute leading eigenvectors
@@ -1143,7 +1146,7 @@ float computeBayesEstimate_LR(
 			 * filter coefficient is set to zero. Otherwise it is set to
 			 * the clipped Wiener coefficient.
 			 */
-            fprintf(stdout,"thres,sigma2: %2.3f,%2.3f\n",thres,sigma2);
+            // fprintf(stdout,"thres,sigma2: %2.3f,%2.3f\n",thres,sigma2);
 			for (unsigned k = 0; k < r; ++k)
 			{
 				rank_variance += mat.covEigVals[k];
@@ -1188,7 +1191,7 @@ float computeBayesEstimate_LR(
 
 			// Copy channel back into vector
 			std::copy(gNoisy->begin(), gNoisy->end(), groupNoisy.begin() + pdim*nSimP*c);
-            break;
+            // break;
 		}
 	}
 	else
