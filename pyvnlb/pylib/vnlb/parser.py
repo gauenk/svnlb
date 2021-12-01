@@ -75,6 +75,7 @@ def get_param_translations():
     names['verbose'] = []
     names['testing'] = []
 
+    names['use_imread'] = []
     names['set_sizePatch'] = []
     names['set_sizePatchTime'] = []
     names['set_nSim'] = []
@@ -109,6 +110,7 @@ def get_param_type():
     types['testing'] = np.bool_
     types['var_mode'] = np.int32
 
+    types['use_imread'] = np.bool_
     types['set_sizePatch'] = np.bool_
     types['set_sizePatchTime'] = np.bool_
     types['set_nSim'] = np.bool_
@@ -144,6 +146,7 @@ def get_defaults():
     defaults.testing = [False,False]
 
     # -- must be set using "handle_set_bools" --
+    defaults.use_imread = False
     defaults.set_sizePatch = None
     defaults.set_sizePatchTime = None
     defaults.set_nSim = None

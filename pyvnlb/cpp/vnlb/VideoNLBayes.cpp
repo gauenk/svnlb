@@ -557,9 +557,11 @@ unsigned processNLBayes(
 	else       imFinal.resize(sz); // output of second step
 
     // pick which image to read from for similar patches
-    Video<float>* imRead;
-    imRead = const_cast<Video<float>*>(&imNoisy);
-    if (!step1) imRead = const_cast<Video<float>*>(&imBasic);
+    Video<float>* imRead = nullptr;
+    if (params.use_imread){ // used in testing only
+      imRead = const_cast<Video<float>*>(&imNoisy);
+      if (!step1) imRead = const_cast<Video<float>*>(&imBasic);
+    }
 
 	// Matrices used for Bayes' estimate
 	vector<float> groupNoisy(            patch_num * patch_dim * patch_chnls);
@@ -596,7 +598,7 @@ unsigned processNLBayes(
 			// Search for similar patches around the reference one
 			unsigned nSimP = estimateSimilarPatches(imNoisy, imBasic, fflow, bflow,
                                                     groupNoisy, groupBasic, indices,
-                                                    ij3, params, imClean, *imRead);
+                                                    ij3, params, imClean, imRead);
 			// If we use the homogeneous area trick
 			bool flatPatch = false;
 			if (params.flatAreas)
@@ -655,7 +657,7 @@ unsigned estimateSimilarPatches(
 	const unsigned pidx,
 	const nlbParams &params,
 	Video<float> const &imClean,
-    Video<float> const &imRead)
+    Video<float>* imRead)
 {
 	// Initialization
 	bool step1 = params.isFirstStep;
@@ -846,10 +848,13 @@ unsigned estimateSimilarPatches(
       // problem with this interpt is that we always actually index...
       // t_i = {0,..,sPt}, y_i = {0,..,sPx}, ..
       // so it always indexes the "volume patch" @ the offset of indices[n]
-      // groupNoisy[k] = imRead(c * wh + indices[n] + ht * whc + hy * w + hx);
-      groupNoisy[k] = imNoisy(c * wh + indices[n] + ht * whc + hy * w + hx);
-      if (!step1)
-      	groupBasic[k] = imBasic(c * wh + indices[n] + ht * whc + hy * w + hx);
+      if (imRead != nullptr){
+        groupNoisy[k] = (*imRead)(c * wh + indices[n] + ht * whc + hy * w + hx);
+      }else{
+        groupNoisy[k] = imNoisy(c * wh + indices[n] + ht * whc + hy * w + hx);
+        if (!step1)
+          groupBasic[k] = imBasic(c * wh + indices[n] + ht * whc + hy * w + hx);
+      }
 	}
 
     // if (pidx == 968){

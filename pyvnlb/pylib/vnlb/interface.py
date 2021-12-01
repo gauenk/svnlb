@@ -112,8 +112,8 @@ def simPatchSearch(noisy,sigma,pidx,tensors=None,params=None):
     results['groupBasic'] = gBasic
     results['groupNoisy_og'] = gNoisy_og
     results['groupBasic_og'] = gBasic_og
-    results['indices'] = indices
     results['npatches_og'] = gNoisy_og.shape[-1]
+    results['indices'] = indices
     results['npatches'] = simParams.nSimP
     results['psX'] = psX
     results['psT'] = psT

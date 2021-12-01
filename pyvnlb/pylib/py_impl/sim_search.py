@@ -3,11 +3,14 @@ import cv2
 import numpy as np
 from einops import rearrange
 from numba import njit,jit,prange
+from easydict import EasyDict as edict
+
 from pyvnlb.pylib.tests import save_images
 
 def runSimSearch(noisy,sigma,pidx,tensors,params,step=0):
 
     # -- extract info for explicit call --
+    t,c,h,w = noisy.shape
     ps = params['sizePatch'][step]
     ps_t = params['sizePatchTime'][step]
     npatches = params['nSimilarPatches'][step]
@@ -24,19 +27,68 @@ def runSimSearch(noisy,sigma,pidx,tensors,params,step=0):
     # print("fflow.shape: ",fflow.shape)
 
     # -- color transform --
-    noisy = apply_color_xform_cpp(noisy)
+    noisy_yuv = apply_color_xform_cpp(noisy)
 
     # -- find the best patches using c++ logic --
-    values,indices = exec_cpp_sim_search(pidx,noisy,fflow,bflow,sigma,ps,ps_t,
-                                         npatches,nwindow_xy,nfwd,nbwd,couple_ch,step1)
+    values,indices = exec_cpp_sim_search(pidx,noisy_yuv,fflow,bflow,sigma,ps,ps_t,
+                                         npatches,nwindow_xy,nfwd,nbwd,
+                                         couple_ch,step1)
 
     # -- group the values and indices --
-    # print(indices,pidx)
+    groups = exec_select_cpp_groups(noisy,indices,ps,ps_t)
 
-    # -- patches to groups --
-    groups = None#patches2groups(patches)
+    # -- pack results --
+    results = edict()
+    results.groups = groups
+    results.values = values
+    results.indices = indices
+    results.nSimP = len(indices)
+    results.nflat = results.nSimP * ps * ps * ps_t * c
 
-    return groups,values,indices
+    return results
+
+#
+# -- select groups of noisy regions --
+#
+
+def exec_select_cpp_groups(noisy,indices,ps,ps_t):
+    t,c,h,w = noisy.shape
+    npatches = indices.shape[0]
+    groups = np.zeros((npatches,ps_t,c,ps,ps),dtype=np.float32)
+    numba_select_cpp_groups(groups,noisy,indices,ps,ps_t)
+    return groups
+
+@njit
+def numba_select_cpp_groups(groups,noisy,indices,ps,ps_t):
+
+    # -- init shapes --
+    t,c,h,w = noisy.shape
+    nframes,color,height,width = t,c,h,w
+
+    def coords(idx):
+
+        # -- get shapes --
+        whc = width*height*color
+        wh = width*height
+
+        # -- compute coords --
+        t = (idx      ) // whc
+        c = (idx % whc) // wh
+        y = (idx % wh ) // width
+        x = idx % width
+
+        return t,c,y,x
+
+    # -- exec copy --
+    for n in range(indices.shape[0]):
+        ind = indices[n]
+        ti,_,hi,wi = coords(ind)
+        for pt in range(ps_t):
+            for pi in range(ps):
+                for pj in range(ps):
+                    for ci in range(c):
+                        groups[n,pt,ci,pi,pj] = noisy[ti+pt,ci,hi+pi,wi+pj]
+
 
 def apply_color_xform_cpp(burst):
     """

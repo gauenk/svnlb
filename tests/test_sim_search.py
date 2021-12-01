@@ -185,42 +185,19 @@ class TestSimSearch(unittest.TestCase):
             py_data = runSimSearch(noisy,sigma,pidx,tensors,params)
 
             # -- unpack --
-            groups = py_data[0]
-            py_vals = py_data[1]
-            py_indices = py_data[2]
-            # py_group = py_data["groupNoisy"]
-            # py_group_og = py_data["groupNoisy_og"]
-            # py_indices = py_data['indices']
-            # py_psX,py_psT = py_data['psX'],py_data['psT']
-            # py_nSimP = py_data['npatches']
-            # py_nSimOG = py_data['npatches_og']
-            # py_nParts = py_data['nparts_omp']
-
-            # -- neq messages --
-            # neq_idx = np.where(cpp_indices != py_indices)
-            # print(neq_idx[0])
-            # perc_nz = check_if_reordered(py_indices[neq_idx],cpp_indices[neq_idx])
-            # perc_ic = len(neq_idx[0]) / (1.*len(py_indices)) * 100.
-            # print(perc_nz,perc_ic)
-
-            # -- expore --
-            # print(cpp_indices)
-            # print(py_indices)
-            # print(py_indices[neq_idx[0]])
-            # print(cpp_indices[neq_idx[0]])
-            # print(py_indices[neq_idx])
-            # print(cpp_indices[neq_idx])
-            # examples = np.stack([py_indices[:3],cpp_indices[:3]],axis=-1).T
-            # print(examples)
+            py_group = py_data.groups
+            py_vals = py_data.values
+            py_indices = py_data.indices
+            nSimP = len(py_indices)
+            nflat = py_data.nflat
 
             # -- compare --
-            # np.testing.assert_array_equal(py_group,cpp_group)
+            np.testing.assert_allclose(py_group,cpp_group,rtol=1e-5)
 
             # -- allow for swapping of "close" values --
             try:
                 np.testing.assert_array_equal(py_indices,cpp_indices)
             except:
-                print("SWAPPED!")
                 neq_idx = np.where(cpp_indices != py_indices)
                 check_pairwise_diff(py_vals[neq_idx])
 
@@ -243,6 +220,7 @@ class TestSimSearch(unittest.TestCase):
         params = pyvnlb.setVnlbParams(noisy.shape,sigma,params=in_params)
         tchecks,nchecks = 10,0
         checks = np.random.permutation(h*w*c*(t-1))[:100]
+        flows = {'fflow':tensors['fflow'],'bflow':tensors['bflow']}
 
         for pidx in checks:
 
@@ -256,8 +234,7 @@ class TestSimSearch(unittest.TestCase):
 
             # -- cpp exec --
             cpp_data = pyvnlb.simPatchSearch(noisy,sigma,pidx,
-                                             tensors={'fflow':tensors['fflow'],
-                                                      'bflow':tensors['bflow']},
+                                             tensors=flows,
                                              params=params)
             # -- unpack --
             group = cpp_data["groupNoisy"]

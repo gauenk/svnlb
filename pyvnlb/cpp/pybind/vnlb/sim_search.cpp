@@ -51,7 +51,7 @@ void runSimSearch(VideoNLB::nlbParams& params,
   unsigned& nSimP = sim_params.nSimP;
   unsigned pidx = sim_params.pidx;
   bool all_pix = sim_params.all_pix;
-
+  params.use_imread = true; // set for testing.
 
   // unpack shape
   int w = tensors.w;
@@ -157,7 +157,7 @@ void runSimSearch(VideoNLB::nlbParams& params,
                                      fflowSub[part],bflowSub[part],
                                      groupNoisy,groupBasic,indices,
                                      pidx,params,imCleanSub[part],
-                                     imNoisyRGBSub[part]);
+                                     &(imNoisyRGBSub[part]));
     // }else if (all_pix){
     //   for (int idx=0; idx < sz.whcf; ++idx){
     //     nSimP += estimateSimilarPatches(imNoisy,imBasic,fflow,bflow,

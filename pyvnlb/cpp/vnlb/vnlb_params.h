@@ -50,6 +50,7 @@ struct nlbParams {
   VAR_MODE var_mode;
 
   // to allow for inputs in the swig-python code
+  bool use_imread;
   bool set_sizePatch;
   bool set_sizePatchTime;
   bool set_nSim;
