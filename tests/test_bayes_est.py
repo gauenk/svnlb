@@ -161,7 +161,7 @@ class TestBayesEstimate(unittest.TestCase):
         params = pyvnlb.setVnlbParams(noisy.shape,sigma,params=in_params)
         # tensors = {'fflow':tensors['fflow'],'bflow':tensors['bflow']}
 
-        tchecks,nchecks = 3,0
+        tchecks,nchecks = 10,0
         checks = np.random.permutation(h*w*c*(t-1))[:1000]
         for pidx in checks:
 
@@ -175,15 +175,16 @@ class TestBayesEstimate(unittest.TestCase):
             # print(pidx,ti,ci,wi,hi)
 
             # -- estimate similar patches --
-            cpp_data = pyvnlb.simPatchSearch(noisy,sigma,pidx,tensors,params)
-            cpp_group = cpp_data["groupNoisy"]
-            cpp_group_og = cpp_data["groupNoisy_og"]
-            nSimP = cpp_data['npatches']
-            nSimP_og = cpp_data['npatches_og']
+            params.use_imread = False
+            sim_data = pyvnlb.simPatchSearch(noisy,sigma,pidx,tensors,params)
+            sim_patches = sim_data["patchesNoisy"]
+            sim_groupNoisy = sim_data["groupNoisy"]
+            nSimP = sim_data['npatches']
+            nSimP_og = sim_data['ngroups']
 
             # -- cpp exec --
-            results = pyvnlb.computeBayesEstimate(cpp_group_og.copy(),
-                                                  cpp_group_og.copy(),
+            results = pyvnlb.computeBayesEstimate(sim_groupNoisy.copy(),
+                                                  sim_groupNoisy.copy(),
                                                   0.,nSimP_og,shape,params)
 
             # -- unpack --
@@ -199,8 +200,8 @@ class TestBayesEstimate(unittest.TestCase):
             psT = results['psT']
 
             # -- python exec --
-            py_results = runBayesEstimate(cpp_group_og.copy(),
-                                          cpp_group_og.copy(),
+            py_results = runBayesEstimate(sim_groupNoisy.copy(),
+                                          sim_groupNoisy.copy(),
                                           0.,nSimP_og,shape,params)
 
             # -- unpack --
@@ -218,21 +219,16 @@ class TestBayesEstimate(unittest.TestCase):
             # -- simple checks --
             assert abs(py_psX - psX) == 0
             assert abs(py_psT - psT) == 0
-            print(py_rank_var,cpp_rank_var)
             assert abs(py_rank_var - cpp_rank_var)/cpp_rank_var < 1e-3
 
-            # -- explore --
-            # nest = np.zeros((98,98))
-            # nest[:,:39] = cpp_covEigVecs
-            # cpp_covEigVecs = nest
 
             #
             # -- tests --
             #
 
             # -- simple --
-            np.testing.assert_allclose(py_center,cpp_center,rtol=1.5e-5)
-            # np.testing.assert_allclose(py_covMat,cpp_covMat,rtol=1.5e-3)
+            np.testing.assert_allclose(py_center,cpp_center,rtol=1.5e-4)
+            # np.testing.assert_allclose(py_covMat,cpp_covMat,rtol=3.)
             np.testing.assert_allclose(py_covEigVals,cpp_covEigVals,rtol=1.5e-3)
 
             # -- eigen vectors allow either sign --
@@ -257,15 +253,12 @@ class TestBayesEstimate(unittest.TestCase):
                 save_images(patches,SAVE_DIR / "./patches.png",imax=255.)
 
                 patches = groups2patches(cpp_groupNoisy,c,psX,psT,nSimP)
-                print(patches.shape,c,psX,psT,nSimP)
                 save_images(patches,SAVE_DIR / "./groupNoisy.png",imax=255.)
 
                 patches_ave = patches.mean(axis=0)
-                print(patches.shape,c,psX,psT,nSimP)
                 save_images(patches,SAVE_DIR / "./groupNoisy.png",imax=255.)
 
                 patches = groups2patches(cpp_groupBasic,c,psX,psT,nSimP)
-                print(patches.shape,c,psX,psT,nSimP)
                 save_images(patches,SAVE_DIR / "./groupBasic.png",imax=255.)
 
 
@@ -291,6 +284,6 @@ class TestBayesEstimate(unittest.TestCase):
         # -- modify patch size --
         pyargs = {}
         tensors,sigma = self.do_load_rand_data(5,3,32,32)
-        # self.do_run_bayes_est(tensors,sigma,pyargs)
+        self.do_run_bayes_est(tensors,sigma,pyargs)
 
 

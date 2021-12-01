@@ -66,7 +66,6 @@ void runBayesEstimate(VideoNLB::nlbParams& params,
   int groupSize = patch_num * patch_dim * patch_chnls;
 
   // init vectors of the groups
-  std::fprintf(stdout,"groupSize: %d\n",groupSize);
   float* ptr = bayes_params.groupNoisy;
   std::vector<float> groupNoisy(ptr,ptr+groupSize);
   ptr = bayes_params.groupBasic;

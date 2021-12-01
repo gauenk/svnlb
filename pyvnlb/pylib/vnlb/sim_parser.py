@@ -108,27 +108,27 @@ def sim_parser(noisy,sigma,nParts,py_tensors,params):
 
     return tensors, swig_tensors
 
-def reorder_sim_group(group,psX,psT,c,nSimP):
-    """
-    The patch data is not contiguous and this code
-    corrects this through reshapes (creating new strides)
-    and concatenations (pasting two edges together).
+# def reorder_sim_group(group,psX,psT,c,nSimP):
+#     """
+#     The patch data is not contiguous and this code
+#     corrects this through reshapes (creating new strides)
+#     and concatenations (pasting two edges together).
 
-    E.x.
-    Idx to Access inside a Match: 0,...,100,..,200,..,(psX**2*psT*c)*100
-    Idx to Access the Patch (px**2): [0],[2],[4],[1],[3],[5]...
-    Idx to Access the Time/Color Channels of the Image...
-    """
-    ncat = np.concatenate
-    numNz = nSimP * psX * psX * psT * c
-    group_f = group.ravel()[:numNz]
-    group = group_f.reshape(c,psT,-1)
-    group = ncat(group,axis=1)
-    group_f = group.ravel()
-    group = group_f.reshape(c*psT,psX**2,nSimP).transpose(2,0,1)
-    group = ncat(group,axis=1)
-    group = group.reshape(c*psT,nSimP,psX**2).transpose(1,0,2)
-    group = ncat(group,axis=0)
-    group = group.reshape(nSimP,psT,c,psX,psX)
-    return group
+#     E.x.
+#     Idx to Access inside a Match: 0,...,100,..,200,..,(psX**2*psT*c)*100
+#     Idx to Access the Patch (px**2): [0],[2],[4],[1],[3],[5]...
+#     Idx to Access the Time/Color Channels of the Image...
+#     """
+#     ncat = np.concatenate
+#     numNz = nSimP * psX * psX * psT * c
+#     group_f = group.ravel()[:numNz]
+#     group = group_f.reshape(c,psT,-1)
+#     group = ncat(group,axis=1)
+#     group_f = group.ravel()
+#     group = group_f.reshape(c*psT,psX**2,nSimP).transpose(2,0,1)
+#     group = ncat(group,axis=1)
+#     group = group.reshape(c*psT,nSimP,psX**2).transpose(1,0,2)
+#     group = ncat(group,axis=0)
+#     group = group.reshape(nSimP,psT,c,psX,psX)
+#     return group
 

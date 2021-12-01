@@ -20,6 +20,7 @@ def runSimSearch(noisy,sigma,pidx,tensors,params,step=0):
     nwindow_t = nfwd + nbwd + 1
     couple_ch = params['coupleChannels'][step]
     step1 = params['isFirstStep'][step]
+    use_imread = params['use_imread'] # use rgb for patches or yuv?
 
     # -- extract tensors --
     fflow = tensors['fflow']
@@ -35,11 +36,12 @@ def runSimSearch(noisy,sigma,pidx,tensors,params,step=0):
                                          couple_ch,step1)
 
     # -- group the values and indices --
-    groups = exec_select_cpp_groups(noisy,indices,ps,ps_t)
+    img = noisy if use_imread else noisy_yuv
+    patches = exec_select_cpp_patches(img,indices,ps,ps_t)
 
     # -- pack results --
     results = edict()
-    results.groups = groups
+    results.patches = patches
     results.values = values
     results.indices = indices
     results.nSimP = len(indices)
@@ -48,18 +50,18 @@ def runSimSearch(noisy,sigma,pidx,tensors,params,step=0):
     return results
 
 #
-# -- select groups of noisy regions --
+# -- select patches of noisy regions --
 #
 
-def exec_select_cpp_groups(noisy,indices,ps,ps_t):
+def exec_select_cpp_patches(noisy,indices,ps,ps_t):
     t,c,h,w = noisy.shape
     npatches = indices.shape[0]
-    groups = np.zeros((npatches,ps_t,c,ps,ps),dtype=np.float32)
-    numba_select_cpp_groups(groups,noisy,indices,ps,ps_t)
-    return groups
+    patches = np.zeros((npatches,ps_t,c,ps,ps),dtype=np.float32)
+    numba_select_cpp_patches(patches,noisy,indices,ps,ps_t)
+    return patches
 
 @njit
-def numba_select_cpp_groups(groups,noisy,indices,ps,ps_t):
+def numba_select_cpp_patches(patches,noisy,indices,ps,ps_t):
 
     # -- init shapes --
     t,c,h,w = noisy.shape
@@ -87,7 +89,7 @@ def numba_select_cpp_groups(groups,noisy,indices,ps,ps_t):
             for pi in range(ps):
                 for pj in range(ps):
                     for ci in range(c):
-                        groups[n,pt,ci,pi,pj] = noisy[ti+pt,ci,hi+pi,wi+pj]
+                        patches[n,pt,ci,pi,pj] = noisy[ti+pt,ci,hi+pi,wi+pj]
 
 
 def apply_color_xform_cpp(burst):

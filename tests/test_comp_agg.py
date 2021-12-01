@@ -161,7 +161,7 @@ class TestCompAgg(unittest.TestCase):
         params = pyvnlb.setVnlbParams(noisy.shape,sigma,params=in_params)
         # tensors = {'fflow':tensors['fflow'],'bflow':tensors['bflow']}
 
-        tchecks,nchecks = 3,0
+        tchecks,nchecks = 10,0
         checks = np.random.permutation(h*w*c*(t-1))[:1000]
         for pidx in checks:
 
@@ -175,17 +175,16 @@ class TestCompAgg(unittest.TestCase):
             # print(pidx,ti,ci,wi,hi)
 
             # -- estimate similar patches --
-            cpp_data = pyvnlb.simPatchSearch(noisy,sigma,pidx,tensors,params)
-            cpp_group = cpp_data["groupNoisy"]
-            cpp_group_og = cpp_data["groupNoisy_og"]
-            nSimP = cpp_data['npatches']
-            nSimP_og = cpp_data['npatches_og']
-            indices = cpp_data['indices']
-            psX,psT = cpp_data['psX'],cpp_data['psT']
+            sim_data = pyvnlb.simPatchSearch(noisy,sigma,pidx,tensors,params)
+            indices = sim_data['indices']
+            sim_patches = sim_data["patchesNoisy"]
+            sim_groupNoisy = sim_data["groupNoisy"]
+            nSimP = sim_data['npatches']
+            nSimP_og = sim_data['ngroups']
 
             # -- cpp exec --
             cpp_deno = np.zeros_like(noisy)
-            cpp_group = cpp_group_og
+            cpp_group = sim_groupNoisy
             cpp_weights = np.zeros((t,h,w),dtype=np.float32)
             cpp_mask = np.zeros((t,h,w),dtype=np.int8)
             results = pyvnlb.computeAggregation(cpp_deno,cpp_group,
@@ -201,7 +200,7 @@ class TestCompAgg(unittest.TestCase):
 
             # -- python exec --
             py_deno = np.zeros_like(noisy)
-            py_group = cpp_group_og
+            py_group = sim_groupNoisy
             py_weights = np.zeros((t,h,w),dtype=np.float32)
             py_mask = np.zeros((t,h,w),dtype=np.int8)
             py_results = computeAggregation(py_deno,py_group,indices,
@@ -223,14 +222,6 @@ class TestCompAgg(unittest.TestCase):
             np.testing.assert_array_equal(cpp_mask,py_mask)
             np.testing.assert_array_equal(cpp_weights,py_weights)
             np.testing.assert_array_equal(cpp_deno,py_deno)
-
-            # -- allow for swapping of "close" values --
-            # try:
-            #     np.testing.assert_array_equal(py_indices,cpp_indices)
-            # except:
-            #     print("SWAPPED!")
-            #     neq_idx = np.where(cpp_indices != py_indices)
-            #     check_pairwise_diff(py_vals[neq_idx])
 
             # -- check to break --
             nchecks += 1
@@ -263,6 +254,6 @@ class TestCompAgg(unittest.TestCase):
         # -- modify patch size --
         pyargs = {}
         tensors,sigma = self.do_load_rand_data(5,3,32,32)
-        # self.do_run_comp_agg(tensors,sigma,pyargs)
+        self.do_run_comp_agg(tensors,sigma,pyargs)
 
 

@@ -1,8 +1,15 @@
 
+# -- python deps --
+import numpy as np
+
+# -- local imports --
 from .sim_search import runSimSearch
 from .bayes_est import runBayesEstimate
 from .comp_agg import computeAggregation
-import numpy as np
+
+
+# -- project imports --
+from pyvnlb import groups2patches
 
 def runPythonVnlb(noisy,sigma,flows,params):
     """
@@ -40,16 +47,16 @@ def exec_step(noisy,basic,mask,weights,sigma,flows,params,step):
 def exec_step_at_pixel(noisy,basic,mask,weights,sigma,pidx,flows,params,step):
 
     # -- sim search --
+    params.use_imread = False
     sim_results = runSimSearch(noisy,sigma,pidx,flows,params,step)
-    groupNoisy = sim_results['groupNoisy_og']
-    groupBasic = sim_results['groupBasic_og']
-    nSimP = sim_results['npatches']
-    indices = sim_results['indices']
+    groups = sim_results.groups
+    indices = sim_results.indices
+    nSimP = sim_results.nSimP
 
     # -- bayes estimate --
     shape = noisy.shape
-    rank_var = params.rank_var
-    bayes_results = runBayesEstimate(groupNoisy,groupBasic,rank_var,
+    rank_var = 0.
+    bayes_results = runBayesEstimate(groups,groups,rank_var,
                                      nSimP,shape,params,step)
     groupNoisy = bayes_results['groupNoisy']
 

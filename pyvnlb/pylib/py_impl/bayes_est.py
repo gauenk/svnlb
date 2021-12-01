@@ -72,7 +72,6 @@ def exec_bayes_estimate(groupInput,sigma,sigmab,rank,nSimP,
         group_c += center_c
         group[chnl] = group_c
         center[chnl] = center_c[:,0]
-        break
 
     # -- rearrange --
     shape_str = 'c (p pst ps1 ps2) n -> p pst c ps1 ps2 n'

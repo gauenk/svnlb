@@ -174,26 +174,26 @@ class TestSimSearch(unittest.TestCase):
             cpp_data = pyvnlb.simPatchSearch(noisy,sigma,pidx,tensors,params)
 
             # -- unpack --
+            cpp_patches = cpp_data["patchesNoisy"]
             cpp_group = cpp_data["groupNoisy"]
-            cpp_group_og = cpp_data["groupNoisy_og"]
             cpp_indices = cpp_data['indices']
             cpp_psX,cpp_psT = cpp_data['psX'],cpp_data['psT']
             cpp_nSimP = cpp_data['npatches']
-            cpp_nSimOG = cpp_data['npatches_og']
+            cpp_ngroups = cpp_data['ngroups']
             cpp_nParts = cpp_data['nparts_omp']
 
             # -- python exec --
             py_data = runSimSearch(noisy,sigma,pidx,tensors,params)
 
             # -- unpack --
-            py_group = py_data.groups
+            py_patches = py_data.patches
             py_vals = py_data.values
             py_indices = py_data.indices
             nSimP = len(py_indices)
             nflat = py_data.nflat
 
             # -- compare --
-            np.testing.assert_allclose(py_group,cpp_group,rtol=1e-5)
+            np.testing.assert_allclose(py_patches,cpp_patches,rtol=1e-5)
 
             # -- allow for swapping of "close" values --
             try:
@@ -239,29 +239,23 @@ class TestSimSearch(unittest.TestCase):
                                              tensors=flows,
                                              params=params)
             # -- unpack --
-            group = cpp_data["groupNoisy"]
-            group_og = cpp_data["groupNoisy_og"]
+            patches = cpp_data["patchesNoisy"]
+            groups = cpp_data["groupNoisy"]
             indices = cpp_data['indices']
             psX,psT = cpp_data['psX'],cpp_data['psT']
             nSimP = cpp_data['npatches']
-            nSimOG = cpp_data['npatches_og']
+            ngroups = cpp_data['ngroups']
             nParts = cpp_data['nparts_omp']
 
             # -- ground truth patches --
             gt_patches = patches_at_indices(noisy,indices,psX,psT)
-            gt_patches_og = patches2groups(gt_patches,c,psX,psT,nSimP,nSimOG,nParts)
-            gt_patches_rs = groups2patches(gt_patches_og,c,psX,psT,nSimP)
-
-            # -- [temp] --
-            # print_value_order(group_og,gt_patches_og,c,psX,psT,nSimP)
-            # print_value_order(group,gt_patches_rs,c,psX,psT,nSimP)
-            # print_neq_values(group_og,gt_patches_og)
-            # print_neq_values_fix_pix(group_og,gt_patches_og)
+            gt_groups = patches2groups(gt_patches,c,psX,psT,nSimP,ngroups,nParts)
+            gt_patches_r2 = groups2patches(gt_groups,c,psX,psT,nSimP)
 
             # -- compare --
-            np.testing.assert_array_equal(gt_patches,group)
-            np.testing.assert_array_equal(gt_patches_og,group_og)
-            np.testing.assert_array_equal(gt_patches_rs,group)
+            np.testing.assert_array_equal(gt_patches,patches)
+            np.testing.assert_array_equal(gt_groups,groups)
+            np.testing.assert_array_equal(gt_patches_r2,patches)
 
             # -- check to break --
             nchecks += 1
@@ -270,7 +264,7 @@ class TestSimSearch(unittest.TestCase):
         # -- save [the pretty] results --
         if save:
             save_images(noisy,SAVE_DIR / "./noisy.png",imax=255.)
-            save_images(group,SAVE_DIR / f"./patches_pyvnlb.png",imax=255.)
+            save_images(patches,SAVE_DIR / f"./patches_pyvnlb.png",imax=255.)
             save_images(gt_patches,SAVE_DIR / f"./patches_gt.png",imax=255.)
 
 

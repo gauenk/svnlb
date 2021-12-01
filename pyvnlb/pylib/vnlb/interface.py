@@ -10,7 +10,8 @@ import pyvnlb
 # -- local imports --
 from ..utils import optional,optional_swig_ptr,assign_swig_args
 from .parser import parse_args,parse_params
-from .sim_parser import sim_parser,reorder_sim_group
+from .sim_parser import sim_parser
+from .sim_utils import groups2patches
 from .bayes_parser import parse_bayes_params
 from .agg_parser import parse_agg_params
 
@@ -100,19 +101,19 @@ def simPatchSearch(noisy,sigma,pidx,tensors=None,params=None):
     psT = swig_params[0].sizePatchTime
     t,c,h,w = noisy.shape
     nSimP = simParams.nSimP
-    gNoisy_og = tensors.groupNoisy
-    gBasic_og = tensors.groupBasic
-    gNoisy = reorder_sim_group(tensors.groupNoisy,psX,psT,c,nSimP)
-    gBasic = reorder_sim_group(tensors.groupBasic,psX,psT,c,nSimP)
+    groupNoisy = tensors.groupNoisy
+    groupBasic = tensors.groupBasic
+    patchesNoisy = groups2patches(tensors.groupNoisy,c,psX,psT,nSimP)
+    patchesBasic = groups2patches(tensors.groupBasic,c,psX,psT,nSimP)
     indices = rearrange(tensors.indices[:,:nSimP],'nparts nsimp -> (nparts nsimp)')
 
     # -- pack results --
     results = {}
-    results['groupNoisy'] = gNoisy
-    results['groupBasic'] = gBasic
-    results['groupNoisy_og'] = gNoisy_og
-    results['groupBasic_og'] = gBasic_og
-    results['npatches_og'] = gNoisy_og.shape[-1]
+    results['patchesNoisy'] = patchesNoisy
+    results['patchesBasic'] = patchesBasic
+    results['groupNoisy'] = groupNoisy
+    results['groupBasic'] = groupBasic
+    results['ngroups'] = groupNoisy.shape[-1]
     results['indices'] = indices
     results['npatches'] = simParams.nSimP
     results['psX'] = psX
