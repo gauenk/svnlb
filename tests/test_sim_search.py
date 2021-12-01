@@ -155,6 +155,7 @@ class TestSimSearch(unittest.TestCase):
 
         # -- parse parameters --
         params = pyvnlb.setVnlbParams(noisy.shape,sigma,params=in_params)
+        params.use_imread = True
         tensors = {'fflow':tensors['fflow'],'bflow':tensors['bflow']}
         tchecks,nchecks = 10,0
         checks = np.random.permutation(h*w*c*(t-1))[:1000]
@@ -218,6 +219,7 @@ class TestSimSearch(unittest.TestCase):
 
         # -- parse parameters --
         params = pyvnlb.setVnlbParams(noisy.shape,sigma,params=in_params)
+        params.use_imread = True
         tchecks,nchecks = 10,0
         checks = np.random.permutation(h*w*c*(t-1))[:100]
         flows = {'fflow':tensors['fflow'],'bflow':tensors['bflow']}

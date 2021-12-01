@@ -51,7 +51,6 @@ void runSimSearch(VideoNLB::nlbParams& params,
   unsigned& nSimP = sim_params.nSimP;
   unsigned pidx = sim_params.pidx;
   bool all_pix = sim_params.all_pix;
-  params.use_imread = true; // set for testing.
 
   // unpack shape
   int w = tensors.w;
@@ -60,6 +59,7 @@ void runSimSearch(VideoNLB::nlbParams& params,
   int t = tensors.t;
 
   // setup video data
+  Video<float> *imPtr = nullptr;
   Video<float> imNoisy,imNoisyRGB,imBasic,imClean,fflow,bflow;
   imNoisy.loadVideoFromPtr(tensors.noisy,w,h,c,t);
   imNoisyRGB.loadVideoFromPtr(tensors.noisy,w,h,c,t);
@@ -151,13 +151,19 @@ void runSimSearch(VideoNLB::nlbParams& params,
     // size = patch_num;
     std::vector<unsigned> indices(patch_num);//istart,istart+size);
 
+
+    // pointer for different types of sim search
+    if (params.use_imread){
+      imPtr = &(imNoisyRGBSub[part]);
+    }
+
     // exec similarity search
     if ((pidx >= 0) && (!all_pix)){
       nSimP = estimateSimilarPatches(imNoisySub[part],imBasicSub[part],
                                      fflowSub[part],bflowSub[part],
                                      groupNoisy,groupBasic,indices,
                                      pidx,params,imCleanSub[part],
-                                     &(imNoisyRGBSub[part]));
+                                     imPtr);
     // }else if (all_pix){
     //   for (int idx=0; idx < sz.whcf; ++idx){
     //     nSimP += estimateSimilarPatches(imNoisy,imBasic,fflow,bflow,
