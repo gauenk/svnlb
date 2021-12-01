@@ -31,9 +31,9 @@ def runSimSearch(noisy,sigma,pidx,tensors,params,step=0):
     noisy_yuv = apply_color_xform_cpp(noisy)
 
     # -- find the best patches using c++ logic --
-    values,indices = exec_cpp_sim_search(pidx,noisy_yuv,fflow,bflow,sigma,ps,ps_t,
-                                         npatches,nwindow_xy,nfwd,nbwd,
-                                         couple_ch,step1)
+    values,indices,nsearch = exec_cpp_sim_search(pidx,noisy_yuv,fflow,bflow,sigma,
+                                                 ps,ps_t,npatches,nwindow_xy,nfwd,nbwd,
+                                                 couple_ch,step1)
 
     # -- group the values and indices --
     img = noisy if use_imread else noisy_yuv
@@ -46,6 +46,9 @@ def runSimSearch(noisy,sigma,pidx,tensors,params,step=0):
     results.indices = indices
     results.nSimP = len(indices)
     results.nflat = results.nSimP * ps * ps * ps_t * c
+    results.nsearch = nsearch
+    results.ps = ps
+    results.ps_t = ps_t
 
     return results
 
@@ -154,6 +157,7 @@ def exec_cpp_sim_search(pidx,noisy,fflow,bflow,sigma,ps,ps_t,
     patches = np.zeros((npatches,ps_t,c,ps,ps))
     vals = np.ones((t-ps_t+1,nwindow_xy,nwindow_xy),dtype=np.float32)*np.inf
     indices = np.zeros((t-ps_t+1,nwindow_xy,nwindow_xy),dtype=np.int32)
+    nsearch = indices.size
 
     # -- search --
     # print("-"*30)
@@ -180,7 +184,7 @@ def exec_cpp_sim_search(pidx,noisy,fflow,bflow,sigma,ps,ps_t,
     vals = vals_f[vindices]
     indices = indices.ravel()[vindices]
 
-    return vals,indices
+    return vals,indices,nsearch
 
 @njit
 def numba_cpp_sim_search(pidx,vals,indices,noisy,fflow,bflow,sigma,

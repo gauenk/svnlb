@@ -249,7 +249,7 @@ class TestSimSearch(unittest.TestCase):
 
             # -- ground truth patches --
             gt_patches = patches_at_indices(noisy,indices,psX,psT)
-            gt_groups = patches2groups(gt_patches,c,psX,psT,nSimP,ngroups,nParts)
+            gt_groups = patches2groups(gt_patches,c,psX,psT,ngroups,nParts)
             gt_patches_r2 = groups2patches(gt_groups,c,psX,psT,nSimP)
 
             # -- compare --

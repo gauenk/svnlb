@@ -33,44 +33,45 @@ def patches_at_indices(noisy,indices,psX,psT):
     patches = np.stack(patches)
     return patches
 
-def groups2patches(group,c,psX,psT,nSimP):
+def groups2patches(group,c,psX,psT,npatches):
 
     # -- setup --
     ncat = np.concatenate
     size = psX * psX * psT * c
-    numNz = nSimP * psX * psX * psT * c
+    numNz = npatches * psX * psX * psT * c
     group_f = group.ravel()[:numNz]
 
     # -- [og -> img] --
     group = group_f.reshape(c,psT,-1)
     group = ncat(group,axis=1)
-    group = group.reshape(c*psT,psX**2,nSimP).transpose(2,0,1)
+    group = group.reshape(c*psT,psX**2,npatches).transpose(2,0,1)
     group = ncat(group,axis=0)
 
     # -- final reshape --
-    group = group.reshape(nSimP,psT,c,psX,psX)
+    group = group.reshape(npatches,psT,c,psX,psX)
 
     return group
 
 
-def patches2groups(group,c,psX,psT,nSimP,nSimOG,nParts):
+def patches2groups(patches,c,psX,psT,nsearch,nParts):
 
     # -- setup --
+    npatches = patches.shape[0]
     ncat = np.concatenate
     size = psX * psX * psT * c
-    numNz = nSimP * psX * psX * psT * c
-    group = group.ravel()[:numNz]
+    numNz = npatches * psX * psX * psT * c
+    group = patches.ravel()[:numNz]
 
     # -- [img -> og] --
-    group = group.reshape(nSimP,psX*psX,c*psT).transpose(1,2,0)
+    group = group.reshape(npatches,psX*psX,c*psT).transpose(1,2,0)
     group = ncat(group,axis=0)
-    group = group.reshape(psT,c,nSimP*psX*psX)
+    group = group.reshape(psT,c,npatches*psX*psX)
     group = ncat(group,axis=1)
 
     # -- fill with zeros --
     group_f = group.ravel()[:numNz]
-    group = np.zeros(size*nSimOG)
-    group[:size*nSimP] = group_f[...]
-    group = group.reshape(nParts,psT,c,psX,psX,nSimOG)
+    group = np.zeros(size*nsearch)
+    group[:size*npatches] = group_f[...]
+    group = group.reshape(nParts,psT,c,psX,psX,nsearch)
 
     return group
