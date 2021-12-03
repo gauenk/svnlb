@@ -175,7 +175,7 @@ class TestBayesEstimate(unittest.TestCase):
             # print(pidx,ti,ci,wi,hi)
 
             # -- estimate similar patches --
-            params.use_imread = False
+            params.use_imread = [False,False]
             sim_data = pyvnlb.simPatchSearch(noisy,sigma,pidx,tensors,params)
             sim_patches = sim_data["patchesNoisy"]
             sim_groupNoisy = sim_data["groupNoisy"]
@@ -190,7 +190,7 @@ class TestBayesEstimate(unittest.TestCase):
             # -- unpack --
             cpp_groupNoisy = results['groupNoisy']
             cpp_groupBasic = results['groupBasic']
-            cpp_group = results['group']
+            cpp_group = results['group'] # modified in-place
             cpp_center = results['center']
             cpp_covMat = results['covMat']
             cpp_covEigVecs = results['covEigVecs']
@@ -198,6 +198,7 @@ class TestBayesEstimate(unittest.TestCase):
             cpp_rank_var = results['rank_var']
             psX = results['psX']
             psT = results['psT']
+            print(cpp_covMat)
 
             # -- python exec --
             py_results = runBayesEstimate(sim_groupNoisy.copy(),
@@ -207,7 +208,7 @@ class TestBayesEstimate(unittest.TestCase):
             # -- unpack --
             py_groupNoisy = py_results['groupNoisy']
             py_groupBasic = py_results['groupBasic']
-            py_group = py_results['group']
+            py_group = py_results['group'] # not modified in-place
             py_center = py_results['center']
             py_covMat = py_results['covMat']
             py_covEigVecs = py_results['covEigVecs']
@@ -216,30 +217,41 @@ class TestBayesEstimate(unittest.TestCase):
             py_psX = py_results['psX']
             py_psT = py_results['psT']
 
+            print(np.sum(py_covEigVals),np.sum(cpp_covEigVals))
+
             # -- simple checks --
             assert abs(py_psX - psX) == 0
             assert abs(py_psT - psT) == 0
-            assert abs(py_rank_var - cpp_rank_var)/cpp_rank_var < 1e-3
-
+            assert abs(py_rank_var - cpp_rank_var)/cpp_rank_var < 2e-6
 
             #
             # -- tests --
             #
 
             # -- simple --
-            np.testing.assert_allclose(py_center,cpp_center,rtol=1.5e-4)
-            # np.testing.assert_allclose(py_covMat,cpp_covMat,rtol=3.)
-            np.testing.assert_allclose(py_covEigVals,cpp_covEigVals,rtol=1.5e-3)
+            np.testing.assert_allclose(py_center,cpp_center,rtol=2e-5)
+            np.testing.assert_allclose(py_covMat,cpp_covMat,rtol=1e-4)
+            np.testing.assert_allclose(py_covEigVals,cpp_covEigVals,rtol=5e-7)
 
             # -- eigen vectors allow either sign --
-            delta_pos = np.abs(py_covEigVecs - cpp_covEigVecs)
+            delta_pos = np.abs(py_covEigVecs + cpp_covEigVecs)
             delta_neg = np.abs(py_covEigVecs - cpp_covEigVecs)
             delta = np.minimum(delta_pos,delta_neg).mean()
-            assert delta < 1.5e-3
+            assert delta < 1.5e-7
+
+
+            # -- debug zone --
+            # delta = np.abs(py_groupNoisy-cpp_groupNoisy)/(cpp_groupNoisy+1e-8)
+            # print(delta.max())
+            # neq = np.where(delta>0.01)
+            # print(np.stack([py_groupNoisy[neq],cpp_groupNoisy[neq],delta[neq]],-1))
 
             # -- resume simple --
             # np.testing.assert_allclose(py_group,cpp_group,rtol=1.5e-7)
-            np.testing.assert_allclose(py_groupNoisy,cpp_groupNoisy,rtol=3.)
+            # np.testing.assert_allclose(py_groupNoisy,cpp_groupNoisy,rtol=1.5e-3)
+            sargs = np.where(cpp_groupNoisy > 1.)
+            np.testing.assert_allclose(py_groupNoisy[sargs],
+                                       cpp_groupNoisy[sargs],rtol=1.5e-4)
             # np.testing.assert_allclose(py_groupBasic,cpp_groupBasic,rtol=1.5e-7)
 
             # -- check to break --

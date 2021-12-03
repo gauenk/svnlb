@@ -107,6 +107,10 @@ typedef uint64_t size_t;
  * Parse headers
  *******************************************************************/
 
+%include typemaps.i
+%apply int &INOUT { int & group_counter };
+%apply int &INOUT { int & ngroups };
+%apply int &INOUT { int & nmasked };
 %include <pyvnlb/cpp/utils/platform_macros.h>
 
 %ignore *::cmp;

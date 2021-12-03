@@ -2,6 +2,7 @@
 import scipy
 import numpy as np
 from einops import rearrange
+import pyvnlb
 
 def check_steps(step1,step):
     is_step_1 = (step1 == True) and (step == 0)
@@ -63,8 +64,8 @@ def exec_bayes_estimate(groupInput,sigma,sigmab,rank,nSimP,
     center = np.zeros((group_chnls,pdim),dtype=np.float32)
     for chnl in range(group_chnls):
         group_c,center_c = center_data(groupInput[chnl])
-        covMat = compute_cov_matrix(group_c,nSimP)
-        eigVals,eigVecs = compute_eig_stuff(covMat,rank)
+        covMat,eigVals,eigVecs = pyvnlb.computeCovMat(group_c,pdim,nSimP,c,rank)
+        # covMat,eigVals,eigVecs = compute_eig_stuff(group_c,nSimP,rank)
         eigVals = denoise_eigvals(eigVals,sigmab,mod_sel,rank)
         rank_var += np.sum(eigVals[:rank])
         eigVals = bayes_filter_coeff(eigVals,sigma,thresh)
@@ -72,6 +73,7 @@ def exec_bayes_estimate(groupInput,sigma,sigmab,rank,nSimP,
         group_c += center_c
         group[chnl] = group_c
         center[chnl] = center_c[:,0]
+        break
 
     # -- rearrange --
     shape_str = 'c (p pst ps1 ps2) n -> p pst c ps1 ps2 n'
@@ -96,19 +98,27 @@ def center_data(groupInput):
     centered = groupInput - center
     return centered,center
 
-def compute_cov_matrix(groups,nSimP):
-    dim,npatches = groups.shape
-    covs = np.matmul(groups,groups.transpose(1,0))/nSimP
-    return covs
 
-def compute_eig_stuff(covMat,rank):
+def compute_eig_stuff(group,nSimP,rank):
+
+    # -- cov mat --
+    dim,npatches = group.shape
+    covMat = np.matmul(group,group.transpose(1,0))/nSimP
+    covMat = covMat.astype(np.float32)
+
+    # -- eigen stuff --
     n,n = covMat.shape
-    results = np.linalg.eigh(covMat)
+    # results = np.linalg.eigh(covMat)
     results = scipy.linalg.lapack.ssyevx(covMat,1,'I',1,
                                          0,1,n-rank+1,n,
                                          overwrite_a=0)
+
+    # -- format outputs --
     eigVals,eigVecs = results[0],results[1]
-    return eigVals,eigVecs
+    eigVals = eigVals.astype(np.float32)
+    eigVecs = eigVecs.astype(np.float32)
+
+    return covMat,eigVals,eigVecs
 
 def denoise_eigvals(eigVals,sigmab,mod_sel,rank):
     if mod_sel == "clipped":

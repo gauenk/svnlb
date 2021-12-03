@@ -2,6 +2,7 @@
 # -- python imports --
 import cv2,sys
 import subprocess
+import pathlib
 import numpy as np
 from pathlib import Path
 from einops import rearrange
@@ -156,7 +157,9 @@ def merge_images(image_batch, size):
 
 def save_images(tensor,fn,imax=255.):
     # -- swap string and tensor --
-    if isinstance(tensor,str):
+    is_str = isinstance(tensor,str)
+    is_path = isinstance(tensor,pathlib.Path)
+    if is_str or is_path:
         tmp = tensor
         tensor = fn
         fn = tmp

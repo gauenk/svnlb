@@ -35,6 +35,8 @@ def parse_agg_params(deno,group,indices,weights,mask,nSimP,params):
     # -- group used for denoising --
     aggParams.group = group
     groupSize = p_num * p_dim * p_chnls
+    print(p_num,p_dim,p_chnls)
+    print(group.size,groupSize)
     assert group.size == groupSize
 
     # -- indices used for placement in Denoised image --

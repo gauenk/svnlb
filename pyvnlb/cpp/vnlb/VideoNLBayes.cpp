@@ -476,6 +476,13 @@ unsigned processNLBayes(
 	Video<char> mask(sz.width, sz.height, sz.frames, 1, false);
 
 	// There's a border added only if the crop doesn't touch the source image border
+    fprintf(stdout,"crop.origin(x,y,t): (%d,%d,%d)\n",
+            crop.origin_x,crop.origin_y,crop.origin_t);
+    fprintf(stdout,"crop.ending(x,y,t): (%d,%d,%d)\n",
+            crop.ending_x,crop.ending_y,crop.ending_t);
+    fprintf(stdout,"crop.source_sz(w,h,f): (%d,%d,%d)\n",
+            crop.source_sz.width,crop.source_sz.height,crop.source_sz.frames);
+    fprintf(stdout,"procStep: %d\n",params.procStep);
 	bool border_x0 = crop.origin_x > 0;
 	bool border_y0 = crop.origin_y > 0;
 	bool border_t0 = crop.origin_t > 0;
@@ -569,16 +576,20 @@ unsigned processNLBayes(
 
 	// Loop over video
 	int remaining_groups = n_groups;
-	// std::fprintf(stdout,"(t,h,w): (%d,%d,%d)\n",sz.frames,sz.height,sz.width);
-	for (unsigned pt = 0; pt < sz.frames; pt++)
-	for (unsigned py = 0; py < sz.height; py++)
-	for (unsigned px = 0; px < sz.width ; px++)
+	for (unsigned pt = 0; pt < sz.frames; pt++){
+      for (unsigned py = 0; py < sz.height; py++){
+        for (unsigned px = 0; px < sz.width ; px++){
+        // fprintf(stdout,"hi: %d,%d,%d\n",pt,py,px);
 		if (mask(px,py,pt)) //< Only non-seen patches are processed
 		{
+            if (group_counter > 2){
+              break;
+            }
 			group_counter++;
 
 			const unsigned ij  = sz.index(px,py,pt);
 			const unsigned ij3 = sz.index(px,py,pt, 0);
+            fprintf(stdout,"ij: %d\n",ij);
 
 			if (params.verbose && (group_counter % 100 == 0))
 			{
@@ -619,6 +630,9 @@ unsigned processNLBayes(
                                    groupNoisy, indices, params, nSimP);
 		}
 
+        }
+      }
+    }
 	// Weighted aggregation
 	computeWeightedAggregation(imNoisy, step1 ? imBasic : imFinal, weight);
 
@@ -1141,6 +1155,7 @@ float computeBayesEstimate_LR(
 			// Convariance matrix is noisy, either because it has been computed
 			// from the noisy patches, or because we model the noise in the basic
 			// estimate
+
 			if (sigmab2){
 			  modifyEigVals(mat,sigmab2, r, pdim, nSimP, params.var_mode);
 			}
@@ -1195,7 +1210,8 @@ float computeBayesEstimate_LR(
 			              false, true);
 
 			// Copy channel back into vector
-			std::copy(gNoisy->begin(), gNoisy->end(), groupNoisy.begin() + pdim*nSimP*c);
+			std::copy(gNoisy->begin(), gNoisy->end(),
+                      groupNoisy.begin() + pdim*nSimP*c);
             // break;
 		}
 	}

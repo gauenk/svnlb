@@ -155,7 +155,7 @@ class TestSimSearch(unittest.TestCase):
 
         # -- parse parameters --
         params = pyvnlb.setVnlbParams(noisy.shape,sigma,params=in_params)
-        params.use_imread = True
+        params.use_imread = [True,True]
         tensors = {'fflow':tensors['fflow'],'bflow':tensors['bflow']}
         tchecks,nchecks = 10,0
         checks = np.random.permutation(h*w*c*(t-1))[:1000]
@@ -189,11 +189,16 @@ class TestSimSearch(unittest.TestCase):
             py_patches = py_data.patches
             py_vals = py_data.values
             py_indices = py_data.indices
+            py_ngroups = py_data.ngroups
             nSimP = len(py_indices)
             nflat = py_data.nflat
+            psX,psT = py_data['psX'],py_data['psT']
+            py_group = patches2groups(py_patches,c,psX,psT,py_ngroups,1)
 
             # -- compare --
-            np.testing.assert_allclose(py_patches,cpp_patches,rtol=1e-5)
+            assert np.abs(cpp_ngroups - py_ngroups) == 0
+            np.testing.assert_allclose(py_patches,cpp_patches,rtol=1e-7)
+            np.testing.assert_allclose(py_group,cpp_group,rtol=1e-7)
 
             # -- allow for swapping of "close" values --
             try:
@@ -219,7 +224,7 @@ class TestSimSearch(unittest.TestCase):
 
         # -- parse parameters --
         params = pyvnlb.setVnlbParams(noisy.shape,sigma,params=in_params)
-        params.use_imread = True
+        params.use_imread = [True,True]
         tchecks,nchecks = 10,0
         checks = np.random.permutation(h*w*c*(t-1))[:100]
         flows = {'fflow':tensors['fflow'],'bflow':tensors['bflow']}

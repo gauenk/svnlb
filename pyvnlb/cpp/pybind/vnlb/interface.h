@@ -111,7 +111,7 @@ struct PyAggParams {
 PyAggParams() :
   t(0),c(0),h(0),w(0),
     imDeno(nullptr),weights(nullptr),mask(nullptr),
-    group(nullptr),indices(nullptr), nmasked(0),nSimP(0) {}
+    group(nullptr),indices(nullptr), nSimP(0) {}
 
   // --> shapes <--
   int t,c,h,w;
@@ -127,7 +127,61 @@ PyAggParams() :
 
   // --> num of similar patches <--
   unsigned nSimP; // num of similar patches
-  unsigned nmasked; // num of masked indices
+
+};
+
+struct MaskParams {
+MaskParams() :
+  mask(nullptr),
+    nframes(0),width(0),height(0),
+    origin_t(0),origin_h(0),origin_w(0),
+    ending_t(0),ending_h(0),ending_w(0),
+    step_t(1),step_h(1),step_w(1),
+    ps(0),ps_t(0),sWx(0),sWt(0) {};
+
+  // -- init --
+  void* mask;
+
+  int nframes;
+  int width;
+  int height;
+
+  int origin_t;
+  int origin_h;
+  int origin_w;
+
+  int ending_t;
+  int ending_h;
+  int ending_w;
+
+  int step_t;
+  int step_h;
+  int step_w;
+
+  int ps;
+  int ps_t;
+  int sWx;
+  int sWt;
+
+};
+
+struct CovMatParams {
+CovMatParams():
+  pdim(0),rank(0),nSimP(0),gsize(0),
+    groups(nullptr),covMat(nullptr),
+    covEigVals(nullptr),covEigVecs(nullptr) {}
+
+  // size of ints
+  int pdim;
+  int rank;
+  int nSimP;
+  int gsize;
+
+  // arrays galore
+  float* groups;
+  float* covMat;
+  float* covEigVals;
+  float* covEigVecs;
 
 };
 
@@ -146,6 +200,14 @@ void setVnlbParamsCpp(VideoNLB::nlbParams& params, const VnlbTensors& tensors,in
 void runSimSearch(VideoNLB::nlbParams& params,
                   const VnlbTensors& tensors,
                   PySimSearchParams& sim_params);
-void runBayesEstimate(VideoNLB::nlbParams& params,PyBayesEstimateParams& bayes_params);
-void runAggregation(VideoNLB::nlbParams& params, PyAggParams& agg_params);
+void runBayesEstimate(VideoNLB::nlbParams& params,
+                      PyBayesEstimateParams& bayes_params);
+void runAggregation(VideoNLB::nlbParams& params,
+                    PyAggParams& agg_params,
+                    int& nmasked);
+void processNLBayesCpp(VideoNLB::nlbParams& params,
+                       const VnlbTensors& tensors,
+                       int& group_counter, int border);
+void init_mask_cpp(MaskParams params, int& ngroups);
+void computeCovMatCpp(CovMatParams params);
 

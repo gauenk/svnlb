@@ -166,3 +166,45 @@ def expand_flows(pydict,axis=0):
     pydict['fflow'],pydict['bflow'] = fflow,bflow
 
 
+def groups2patches(group,c,psX,psT,npatches):
+
+    # -- setup --
+    ncat = np.concatenate
+    size = psX * psX * psT * c
+    numNz = npatches * psX * psX * psT * c
+    group_f = group.ravel()[:numNz]
+
+    # -- [og -> img] --
+    group = group_f.reshape(c,psT,-1)
+    group = ncat(group,axis=1)
+    group = group.reshape(c*psT,psX**2,npatches).transpose(2,0,1)
+    group = ncat(group,axis=0)
+
+    # -- final reshape --
+    group = group.reshape(npatches,psT,c,psX,psX)
+
+    return group
+
+
+def patches2groups(patches,c,psX,psT,nsearch,nParts):
+
+    # -- setup --
+    npatches = patches.shape[0]
+    ncat = np.concatenate
+    size = psX * psX * psT * c
+    numNz = npatches * psX * psX * psT * c
+    group = patches.ravel()[:numNz]
+
+    # -- [img -> og] --
+    group = group.reshape(npatches,psX*psX,c*psT).transpose(1,2,0)
+    group = ncat(group,axis=0)
+    group = group.reshape(psT,c,npatches*psX*psX)
+    group = ncat(group,axis=1)
+
+    # -- fill with zeros --
+    group_f = group.ravel()[:numNz]
+    group = np.zeros(size*nsearch,dtype=np.float32)
+    group[:size*npatches] = group_f[...]
+    group = group.reshape(nParts,psT,c,psX,psX,nsearch)
+
+    return group

@@ -82,5 +82,6 @@ void runVnlb(VideoNLB::nlbParams& params1, VideoNLB::nlbParams& params2,
 		       "%5.2f%% in 2nd step.\n", groupsRatio[0], groupsRatio[1]);
 
   // copy back to arrays
+  basic.saveVideoToPtr(tensors.basic);
   final.saveVideoToPtr(tensors.denoised);
 }

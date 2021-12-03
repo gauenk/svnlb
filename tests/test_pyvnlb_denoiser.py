@@ -1,4 +1,4 @@
-import cv2
+import cv2,copy
 import numpy as np
 import unittest
 import pyvnlb
@@ -16,7 +16,9 @@ from pyvnlb.pylib.tests.file_io import save_images
 from pyvnlb import groups2patches,patches2groups,patches_at_indices
 
 # -- python impl --
-from pyvnlb.pylib.py_impl import runPythonVnlb
+from pyvnlb.pylib.py_impl import runPythonVnlb,processNLBayes
+SAVE_DIR = Path("./output/tests/")
+
 
 class TestPythonVnlbDenoiser(unittest.TestCase):
 
@@ -63,16 +65,17 @@ class TestPythonVnlbDenoiser(unittest.TestCase):
     # -- Define C++ & Python calls --
     #
 
-    def do_run_cpp(self,tensors,sigma,pyargs):
+    def do_run_cpp(self,tensors,sigma,params):
         noisy = tensors.noisy
         flows = {'fflow':tensors.fflow,'bflow':tensors.bflow}
-        results = pyvnlb.runPyVnlb(noisy,sigma,flows,pyargs)
+        results = pyvnlb.runPyVnlb(noisy,sigma,flows,params)
         return results
 
-    def do_run_python(self,tensors,sigma,pyargs):
+    def do_run_python(self,tensors,sigma,params):
         noisy = tensors.noisy
         flows = {'fflow':tensors.fflow,'bflow':tensors.bflow}
-        results = runPythonVnlb(noisy,sigma,flows,pyargs)
+        params = copy.deepcopy(params)
+        results = runPythonVnlb(noisy,sigma,flows,params)
         return results
 
     #
@@ -86,8 +89,21 @@ class TestPythonVnlbDenoiser(unittest.TestCase):
         params = pyvnlb.setVnlbParams(noisy.shape,sigma,params=pyargs)
 
         # -- exec both types --
-        py_results = self.do_run_python(tensors,sigma,params)
         cpp_results = self.do_run_cpp(tensors,sigma,params)
+        py_results = self.do_run_python(tensors,sigma,params)
+
+        # -- save results --
+        results = defaultdict(dict)
+        fields = ["basic","denoised"]
+        for field in fields:
+            cppField = cpp_results[field]
+            pyField = py_results[field]
+            save_images(SAVE_DIR / f"cpp_{field}.png",cppField,imax=255.)
+            save_images(SAVE_DIR / f"py_{field}.png",pyField,imax=255.)
+            delta = np.abs(cppField - pyField)
+            if delta.max() > 0:
+                delta /= delta.max()
+            save_images(SAVE_DIR / f"delta_{field}.png",delta,imax=1.)
 
         # -- compare results --
         results = defaultdict(dict)
@@ -95,14 +111,22 @@ class TestPythonVnlbDenoiser(unittest.TestCase):
         for field in fields:
             cppField = cpp_results[field]
             pyField = py_results[field]
-            totalError = np.abs(cppField - pyField)/(np.abs(cppField)+1e-12)
-            totalError = np.sum(totalError)
-            totalError = np.around(totalError,9)
-            tgt = 0.
-            delta = np.abs(totalError-tgt)/(tgt+1e-12)
-            assert delta < 1e-5
+            np.testing.assert_allclose(cppField,pyField,rtol=1.5e-3)
+            print(np.stack([cppField,pyField],axis=-1))
+            # totalError = np.abs(cppField - pyField)/(np.abs(cppField)+1e-12)
+            # totalError = np.mean(totalError)
+            # totalError = np.around(totalError,9)
+            # tgt = 0.
+            # delta = np.abs(totalError-tgt)/(tgt+1e-12)
+            # assert delta < 1e-5
 
     def test_python_denoiser(self):
+
+        # -- init save path --
+        np.random.seed(234)
+        save_dir = SAVE_DIR
+        if not save_dir.exists():
+            save_dir.mkdir(parents=True)
 
         # -- no args --
         pyargs = {}

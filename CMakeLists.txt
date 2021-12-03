@@ -26,8 +26,8 @@ set(CMAKE_VERBOSE_MAKEFILE OFF)
 
 # set(CMAKE_C_FLAGS_RELEASE_INIT "/MT /O2 /Ob2")
 # set(CMAKE_CXX_FLAGS_RELEASE_INIT "/MT /O2 /Ob2")
-# set(CMAKE_C_FLAGS_RELEASE "-O3")
-# set(CMAKE_CXX_FLAGS_RELEASE "-O3")
+set(CMAKE_C_FLAGS_RELEASE "-O3")
+set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 # message(status "cxx release flags: ${CMAKE_CXX_FLAGS_RELEASE}")
 # message(status "c release flags: ${CMAKE_C_FLAGS_RELEASE}")
 

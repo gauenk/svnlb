@@ -24,7 +24,8 @@ extern "C" {
 }
 
 
-void runAggregation(VideoNLB::nlbParams& params, PyAggParams& agg_params){
+void runAggregation(VideoNLB::nlbParams& params, PyAggParams& agg_params,
+                    int& nmasked){
 
   /*****************
 
@@ -80,9 +81,8 @@ void runAggregation(VideoNLB::nlbParams& params, PyAggParams& agg_params){
   //
   // Aggregate Similar Patches
   //
-  agg_params.nmasked += computeAggregation(imDeno,weights,mask,group,
-                                           indices,params,nSimP);
-
+  nmasked += computeAggregation(imDeno,weights,mask,group,
+                                indices,params,nSimP);
   //
   // Copy Local Mem *back* to Pybind Interface
   //

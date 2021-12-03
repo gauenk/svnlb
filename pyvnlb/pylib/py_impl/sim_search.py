@@ -5,6 +5,9 @@ from einops import rearrange
 from numba import njit,jit,prange
 from easydict import EasyDict as edict
 
+from .utils import apply_color_xform_cpp
+from ..utils import get_patch_shapes_from_params,optional
+
 from pyvnlb.pylib.tests import save_images
 
 def runSimSearch(noisy,sigma,pidx,tensors,params,step=0):
@@ -20,15 +23,16 @@ def runSimSearch(noisy,sigma,pidx,tensors,params,step=0):
     nwindow_t = nfwd + nbwd + 1
     couple_ch = params['coupleChannels'][step]
     step1 = params['isFirstStep'][step]
-    use_imread = params['use_imread'] # use rgb for patches or yuv?
+    use_imread = params['use_imread'][step] # use rgb for patches or yuv?
+    basic = optional(tensors,'basic',np.zeros_like(noisy))
 
     # -- extract tensors --
     fflow = tensors['fflow']
     bflow = tensors['bflow']
-    # print("fflow.shape: ",fflow.shape)
 
     # -- color transform --
     noisy_yuv = apply_color_xform_cpp(noisy)
+    basic_yuv = apply_color_xform_cpp(basic)
 
     # -- find the best patches using c++ logic --
     values,indices,nsearch = exec_cpp_sim_search(pidx,noisy_yuv,fflow,bflow,sigma,
@@ -36,19 +40,31 @@ def runSimSearch(noisy,sigma,pidx,tensors,params,step=0):
                                                  couple_ch,step1)
 
     # -- group the values and indices --
-    img = noisy if use_imread else noisy_yuv
-    patches = exec_select_cpp_patches(img,indices,ps,ps_t)
+    img_noisy = noisy if use_imread else noisy_yuv
+    img_basic = basic if use_imread else basic_yuv
+    patchesNoisy = exec_select_cpp_patches(img_noisy,indices,ps,ps_t)
+    patchesBasic = exec_select_cpp_patches(img_basic,indices,ps,ps_t)
+
+    # -- extract some params info --
+    i_params = edict({k:v[step] if isinstance(v,list) else v for k,v in params.items()})
+    pinfo = get_patch_shapes_from_params(i_params,c)
+    patch_num,patch_dim,patch_chnls = pinfo
 
     # -- pack results --
     results = edict()
-    results.patches = patches
+    results.patches = patchesNoisy
+    results.patchesNoisy = patchesNoisy
+    results.patchesBasic = patchesBasic
     results.values = values
     results.indices = indices
     results.nSimP = len(indices)
     results.nflat = results.nSimP * ps * ps * ps_t * c
     results.nsearch = nsearch
+    results.ngroups = patch_num
     results.ps = ps
     results.ps_t = ps_t
+    results.psX = ps
+    results.psT = ps_t
 
     return results
 
@@ -70,7 +86,7 @@ def numba_select_cpp_patches(patches,noisy,indices,ps,ps_t):
     t,c,h,w = noisy.shape
     nframes,color,height,width = t,c,h,w
 
-    def coords(idx):
+    def idx2coords(idx):
 
         # -- get shapes --
         whc = width*height*color
@@ -87,52 +103,13 @@ def numba_select_cpp_patches(patches,noisy,indices,ps,ps_t):
     # -- exec copy --
     for n in range(indices.shape[0]):
         ind = indices[n]
-        ti,_,hi,wi = coords(ind)
+        ti,_,hi,wi = idx2coords(ind)
         for pt in range(ps_t):
             for pi in range(ps):
                 for pj in range(ps):
                     for ci in range(c):
                         patches[n,pt,ci,pi,pj] = noisy[ti+pt,ci,hi+pi,wi+pj]
 
-
-def apply_color_xform_cpp(burst):
-    """
-    rgb -> yuv [using cpp logic]
-    """
-    burst_yuv = []
-    # burst = rearrange(burst,'t c h w -> t h w c')
-    t,h,w,c = burst.shape
-    for ti in range(t):
-
-        # -- init --
-        image = burst[ti]
-        image_yuv = np.zeros_like(image)
-        weights = [1./np.sqrt(3),1./np.sqrt(2),2./np.sqrt(3)*np.sqrt(2.)]
-
-        # -- rgb -> yuv --
-        image_yuv[0] = weights[0] * (image[0] + image[1] + image[2])
-        image_yuv[1] = weights[1] * (image[0] - image[2])
-        image_yuv[2] = weights[2] * (.25 * image[0] - 0.5 * image[1] + .25 * image[2])
-
-        # -- append --
-        burst_yuv.append(image_yuv)
-    burst_yuv = np.stack(burst_yuv)
-
-    return burst_yuv
-
-def apply_color_xform(burst):
-    """
-    rgb -> yuv
-    """
-    burst_yuv = []
-    burst = rearrange(burst,'t c h w -> t h w c')
-    t,h,w,c = burst.shape
-    for ti in range(t):
-        image_yuv = cv2.cvtColor(burst[ti], cv2.COLOR_RGB2YUV)
-        burst_yuv.append(image_yuv)
-    burst_yuv = np.stack(burst_yuv)
-    burst_yuv = rearrange(burst_yuv,'t h w c -> t c h w')
-    return burst_yuv
 
 def idx2coords(idx,width,height,color):
 
@@ -154,15 +131,15 @@ def exec_cpp_sim_search(pidx,noisy,fflow,bflow,sigma,ps,ps_t,
 
     # -- init shapes --
     t,c,h,w = noisy.shape
-    patches = np.zeros((npatches,ps_t,c,ps,ps))
+    # patches = np.zeros((npatches,ps_t,c,ps,ps))
     vals = np.ones((t-ps_t+1,nwindow_xy,nwindow_xy),dtype=np.float32)*np.inf
-    indices = np.zeros((t-ps_t+1,nwindow_xy,nwindow_xy),dtype=np.int32)
+    indices = np.zeros((t-ps_t+1,nwindow_xy,nwindow_xy),dtype=np.uint32)
     nsearch = indices.size
 
     # -- search --
     # print("-"*30)
     numba_cpp_sim_search(pidx,vals,indices,noisy,fflow,bflow,sigma,
-                         ps,ps_t,npatches,nwindow_xy,nWt_f,nWt_b,couple_ch,step1)
+                         ps,ps_t,nwindow_xy,nWt_f,nWt_b,couple_ch,step1)
 
     # -- remove ref frame --
     # t_c = coords(pidx,w,h,c)[0]
@@ -183,12 +160,14 @@ def exec_cpp_sim_search(pidx,noisy,fflow,bflow,sigma,ps,ps_t,
     vindices = np.argsort(vals_f)[:npatches]
     vals = vals_f[vindices]
     indices = indices.ravel()[vindices]
+    # print("nsearch: %d\n" % nsearch)
+    # print("npatches: %d\n" % npatches)
 
     return vals,indices,nsearch
 
 @njit
 def numba_cpp_sim_search(pidx,vals,indices,noisy,fflow,bflow,sigma,
-                         ps,ps_t,npatches,nWxy,nWt_f,nWt_b,couple_ch,step1):
+                         ps,ps_t,nWxy,nWt_f,nWt_b,couple_ch,step1):
     # -- init shapes --
     t,c,h,w = noisy.shape
     nframes,color,height,width = t,c,h,w
@@ -200,7 +179,7 @@ def numba_cpp_sim_search(pidx,vals,indices,noisy,fflow,bflow,sigma,
         pix += wi
         return pix
 
-    def coords(idx):
+    def idx2coords(idx):
 
         # -- get shapes --
         whc = width*height*color
@@ -215,7 +194,7 @@ def numba_cpp_sim_search(pidx,vals,indices,noisy,fflow,bflow,sigma,
         return t,c,y,x
 
     # -- "center" coords at index "pidx" --
-    t_c,c_c,h_c,w_c = coords(pidx)
+    t_c,c_c,h_c,w_c = idx2coords(pidx)
     # print(t_c,c_c,h_c,w_c)
 
     # int shift_t = std::min(0, (int)pt -  sWt_b)
