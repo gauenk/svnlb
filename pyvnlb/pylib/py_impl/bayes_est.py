@@ -69,7 +69,7 @@ def add_back_center(group,centers,nSimP,pdim,c):
     # for ci in range(c):
     #     index = slice(nSimP*pdim * ci,nSimP*pdim * (ci+1))
     #     # rcenter = repeat(centers[ci],'p -> (s p)',s=nSimP)
-    groupv = group.ravel()[:nSimP*pdim*c].reshape((c,pdim,nSimP,))
+    groupv = group.ravel()[:nSimP*pdim*c].reshape((c,pdim,nSimP))
     groupv += centers[...,None]
 
 def centering_v1(groupNoisy,groupBasic):

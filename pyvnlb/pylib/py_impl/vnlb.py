@@ -23,15 +23,16 @@ def runPythonVnlb(noisy,sigma,flows,params):
     # -- step 1 --
     step_results = processNLBayes(noisy,sigma,0,flows,params)
     step1_results = step_results
+    basic = step1_results.basic.copy()
 
     # -- step 2 --
     tensors = edict(flows)
-    tensors.basic = step_results.basic
+    tensors.basic = step_results.basic.copy()
     step_results = processNLBayes(noisy,sigma,1,tensors,params)
 
     # -- format --
     results = edict()
-    results.basic = step1_results.basic
+    results.basic = basic
     results.denoised = step_results.denoised
 
     return results

@@ -218,7 +218,6 @@ def computeBayesEstimate(groupNoisy,groupBasic,nSimP,shape,params,step):
     bayes_results = runBayesEstimate(groupNoisy.copy(),groupBasic.copy(),
                                      rank_var,nSimP,shape,params,step)
 
-
     # -- format --
     groups = bayes_results['groupNoisy']
     rank_var = bayes_results['rank_var']

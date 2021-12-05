@@ -37,10 +37,12 @@ def check_and_expand_flows(pyargs,t):
         msg += "(nframes,two,height,width)"
         raise ValueError(msg)
 
-def check_omp_num_threads():
+def check_omp_num_threads(nthreads=4):
     omp_nthreads = omp_num_threads()
-    if (omp_nthreads != 4):
-        print("Please run `export OMP_NUM_THREADS=4` before running this file.")
+    if (omp_nthreads != nthreads):
+        msg = f"Please run `export OMP_NUM_THREADS={nthreads}` "
+        msg += "before running this file."
+        print(msg)
         sys.exit(1)
 
 def omp_num_threads():

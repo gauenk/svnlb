@@ -1,4 +1,5 @@
 import cv2,copy
+import pandas as pd
 import numpy as np
 import unittest
 import pyvnlb
@@ -14,6 +15,7 @@ from easydict import EasyDict as edict
 from pyvnlb.pylib.tests.data_loader import load_dataset
 from pyvnlb.pylib.tests.file_io import save_images
 from pyvnlb import groups2patches,patches2groups,patches_at_indices
+from pyvnlb import check_omp_num_threads
 
 # -- python impl --
 from pyvnlb.pylib.py_impl import runPythonVnlb,processNLBayes
@@ -44,6 +46,7 @@ class TestPythonVnlbDenoiser(unittest.TestCase):
         data.noisy = noisy
         data.fflow = fflow
         data.bflow = bflow
+        data._clean = clean
 
         return data,std
 
@@ -93,7 +96,7 @@ class TestPythonVnlbDenoiser(unittest.TestCase):
         params = pyvnlb.setVnlbParams(noisy.shape,sigma,params=pyargs)
 
         # -- exec both types --
-        cpp_results = self.do_run_cpp(tensors,sigma,params)
+        cpp_results = self.do_run_cpp(tensors,sigma,copy.deepcopy(params))
         py_results = self.do_run_python(tensors,sigma,params)
 
         # -- save results --
@@ -110,6 +113,7 @@ class TestPythonVnlbDenoiser(unittest.TestCase):
             save_images(SAVE_DIR / f"delta_{field}.png",delta,imax=1.)
 
         # -- compare results --
+        clean = tensors._clean
         results = defaultdict(dict)
         fields = ["basic","denoised"]
         for field in fields:
@@ -117,6 +121,13 @@ class TestPythonVnlbDenoiser(unittest.TestCase):
             pyField = py_results[field]
             msg = f"[{field}] check failed."
             np.testing.assert_allclose(cppField,pyField,rtol=5e-3,err_msg=msg)
+
+            cpp_psnrs = pyvnlb.compute_psnrs(clean,cppField)
+            py_psnrs = pyvnlb.compute_psnrs(clean,pyField)
+            for ti in range(len(cpp_psnrs)):
+                field_t = field + "_" + str(ti)
+                results['py'][field_t] = py_psnrs[ti]
+                results['cpp'][field_t] = cpp_psnrs[ti]
             # print(np.stack([cppField,pyField],axis=-1))
             # totalError = np.abs(cppField - pyField)/(np.abs(cppField)+1e-12)
             # totalError = np.mean(totalError)
@@ -124,6 +135,9 @@ class TestPythonVnlbDenoiser(unittest.TestCase):
             # tgt = 0.
             # delta = np.abs(totalError-tgt)/(tgt+1e-12)
             # assert delta < 1e-5
+        results = pd.DataFrame(results)
+        print(results.to_markdown())
+
 
     def test_python_denoiser(self):
 
@@ -132,6 +146,9 @@ class TestPythonVnlbDenoiser(unittest.TestCase):
         save_dir = SAVE_DIR
         if not save_dir.exists():
             save_dir.mkdir(parents=True)
+
+        # -- check omp threads --
+        check_omp_num_threads(nthreads=1)
 
         # -- no args --
         pyargs = {}
