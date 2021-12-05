@@ -13,7 +13,7 @@ from easydict import EasyDict as edict
 
 # -- package helper imports --
 from pyvnlb.pylib.tests.data_loader import load_dataset
-from pyvnlb.pylib.tests.file_io import save_images
+from pyvnlb.pylib.tests.file_io import save_images,save_hist
 from pyvnlb import groups2patches,patches2groups,patches_at_indices
 from pyvnlb import check_omp_num_threads
 
@@ -108,6 +108,7 @@ class TestPythonVnlbDenoiser(unittest.TestCase):
             save_images(SAVE_DIR / f"cpp_{field}.png",cppField,imax=255.)
             save_images(SAVE_DIR / f"py_{field}.png",pyField,imax=255.)
             delta = np.abs(cppField - pyField)
+            save_hist(SAVE_DIR / f"delta_hist_{field}.png",delta.ravel())
             if delta.max() > 0:
                 delta /= delta.max()
             save_images(SAVE_DIR / f"delta_{field}.png",delta,imax=1.)

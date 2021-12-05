@@ -8,6 +8,10 @@ from pathlib import Path
 from einops import rearrange
 from easydict import EasyDict as edict
 
+import matplotlib
+matplotlib.use("agg")
+import matplotlib.pyplot as plt
+
 # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 #
 #      Read Files in a Loop
@@ -155,7 +159,7 @@ def merge_images(image_batch, size):
     img = img.astype(image_batch.dtype)
     return img
 
-def save_images(tensor,fn,imax=255.):
+def swap_ndarray_fn(tensor,fn):
     # -- swap string and tensor --
     is_str = isinstance(tensor,str)
     is_path = isinstance(tensor,pathlib.Path)
@@ -163,6 +167,21 @@ def save_images(tensor,fn,imax=255.):
         tmp = tensor
         tensor = fn
         fn = tmp
+    return tensor,fn
+
+def save_hist(tensor,fn):
+    # -- swap string and tensor --
+    tensor,fn = swap_ndarray_fn(tensor,fn)
+
+    # -- create hist --
+    fig,ax = plt.subplots()
+    ax.hist(tensor,bins=30)
+    plt.savefig(fn,bbox_inches='tight')
+    plt.close("all")
+
+def save_images(tensor,fn,imax=255.):
+    # -- swap string and tensor --
+    tensor,fn = swap_ndarray_fn(tensor,fn)
 
     # -- shaping --
     nframes = tensor.shape[-4]
