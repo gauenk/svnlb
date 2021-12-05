@@ -8,7 +8,7 @@
 cmake_minimum_required(VERSION 3.17 FATAL_ERROR)
 cmake_policy(SET CMP0048 NEW) # avoid annoing warnings
 
-project(pyvnlb
+project(vnlb
   VERSION 1.0.0
   DESCRIPTION "A python api for the video non-local bayes denoiser."
   HOMEPAGE_URL "https://github.com/gauenk/pyvnlb"
@@ -18,7 +18,7 @@ include(GNUInstallDirs)
 ########################################
 
 set(CMAKE_CXX_STANDARD 11)
-option(PYVNLB_ENABLE_PYTHON "Build Python extension." ON)
+option(VNLB_ENABLE_PYTHON "Build Python extension." ON)
 set(CMAKE_BUILD_TYPE Release)
 set(CMAKE_VERBOSE_MAKEFILE OFF)
 
@@ -43,5 +43,5 @@ set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -ggdb")
 
 ########################################
 
-add_subdirectory(pyvnlb)
-add_subdirectory(pyvnlb/python)
+add_subdirectory(vnlb)
+add_subdirectory(vnlb/swig)
