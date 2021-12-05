@@ -1,7 +1,7 @@
 
 #@nolint
 
-# not linting this file because it imports * from swigpyvnlb, which
+# not linting this file because it imports * from swigvnlb, which
 # causes a ton of useless warnings.
 
 import numpy as np

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 cmake -B build
-make -C build -j swigpyvnlb
+make -C build -j swigvnlb
 cd ./build/vnlb/swig
 python setup.py clean --all 
 python -m pip install . --user
