@@ -68,6 +68,12 @@ void init_mask_cpp(MaskParams params, int& ngroups){
 
   ************************/
 
+  // fprintf(stdout,"border_x,border_t: %d,%d\n",border_s,border_t);
+  // fprintf(stdout,"ori_*: %d,%d,%d\n",ori_w,ori_h,ori_t);
+  // fprintf(stdout,"end_*: %d,%d,%d\n",end_w,end_h,end_t);
+  // fprintf(stdout,"step_*: %d,%d,%d\n",step_w,step_h,step_t);
+
+
   // --> init mask <--
   ngroups = 0;
   Video<char> mask(width,height,nframes,1,false);
@@ -98,6 +104,7 @@ void init_mask_cpp(MaskParams params, int& ngroups){
       }
     }
   }
+  // fprintf(stdout,"mask(0,1,2,3): %d,%d,%d,%d\n",mask(0),mask(1),mask(2),mask(3));
 
   // --> write back to python <--
   std::copy(mask.data.begin(),mask.data.end(),(char*)params.mask);

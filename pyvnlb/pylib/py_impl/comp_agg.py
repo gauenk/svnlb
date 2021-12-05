@@ -1,8 +1,14 @@
 
 
+# -- python deps --
 import scipy
 import numpy as np
 from einops import rearrange
+
+# -- numba --
+from numba import njit
+
+# -- package --
 from pyvnlb import groups2patches
 
 def computeAggregation(deno,group,indices,weights,mask,nSimP,params=None,step=0):
@@ -17,9 +23,14 @@ def computeAggregation(deno,group,indices,weights,mask,nSimP,params=None,step=0)
     onlyFrame = params['onlyFrame'][step]
     aggreBoost =  params['aggreBoost'][step]
 
+    # -- convert groups to patches  --
+    t,c,h,w = deno.shape
+    nSimP = len(indices)
+    patches = groups2patches(group,c,ps,ps_t,nSimP)
+
     # -- exec search --
     deno_clone = deno.copy()
-    nmasked = exec_aggregation(deno,group,indices,weights,mask,
+    nmasked = exec_aggregation(deno,patches,indices,weights,mask,
                                ps,ps_t,onlyFrame,aggreBoost)
 
     # -- pack results --
@@ -33,33 +44,36 @@ def computeAggregation(deno,group,indices,weights,mask,nSimP,params=None,step=0)
 
     return results
 
-def idx2coords(idx,width,height,color):
 
-    # -- get shapes --
-    whc = width*height*color
-    wh = width*height
-
-    # -- compute coords --
-    t = (idx      ) // whc
-    c = (idx % whc) // wh
-    y = (idx % wh ) // width
-    x = idx % width
-
-    return t,c,y,x
-
-def pixRmColor(ind,c,w,h):
-    whc = w*h*c
-    wh = w*h
-    ind1 = (ind // whc) * wh + ind % wh;
-    return ind1
-
-def exec_aggregation(deno,group,indices,weights,mask,
+@njit
+def exec_aggregation(deno,patches,indices,weights,mask,
                      ps,ps_t,onlyFrame,aggreBoost):
+
+    # -- def functions --
+    def idx2coords(idx,width,height,color):
+
+        # -- get shapes --
+        whc = width*height*color
+        wh = width*height
+
+        # -- compute coords --
+        t = (idx      ) // whc
+        c = (idx % whc) // wh
+        y = (idx % wh ) // width
+        x = idx % width
+
+        return t,c,y,x
+
+    def pixRmColor(ind,c,w,h):
+        whc = w*h*c
+        wh = w*h
+        ind1 = (ind // whc) * wh + ind % wh;
+        return ind1
+
     # -- init --
     nmasked = 0
     t,c,h,w = deno.shape
     nSimP = len(indices)
-    patches = groups2patches(group,c,ps,ps_t,nSimP)
 
     # -- update [deno,weights,mask] --
     for n in range(indices.shape[0]):
@@ -85,18 +99,19 @@ def exec_aggregation(deno,group,indices,weights,mask,
                     weights[t1+pt,h1+pi,w1+pj] += 1
 
         # -- apply paste trick --
-        if (mask[t1,h1,w1]): nmasked += 1
+        if (mask[t1,h1,w1] == 1): nmasked += 1
         mask[t1,h1,w1] = False
+
         if (aggreBoost):
-            if ( (h1 > 2*ps) and mask[t1,h1-1,w1] ): nmasked += 1
-            if ( (h1 < h - 2*ps) and mask[t1,h1+1,w1] ): nmasked += 1
-            if ( (w1 > 2*ps) and mask[t1,h1,w1-1] ): nmasked += 1
-            if ( (w1 > w - 2*ps) and mask[t1,h1,w1+1] ): nmasked += 1
+            if ( (h1 > 2*ps) and (mask[t1,h1-1,w1]==1) ): nmasked += 1
+            if ( (h1 < (h - 2*ps)) and (mask[t1,h1+1,w1]==1) ): nmasked += 1
+            if ( (w1 > 2*ps) and (mask[t1,h1,w1-1]==1) ): nmasked += 1
+            if ( (w1 < (w - 2*ps)) and (mask[t1,h1,w1+1]==1) ): nmasked += 1
 
             if (h1 > 2*ps):  mask[t1,h1-1,w1] = False
-            if (h1 < h - 2*ps): mask[t1,h1+1,w1] = False
+            if (h1 < (h - 2*ps)): mask[t1,h1+1,w1] = False
             if (w1 > 2*ps):  mask[t1,h1,w1-1] = False
-            if (w1 > w - 2*ps): mask[t1,h1,w1+1] = False
+            if (w1 < (w - 2*ps)): mask[t1,h1,w1+1] = False
 
     return nmasked
 

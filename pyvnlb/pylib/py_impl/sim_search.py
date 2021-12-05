@@ -6,7 +6,7 @@ from numba import njit,jit,prange
 from easydict import EasyDict as edict
 
 from .utils import apply_color_xform_cpp
-from ..utils import get_patch_shapes_from_params,optional
+from ..utils import get_patch_shapes_from_params,optional,groups2patches,check_flows,check_and_expand_flows
 
 from pyvnlb.pylib.tests import save_images
 
@@ -26,24 +26,35 @@ def runSimSearch(noisy,sigma,pidx,tensors,params,step=0):
     use_imread = params['use_imread'][step] # use rgb for patches or yuv?
     basic = optional(tensors,'basic',np.zeros_like(noisy))
 
+    # -- format flows for c++ (t-1 -> t) --
+    if check_flows(tensors):
+        check_and_expand_flows(tensors,t)
+
     # -- extract tensors --
-    fflow = tensors['fflow']
-    bflow = tensors['bflow']
+    zflow = np.zeros((t,2,h,w),dtype=np.float32)
+    fflow = optional(tensors,'fflow',zflow.copy())
+    bflow = optional(tensors,'bflow',zflow.copy())
 
     # -- color transform --
     noisy_yuv = apply_color_xform_cpp(noisy)
     basic_yuv = apply_color_xform_cpp(basic)
 
     # -- find the best patches using c++ logic --
-    values,indices,nsearch = exec_cpp_sim_search(pidx,noisy_yuv,fflow,bflow,sigma,
+    srch_img = noisy_yuv if step1 else basic_yuv
+    values,indices,nsearch = exec_cpp_sim_search(pidx,srch_img,fflow,bflow,sigma,
                                                  ps,ps_t,npatches,nwindow_xy,nfwd,nbwd,
                                                  couple_ch,step1)
 
     # -- group the values and indices --
     img_noisy = noisy if use_imread else noisy_yuv
     img_basic = basic if use_imread else basic_yuv
-    patchesNoisy = exec_select_cpp_patches(img_noisy,indices,ps,ps_t)
-    patchesBasic = exec_select_cpp_patches(img_basic,indices,ps,ps_t)
+
+    # patchesNoisy = exec_select_cpp_patches(img_noisy,indices,ps,ps_t)
+    # patchesBasic = exec_select_cpp_patches(img_basic,indices,ps,ps_t)
+    groupNoisy = exec_select_cpp_groups(img_noisy,indices,ps,ps_t)
+    groupBasic = exec_select_cpp_groups(img_basic,indices,ps,ps_t)
+    patchesNoisy = groups2patches(groupNoisy)
+    patchesBasic = groups2patches(groupBasic)
 
     # -- extract some params info --
     i_params = edict({k:v[step] if isinstance(v,list) else v for k,v in params.items()})
@@ -55,6 +66,8 @@ def runSimSearch(noisy,sigma,pidx,tensors,params,step=0):
     results.patches = patchesNoisy
     results.patchesNoisy = patchesNoisy
     results.patchesBasic = patchesBasic
+    results.groupNoisy = groupNoisy
+    results.groupBasic = groupBasic
     results.values = values
     results.indices = indices
     results.nSimP = len(indices)
@@ -110,6 +123,47 @@ def numba_select_cpp_patches(patches,noisy,indices,ps,ps_t):
                     for ci in range(c):
                         patches[n,pt,ci,pi,pj] = noisy[ti+pt,ci,hi+pi,wi+pj]
 
+def exec_select_cpp_groups(noisy,indices,ps,ps_t):
+    t,c,h,w = noisy.shape
+    npatches = indices.shape[0]
+    groups = np.zeros((1,c,ps_t,ps,ps,npatches),dtype=np.float32)
+    groups_f = groups.ravel()
+    numba_select_cpp_groups(groups_f,noisy,indices,ps,ps_t)
+    return groups
+
+@njit
+def numba_select_cpp_groups(groups,noisy,indices,ps,ps_t):
+
+    # -- init shapes --
+    t,c,h,w = noisy.shape
+    nframes,color,height,width = t,c,h,w
+
+    # def idx2coords(idx):
+
+    #     # -- get shapes --
+    #     whc = width*height*color
+    #     wh = width*height
+
+    #     # -- compute coords --
+    #     t = (idx      ) // whc
+    #     c = (idx % whc) // wh
+    #     y = (idx % wh ) // width
+    #     x = idx % width
+
+    #     return t,c,y,x
+
+    # -- exec copy --
+    k = 0
+    for ci in range(c):
+        for pt in range(ps_t):
+            for pi in range(ps):
+                for pj in range(ps):
+                    for n in range(indices.shape[0]):
+                        ind = indices[n]
+                        # ti,_,hi,wi = idx2coords(ind)
+                        # groups[k] = noisy[ti+pt,ci,hi+pi,wi+pj]
+                        groups[k] = noisy.ravel()[ci * w*h + ind + pt*w*h*c + pi*w + pj]
+                        k+=1
 
 def idx2coords(idx,width,height,color):
 

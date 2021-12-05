@@ -366,11 +366,12 @@ std::vector<float> runNLBayesThreads(
 	if (prms1.verbose) printf(ANSI_CYN "OpenMP is using %d threads\n" ANSI_RST, nThreads);
 #endif
 	const unsigned nParts = 2 * nThreads; // number of video parts
+    // const unsigned nParts = 1;
+    // nThreads = 1;
 
 	// Borders added to each sub-division of the image (for multi-threading)
 	const int border = std::max(2*(prms1.sizeSearchWindow/2) + prms1.sizePatch - 1,
 	                            2*(prms2.sizeSearchWindow/2) + prms2.sizePatch - 1);
-
 
 	// Split optical flow
 	std::vector<Video<float> > fflowSub(nParts), bflowSub(nParts);
@@ -394,7 +395,7 @@ std::vector<float> runNLBayesThreads(
 	prms[1] = prms2;
 
 	// Run VNLBayes steps
-	for (int iter = 0; iter < 2; ++iter)
+	for (int iter = 0; iter < 2; ++iter){
 		if (prms[iter].sizePatch)
 		{
 			if (prms[iter].verbose)
@@ -434,6 +435,7 @@ std::vector<float> runNLBayesThreads(
 			for (int n = 0; n < (int)nParts; n++)
 				groupsRatio[iter] += 100.f * (float)groupsProcessedSub[n]/(float)size.whf;
 		}
+    }
 
 	// Get the basic estimate
 	VideoUtils::subBuildTight(imBasicSub, imBasic, border);
@@ -476,13 +478,14 @@ unsigned processNLBayes(
 	Video<char> mask(sz.width, sz.height, sz.frames, 1, false);
 
 	// There's a border added only if the crop doesn't touch the source image border
-    fprintf(stdout,"crop.origin(x,y,t): (%d,%d,%d)\n",
-            crop.origin_x,crop.origin_y,crop.origin_t);
-    fprintf(stdout,"crop.ending(x,y,t): (%d,%d,%d)\n",
-            crop.ending_x,crop.ending_y,crop.ending_t);
-    fprintf(stdout,"crop.source_sz(w,h,f): (%d,%d,%d)\n",
-            crop.source_sz.width,crop.source_sz.height,crop.source_sz.frames);
-    fprintf(stdout,"procStep: %d\n",params.procStep);
+    // fprintf(stdout,"crop.origin(x,y,t): (%d,%d,%d)\n",
+    //         crop.origin_x,crop.origin_y,crop.origin_t);
+    // fprintf(stdout,"crop.ending(x,y,t): (%d,%d,%d)\n",
+    //         crop.ending_x,crop.ending_y,crop.ending_t);
+    // fprintf(stdout,"crop.source_sz(w,h,f): (%d,%d,%d)\n",
+    //         crop.source_sz.width,crop.source_sz.height,crop.source_sz.frames);
+    // fprintf(stdout,"procStep: %d\n",params.procStep);
+
 	bool border_x0 = crop.origin_x > 0;
 	bool border_y0 = crop.origin_y > 0;
 	bool border_t0 = crop.origin_t > 0;
@@ -510,6 +513,11 @@ unsigned processNLBayes(
 		ori_f = params.onlyFrame;
 		end_f = params.onlyFrame + 1;
 	}
+
+    // fprintf(stdout,"border_x,border_t: %d,%d\n",border_x,border_t);
+    // fprintf(stdout,"ori_*: %d,%d,%d\n",ori_x,ori_y,ori_f);
+    // fprintf(stdout,"end_*: %d,%d,%d\n",end_x,end_y,end_f);
+    // fprintf(stdout,"step_*: %d,%d,%d\n",stepx,stepy,stepf);
 
 //	ori_f = std::max((int)sz.frames / 2 - (int)sPt - 1, 0);
 //	end_f = sz.frames / 2 + 1;
@@ -541,7 +549,8 @@ unsigned processNLBayes(
 	}
 
 	// Used matrices during Bayes' estimate
-	const unsigned patch_dim = sPx * sPx * sPt * (params.coupleChannels ? sz.channels : 1);
+	const unsigned patch_dim = sPx * sPx * sPt *
+      (params.coupleChannels ? sz.channels : 1);
 	const unsigned patch_chnls = params.coupleChannels ? 1 : sz.channels;
 	const unsigned patch_num = sWx * sWx * sWt;
 
@@ -579,17 +588,21 @@ unsigned processNLBayes(
 	for (unsigned pt = 0; pt < sz.frames; pt++){
       for (unsigned py = 0; py < sz.height; py++){
         for (unsigned px = 0; px < sz.width ; px++){
-        // fprintf(stdout,"hi: %d,%d,%d\n",pt,py,px);
+        // fprintf(stdout,"iters!: %d,%d,%d\n",pt,py,px);
 		if (mask(px,py,pt)) //< Only non-seen patches are processed
 		{
-            if (group_counter > 2){
-              break;
-            }
+            // if (group_counter > 2){
+            //   break;
+            // }
+            // fprintf(stdout,"mask(0,1,2,3): %d,%d,%d,%d\n",
+            //         mask(0),mask(1),mask(2),mask(3));
+            // fprintf(stdout,"group_counter: %d\n",group_counter);
 			group_counter++;
+            // fprintf(stdout,"(t,h,w,-): %d,%d,%d,%d\n",pt,py,px,mask(24,0,1));
 
 			const unsigned ij  = sz.index(px,py,pt);
 			const unsigned ij3 = sz.index(px,py,pt, 0);
-            fprintf(stdout,"ij: %d\n",ij);
+            // fprintf(stdout,"ij,ij3: %d,%d\n",ij,ij3);
 
 			if (params.verbose && (group_counter % 100 == 0))
 			{
@@ -612,8 +625,12 @@ unsigned processNLBayes(
                                                     ij3, params, imClean, imRead);
 			// If we use the homogeneous area trick
 			bool flatPatch = false;
-			if (params.flatAreas)
-				flatPatch = computeFlatArea(groupNoisy, groupBasic, params, nSimP, sz.channels);
+			// if (params.flatAreas)
+			// 	flatPatch = computeFlatArea(groupNoisy, groupBasic, params, nSimP, sz.channels);
+
+            // fprintf(stdout,"[pre] groupNoisy(0): %2.3f\n",groupNoisy[0]);
+            // fprintf(stdout,"[pre] groupNoisy(1): %2.3f\n",groupNoisy[1]);
+
 
 			// Bayesian estimate
 #ifdef FAT_ORIGINAL
@@ -622,12 +639,17 @@ unsigned processNLBayes(
 			// computeFlatArea function.
 			if (flatPatch == false)
 #endif
-			  computeBayesEstimate(groupNoisy, groupBasic, mat, params, nSimP, sz.channels, flatPatch);
+              computeBayesEstimate(groupNoisy, groupBasic, mat, params, nSimP, sz.channels, flatPatch);
+
+            // fprintf(stdout,"[post] groupNoisy(0): %2.3f\n",groupNoisy[0]);
+            // fprintf(stdout,"[post] groupNoisy(1): %2.3f\n",groupNoisy[1]);
 
 			// Aggregation
 			remaining_groups -=
 				computeAggregation(step1 ? imBasic : imFinal, weight, mask,
                                    groupNoisy, indices, params, nSimP);
+            // fprintf(stdout,"imBasic(0): %2.3f\n",imBasic(0));
+            // fprintf(stdout,"imBasic(1): %2.3f\n",imBasic(1));
 		}
 
         }
@@ -1098,6 +1120,10 @@ float computeBayesEstimate_LR(
 	                    * params.sizePatchTime
 	                    *(params.coupleChannels ? chnls : 1);
 	const unsigned group_chnls = params.coupleChannels ? 1 : chnls;
+    // fprintf(stdout,"nSimP,pdim,group_chnls: %d,%d,%d\n",nSimP,pdim,group_chnls);
+    // fprintf(stdout,"sigma2,sigmab2,variThres: %2.3f,%2.3f,%2.3f\n",
+    //         sigma2,sigmab2,thres);
+    // fprintf(stdout,"group_chnls,s2: %d,%d\n",group_chnls,s2);
 
 	// Center basic patches with their center
 	if (s2) centerData( groupBasic, mat.center, nSimP, pdim * group_chnls);
@@ -1137,8 +1163,10 @@ float computeBayesEstimate_LR(
 
 				if (s2)
 				{
-					gBasic_c = std::vector<float>(groupBasic.begin() + nSimP*pdim * c   ,
-					                              groupBasic.begin() + nSimP*pdim *(c+1));
+					gBasic_c = std::vector<float>(groupBasic.begin() +
+                                                  nSimP*pdim * c,
+					                              groupBasic.begin() +
+                                                  nSimP*pdim *(c+1));
 					gBasic = &gBasic_c;
 				}
 				else gBasic = gNoisy;
@@ -1212,7 +1240,9 @@ float computeBayesEstimate_LR(
 			// Copy channel back into vector
 			std::copy(gNoisy->begin(), gNoisy->end(),
                       groupNoisy.begin() + pdim*nSimP*c);
-            // break;
+            // fprintf(stdout,"c: %d\n",c);
+            // fprintf(stdout,"nSimP: %d\n",nSimP);
+            // fprintf(stdout,"pdim: %d\n",pdim);
 		}
 	}
 	else
@@ -1328,12 +1358,13 @@ int computeAggregation(
 	const unsigned h   = im.sz.height;
 	const unsigned wh  = im.sz.wh;
 	const unsigned whc = im.sz.whc;
+    // fprintf(stdout,"psX aggreboost: %d,%d\n",sPx,params.aggreBoost);
 
 	// Aggregate estimates
 	int masked = 0;
 	for (unsigned n = 0; n < nSimP; n++)
 	{
-		const unsigned ind = indices[n];
+        const unsigned ind = indices[n];
 		const unsigned ind1 = (ind / whc) * wh + ind % wh;
 
 		unsigned px0, py0, pt0, pc0;
@@ -1359,9 +1390,14 @@ int computeAggregation(
 		// Apply Paste Trick
 		unsigned px, py, pt;
 		mask.sz.coords(ind1, px, py, pt);
+        // fprintf(stdout,"%d,%d,%d,%d,%d\n",masked,mask(ind1),pt,py,px);
 
 		if (mask(ind1)) masked++;
 		mask(ind1) = false;
+
+        // if (px == 23 && py == 0 && pt == 0){
+        //   fprintf(stdout,"[pre] mask(24,0,1): %d\n",mask(24,0,1));
+        // }
 
 		if (params.aggreBoost)
 		{
@@ -1375,6 +1411,11 @@ int computeAggregation(
 			if (px >     2*sPx) mask(ind1 - 1) = false;
 			if (px < w - 2*sPx) mask(ind1 + 1) = false;
 		}
+        // if (px == 23 && py == 15 && pt == 0){
+        //   fprintf(stdout,"[pre] mask(24,0,1): %d\n",mask(24,0,1));
+        // }
+
+
 	}
 	// std::fprintf(stdout,"masked: %d\n",masked);
 

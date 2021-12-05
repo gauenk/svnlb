@@ -67,12 +67,14 @@ class TestPythonVnlbDenoiser(unittest.TestCase):
 
     def do_run_cpp(self,tensors,sigma,params):
         noisy = tensors.noisy
+        # flows = {}
         flows = {'fflow':tensors.fflow,'bflow':tensors.bflow}
         results = pyvnlb.runPyVnlb(noisy,sigma,flows,params)
         return results
 
     def do_run_python(self,tensors,sigma,params):
         noisy = tensors.noisy
+        # flows = {}
         flows = {'fflow':tensors.fflow,'bflow':tensors.bflow}
         params = copy.deepcopy(params)
         results = runPythonVnlb(noisy,sigma,flows,params)
@@ -85,7 +87,9 @@ class TestPythonVnlbDenoiser(unittest.TestCase):
     def do_run_comparison(self,tensors,sigma,pyargs):
 
         # -- parse parameters --
+        # noisy = tensors.noisy[:3,:,:36,:36].copy()
         noisy = tensors.noisy
+        tensors.noisy = noisy
         params = pyvnlb.setVnlbParams(noisy.shape,sigma,params=pyargs)
 
         # -- exec both types --
@@ -111,8 +115,9 @@ class TestPythonVnlbDenoiser(unittest.TestCase):
         for field in fields:
             cppField = cpp_results[field]
             pyField = py_results[field]
-            np.testing.assert_allclose(cppField,pyField,rtol=1.5e-3)
-            print(np.stack([cppField,pyField],axis=-1))
+            msg = f"[{field}] check failed."
+            np.testing.assert_allclose(cppField,pyField,rtol=5e-3,err_msg=msg)
+            # print(np.stack([cppField,pyField],axis=-1))
             # totalError = np.abs(cppField - pyField)/(np.abs(cppField)+1e-12)
             # totalError = np.mean(totalError)
             # totalError = np.around(totalError,9)

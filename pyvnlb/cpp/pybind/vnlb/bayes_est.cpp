@@ -84,6 +84,7 @@ void runBayesEstimate(VideoNLB::nlbParams& params,
   bayes_params.rank_var += computeBayesEstimate(groupNoisy,groupBasic,
                                                 mat_ws,params,nSimP,
                                                 channels,false);
+
   //
   // Copy Local Mem *back* to Pybind Interface
   //

@@ -15,7 +15,7 @@ def idx2coords(idx,color,height,width):
 
     return t,c,y,x
 
-def coords2idx(hi,wi,ti,color,height,width):
+def coords2idx(ti,hi,wi,color,height,width):
     pix = ti * width * height * color
     pix += hi * width
     pix += wi

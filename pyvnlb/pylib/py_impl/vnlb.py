@@ -20,23 +20,18 @@ def runPythonVnlb(noisy,sigma,flows,params):
 
     """
 
-    # -- init params --
-    t,c,h,w = noisy.shape
-    basic = np.zeros_like(noisy)
-    mask = np.zeros((t,h,w),dtype=np.int8)
-    weights = np.zeros((t,h,w),dtype=np.float32)
-
     # -- step 1 --
     step_results = processNLBayes(noisy,sigma,0,flows,params)
+    step1_results = step_results
 
     # -- step 2 --
     tensors = edict(flows)
     tensors.basic = step_results.basic
-    # step_results = processNLBayes(noisy,sigma,1,tensors,params)
+    step_results = processNLBayes(noisy,sigma,1,tensors,params)
 
     # -- format --
     results = edict()
-    results.basic = step_results.basic
+    results.basic = step1_results.basic
     results.denoised = step_results.denoised
 
     return results

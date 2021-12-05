@@ -48,13 +48,22 @@ def processNLBayes(noisy,sigma,step,tensors,params):
     return results
 
 def exec_step(noisy,basic,weights,sigma,flows,params,step):
+    """
+
+    Primary sub-routine of VNLB
+
+    """
 
 
-    # -- init mask --
+    # -- init denoised image --
     shape = noisy.shape
     t,c,h,w = noisy.shape
-    deno = basic if step == 0 else np.zeros_like(noisy)
+    # deno = basic if step == 0 else np.zeros_like(noisy)
+    deno = np.zeros_like(noisy)
+
+    # -- init mask --
     minfo = initMask(noisy.shape,params,step)
+    # minfo = pyvnlb.init_mask(noisy.shape,params,step)
     mask,n_groups = minfo['mask'],minfo['ngroups']
 
     # -- color xform --
@@ -62,30 +71,46 @@ def exec_step(noisy,basic,weights,sigma,flows,params,step):
     basic_yuv = apply_color_xform_cpp(basic)
 
     # -- init looping vars --
-    npixels = noisy.size
+    npixels = t*h*w
     g_remain = n_groups
     g_counter = 0
 
     # -- run npixels --
     for pidx in range(npixels):
 
-        # -- coords --
-        ti,ci,hi,wi = idx2coords(pidx,c,h,w)
-        pidx3 = coords2idx(ti,hi,wi,1,h,w)
-        if not(mask[ti,hi,wi]): continue
+        # -- pix index to coords --
+        # pidx = t*wh + y*width + x;
+        ti = pidx // (w*h)
+        hi = (pidx - ti*w*h) // w
+        wi = pidx - ti*w*h - hi*w
+
+        # pidx3 = t*whc + c*wh + y*width + x
+
+        # ti,ci,hi,wi = idx2coords(pidx,c,h,w)
+        # pidx3 = coords2idx(ti,hi,wi,1,h,w)
+        # t1,c1,h1,w1 = idx2coords(pidx3,1,h,w)
+        pidx3 = ti*w*h*c + hi*w + wi
+
+        # -- skip masked --
+        if not(mask[ti,hi,wi] == 1): continue
+        # print("mask: ",mask[0,0,0],mask[0,0,1],mask[0,0,2],mask[0,0,3])
+
+        # -- inc counter --
+        # if g_counter > 2: break
+        # print("group_counter: %d" % g_counter)
         g_counter += 1
-        if g_counter > 2: break
-        # print("pidx: %d" % pidx)
+        # print("(t,h,w,-): %d,%d,%d,%d" %(ti,hi,wi,mask[1,0,24]))
+        # print("ij,ij3: %d,%d\n" % (pidx,pidx3))
 
         # -- sim search --
-        sim_results = estimateSimPatches(noisy,basic,sigma,pidx,flows,params,step)
+        sim_results = estimateSimPatches(noisy,basic,sigma,pidx3,flows,params,step)
         groupNoisy,groupBasic,indices = sim_results
         nSimP = len(indices)
 
         # -- bayes estimate --
-        groupNoisy,rank_var = computeBayesEstimate(groupNoisy,groupBasic,nSimP,
-                                                   shape,params,step)
-        rank_var = 0.
+        groupNoisy,rank_var = computeBayesEstimate(groupNoisy,groupBasic,
+                                                   nSimP,shape,params,step)
+        # print(groupNoisy.ravel()[0])
 
         # -- debug zone. --
         # from pyvnlb.pylib.tests import save_images
@@ -99,6 +124,8 @@ def exec_step(noisy,basic,weights,sigma,flows,params,step):
         # -- aggregate results --
         deno,weights,mask,nmasked = computeAgg(deno,groupNoisy,indices,weights,
                                                mask,nSimP,params,step)
+        # print("deno.ravel()[0]: ",deno.ravel()[0])
+        # print("deno.ravel()[1]: ",deno.ravel()[1])
         g_remain -= nmasked
 
     # -- reduce using weighted ave --
@@ -128,12 +155,15 @@ def estimateSimPatches(noisy,basic,sigma,pidx,flows,params,step):
     psT = params.sizePatchTime[step]
 
     # -- cpp exec --
-    # sim_results = pyvnlb.simPatchSearch(noisy,sigma,pidx,flows,params)
+    # sim_results = pyvnlb.simPatchSearch(noisy,sigma,pidx,flows,params,step)
     # sim_results = edict(sim_results)
-
-    # groups = sim_results.groupNoisy
+    # groupsNoisy = sim_results.groupNoisy
+    # groupsBasic = sim_results.groupBasic
     # indices = sim_results.indices
-    # nsearch = sim_results.nsearch
+
+    # sim_groupsNoisy = sim_results.groupNoisy
+    # sim_groupsBasic = sim_results.groupBasic
+    # sim_indices = sim_results.indices
 
     # -- sim search --
     params.use_imread = [False,False]
@@ -149,11 +179,25 @@ def estimateSimPatches(noisy,basic,sigma,pidx,flows,params,step):
     groupsNoisy = patches2groups(patchesNoisy,c,psX,psT,ngroups,1)
     groupsBasic = patches2groups(patchesBasic,c,psX,psT,ngroups,1)
 
-    # -- debug zone --
-    # print(groups.shape)
-    # print("nsearch: %d\n" % nsearch)
-    # print("gsize: %d\n" % gsize)
-    # print(indices.dtype)
+    # -- check -- # 563
+    # delta = np.sum(np.sort(indices) - np.sort(sim_indices))
+    # if delta >1e-3:
+    #     print(pidx,step)
+    #     print(np.stack([np.sort(indices),np.sort(sim_indices)],-1))
+    # assert delta < 1e-3
+
+    # py_order = np.argsort(indices)
+    # sim_order = np.argsort(sim_indices)
+
+
+    # py_patches = patchesNoisy[py_order]
+    # sim_patches = groups2patches(sim_groupsNoisy,3,7,2,nSimP)[sim_order]
+    # delta = np.abs(py_patches-sim_patches)
+    # if np.any(delta>1e-3):
+    #     print(np.unique(np.where(delta>1e-3)[0]))
+    #     print(np.stack([py_patches[0],sim_patches[0]],-1))
+    #     assert False
+
 
     # from pyvnlb.pylib.tests import save_images
     # print("patches.shape: ",patches.shape)
@@ -164,40 +208,43 @@ def estimateSimPatches(noisy,basic,sigma,pidx,flows,params,step):
 
 def computeBayesEstimate(groupNoisy,groupBasic,nSimP,shape,params,step):
 
-    # -- sim search --
+    # -- prepare --
     rank_var = 0.
-    bayes_results = pyvnlb.computeBayesEstimate(groupNoisy.copy(),
-                                                groupBasic.copy(),0.,
-                                                nSimP,shape,params,step)
 
-    # bayes_results = runBayesEstimate(groupNoisy.copy(),groupBasic.copy(),
-    #                                  rank_var,nSimP,shape,params,step)
+    # -- exec --
+    # bayes_results = pyvnlb.computeBayesEstimate(groupNoisy.copy(),
+    #                                             groupBasic.copy(),0.,
+    #                                             nSimP,shape,params,step)
+    bayes_results = runBayesEstimate(groupNoisy.copy(),groupBasic.copy(),
+                                     rank_var,nSimP,shape,params,step)
 
+
+    # -- format --
     groups = bayes_results['groupNoisy']
     rank_var = bayes_results['rank_var']
+
 
     return groups,rank_var
 
 def computeAgg(deno,groupNoisy,indices,weights,mask,nSimP,params,step):
 
     # -- cpp version --
-    print(groupNoisy.shape)
-    print(deno.shape)
-    results = pyvnlb.computeAggregation(deno,groupNoisy,
-                                        indices,weights,
-                                        mask,nSimP,params)
-    deno = results['deno']
-    mask = results['mask']
-    weights = results['weights']
-    nmasked = results['nmasked']
+    # params.isFirstStep[step] = step == 0
+    # results = pyvnlb.computeAggregation(deno,groupNoisy,
+    #                                     indices,weights,
+    #                                     mask,nSimP,params)
+    # deno = results['deno']
+    # mask = results['mask']
+    # weights = results['weights']
+    # nmasked = results['nmasked']
 
     # -- python version --
-    # agg_results = computeAggregation(deno,groupNoisy,indices,weights,mask,
-    #                                  nSimP,params,step=step)
-    # deno = agg_results['deno']
-    # weights = agg_results['weights']
-    # mask = agg_results['mask']
-    # nmasked = agg_results['nmasked']
+    agg_results = computeAggregation(deno,groupNoisy,indices,weights,mask,
+                                     nSimP,params,step)
+    deno = agg_results['deno']
+    weights = agg_results['weights']
+    mask = agg_results['mask']
+    nmasked = agg_results['nmasked']
 
     return deno,weights,mask,nmasked
 

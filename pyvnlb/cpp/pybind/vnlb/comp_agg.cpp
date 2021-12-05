@@ -76,7 +76,7 @@ void runAggregation(VideoNLB::nlbParams& params, PyAggParams& agg_params,
   float* f_ptr = agg_params.group;
   std::vector<float> group(f_ptr,f_ptr+groupSize);
   unsigned* ui_ptr = agg_params.indices;
-  std::vector<unsigned> indices(ui_ptr,ui_ptr+groupSize);
+  std::vector<unsigned> indices(ui_ptr,ui_ptr+nSimP);
 
   //
   // Aggregate Similar Patches

@@ -166,7 +166,11 @@ def expand_flows(pydict,axis=0):
     pydict['fflow'],pydict['bflow'] = fflow,bflow
 
 
-def groups2patches(group,c,psX,psT,npatches):
+def groups2patches(group,c=None,psX=None,psT=None,npatches=None):
+
+    # -- shapes --
+    if (c is None) or (psX is None) or (psT is None) or (npatches is None):
+        _,c,psT,psX,_,npatches = group.shape
 
     # -- setup --
     ncat = np.concatenate
@@ -205,6 +209,6 @@ def patches2groups(patches,c,psX,psT,nsearch,nParts):
     group_f = group.ravel()[:numNz]
     group = np.zeros(size*nsearch,dtype=np.float32)
     group[:size*npatches] = group_f[...]
-    group = group.reshape(nParts,psT,c,psX,psX,nsearch)
+    group = group.reshape(nParts,c,psT,psX,psX,nsearch)
 
     return group

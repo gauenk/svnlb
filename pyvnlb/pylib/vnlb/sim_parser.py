@@ -67,12 +67,9 @@ def simSizes(params,c,nParts):
     sPt = params.sizePatchTime
     sPc = c if params.coupleChannels else 1
     pChn = 1 if params.coupleChannels else c
-    # pDim = sPx * sPx * sPt * (params.coupleChannels ? c : 1)
     npatches = sWx * sWx * sWt
-    # return pNum,pDim,pChn
-    # groupShape = (nParts,sPt,sPc,pChn,sPx,sPx,npatches)
-    groupShape = (nParts,sPt,sPc*pChn,sPx,sPx,npatches)
-    # groupShape = (pNum,sPx,sPx,sPt,pChn,sPc)
+    # [old] groupShape = (nParts,sPt,sPc,pChn,sPx,sPx,npatches)
+    groupShape = (nParts,sPc*pChn,sPt,sPx,sPx,npatches)
     return groupShape,npatches
 
 def sim_parser(noisy,sigma,nParts,py_tensors,params):
@@ -90,7 +87,8 @@ def sim_parser(noisy,sigma,nParts,py_tensors,params):
     noisy = ndarray_ctg_dtype(noisy,np.float32,verbose)
 
     # -- format flows for c++ (t-1 -> t) --
-    if check_flows(py_tensors): check_and_expand_flows(py_tensors,t)
+    if check_flows(py_tensors):
+        check_and_expand_flows(py_tensors,t)
 
     # -- set tensors vars --
     tensors = edict()
@@ -107,28 +105,4 @@ def sim_parser(noisy,sigma,nParts,py_tensors,params):
     assign_swig_args(tensors,swig_tensors)
 
     return tensors, swig_tensors
-
-# def reorder_sim_group(group,psX,psT,c,nSimP):
-#     """
-#     The patch data is not contiguous and this code
-#     corrects this through reshapes (creating new strides)
-#     and concatenations (pasting two edges together).
-
-#     E.x.
-#     Idx to Access inside a Match: 0,...,100,..,200,..,(psX**2*psT*c)*100
-#     Idx to Access the Patch (px**2): [0],[2],[4],[1],[3],[5]...
-#     Idx to Access the Time/Color Channels of the Image...
-#     """
-#     ncat = np.concatenate
-#     numNz = nSimP * psX * psX * psT * c
-#     group_f = group.ravel()[:numNz]
-#     group = group_f.reshape(c,psT,-1)
-#     group = ncat(group,axis=1)
-#     group_f = group.ravel()
-#     group = group_f.reshape(c*psT,psX**2,nSimP).transpose(2,0,1)
-#     group = ncat(group,axis=1)
-#     group = group.reshape(c*psT,nSimP,psX**2).transpose(1,0,2)
-#     group = ncat(group,axis=0)
-#     group = group.reshape(nSimP,psT,c,psX,psX)
-#     return group
 

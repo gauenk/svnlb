@@ -131,6 +131,7 @@ def computeBayesEstimate(groupNoisy,groupBasic,rank_var,nSimP,shape,params=None,
     empty = numpy.zeros(shape,dtype=numpy.float32)
     params,swig_params,_,_ = parse_args(empty,0.,None,params)
     params = edict({k:v[step] for k,v in params.items()})
+    assert nSimP > 3,"refactor this issue out."
 
     # -- exec search --
     bayesParams,swig_bayesParams = parse_bayes_params(groupNoisy,groupBasic,nSimP,
@@ -201,10 +202,16 @@ def processNLBayes(noisy,sigma,step,tensors=None,params=None):
 
     return res
 
-def computeCovMat(groups,pdim,nSimP,chnls,rank):
+def computeCovMat(groups,rank):
 
-    # -- params --
-    nSimP = groups.shape[-1]
+    # -- unpack shapes --
+    # groups.shape = (p c pst ps1 ps2 na)
+    groups = groups.copy() # usually not contiguous b/c previously indexed
+    shape = groups.shape
+    nParts,chnls,nSimP = shape[0],shape[1],shape[-1]
+    pdim = groups.size // (nParts*nSimP)
+
+    # -- parser --
     cinfo = covmat_parser(groups,pdim,nSimP,chnls,rank)
     params,covMat,covEigVals,covEigVecs = cinfo
 
@@ -212,8 +219,12 @@ def computeCovMat(groups,pdim,nSimP,chnls,rank):
     pyvnlb.computeCovMatCpp(params)
 
     # -- format output --
+    results = edict()
+    results.covMat = covMat
+    results.covEigVals = covEigVals
+    results.covEigVecs = covEigVecs.T
 
-    return covMat,covEigVals,covEigVecs.T
+    return results
 
 
 def init_mask(shape,vnlb_params,step=0,info=None):

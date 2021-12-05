@@ -113,7 +113,7 @@ void covarianceMatrix(
 
 	for (unsigned i = 0; i < d; i++)
 	for (unsigned j = 0; j < i + 1; j++) {
-		float val = 0.f;
+        float val = 0.f; // change to double to allow for python num. equiv
 		for (unsigned k = 0; k < n; k++)
 			val += data[i * n + k] * data[j * n + k];
 

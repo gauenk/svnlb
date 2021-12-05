@@ -1,6 +1,6 @@
 
 # -- python --
-import cv2,tqdm
+import cv2,tqdm,copy
 import numpy as np
 import unittest
 import pyvnlb
@@ -77,9 +77,10 @@ def print_neq_values_fix_pix(group_og,gt_patches_og):
     order = []
     skip,pidx,gidx = 0,0,20
     shape = group_og.shape
+    nParts,nSimP = shape[0],shape[1]
     for gidx in range(1,2):
-        group_og_f = group_og.reshape(shape[0],-1,shape[-1]).ravel()#[:,1,:].ravel()
-        patch_cmp = gt_patches_og.reshape(shape[0],-1,shape[-1])[:,gidx,:].ravel()
+        group_og_f = group_og.reshape(nParts,-1,nSimP).ravel()#[:,1,:].ravel()
+        patch_cmp = gt_patches_og.reshape(nParts,-1,nSimP)[:,gidx,:].ravel()
         for i in range(patch_cmp.shape[0]):
             idx = np.where(np.abs(patch_cmp[i] - group_og_f)<1e-10)[0]
             print(gidx,i,idx)
@@ -136,6 +137,8 @@ class TestSimSearch(unittest.TestCase):
         data.fflow = (np.random.rand(t,2,h,w)-0.5)*5.
         data.bflow = (np.random.rand(t,2,h,w)-0.5)*5.
         sigma = 20.
+        data.fflow = np.zeros_like(data.fflow)
+        data.bflow = np.zeros_like(data.bflow)
 
         for key,val in data.items():
             data[key] = data[key].astype(np.float32)
@@ -149,16 +152,23 @@ class TestSimSearch(unittest.TestCase):
 
     def do_run_sim_search(self,tensors,sigma,in_params,save=True):
 
-        # -- init --
+        # -- unpack shapes --
         noisy = tensors.noisy
         t,c,h,w = noisy.shape
+        step = 0
 
         # -- parse parameters --
         params = pyvnlb.setVnlbParams(noisy.shape,sigma,params=in_params)
         params.use_imread = [True,True]
         tensors = {'fflow':tensors['fflow'],'bflow':tensors['bflow']}
-        tchecks,nchecks = 10,0
+        tchecks,nchecks = 200,0
         checks = np.random.permutation(h*w*c*(t-1))[:1000]
+        # 4364 0 1 4 12
+        # 4364 0 1 4 12 64 64 3 True True
+        checks[0] = 10605
+        # checks[0] = 4364
+        checks[1] = 523
+        checks[2] = 524
         for pidx in checks:
 
             # -- check boarder --
@@ -167,11 +177,11 @@ class TestSimSearch(unittest.TestCase):
             ti,ci,wi,hi = idx2coords(pidx,w,h,c)
             valid_w = (wi + params.sizePatch[step]) < w
             valid_h = (hi + params.sizePatch[step]) < h
+            # print(pidx,ti,ci,wi,hi,w,h,c,valid_w,valid_h)
             if not(valid_w and valid_h): continue
-            # print(pidx,ti,ci,wi,hi)
 
             # -- cpp exec --
-            cpp_data = pyvnlb.simPatchSearch(noisy,sigma,pidx,tensors,params)
+            cpp_data = pyvnlb.simPatchSearch(noisy.copy(),sigma,pidx,tensors,copy.deepcopy(params),step)
 
             # -- unpack --
             cpp_patches = cpp_data["patchesNoisy"]
@@ -183,7 +193,7 @@ class TestSimSearch(unittest.TestCase):
             cpp_nParts = cpp_data['nparts_omp']
 
             # -- python exec --
-            py_data = runSimSearch(noisy,sigma,pidx,tensors,params)
+            py_data = runSimSearch(noisy,sigma,pidx,tensors,params,step)
 
             # -- unpack --
             py_patches = py_data.patches
@@ -193,19 +203,26 @@ class TestSimSearch(unittest.TestCase):
             nSimP = len(py_indices)
             nflat = py_data.nflat
             psX,psT = py_data['psX'],py_data['psT']
-            py_group = patches2groups(py_patches,c,psX,psT,py_ngroups,1)
-
-            # -- compare --
-            assert np.abs(cpp_ngroups - py_ngroups) == 0
-            np.testing.assert_allclose(py_patches,cpp_patches,rtol=1e-7)
-            np.testing.assert_allclose(py_group,cpp_group,rtol=1e-7)
+            py_group = py_data.groupNoisy
+            # py_group = patches2groups(py_patches,c,psX,psT,py_ngroups,1)
 
             # -- allow for swapping of "close" values --
             try:
                 np.testing.assert_array_equal(py_indices,cpp_indices)
             except:
+                # np.testing.assert_array_equal(np.sort(py_indices),np.sort(cpp_indices))
                 neq_idx = np.where(cpp_indices != py_indices)
                 check_pairwise_diff(py_vals[neq_idx])
+            py_order = np.array([np.where(cpp_indices==pidx)[0] for pidx in py_indices]).ravel()
+
+            # -- compare patches --
+            assert np.abs(cpp_ngroups - py_ngroups) == 0
+            np.testing.assert_allclose(py_patches[py_order],cpp_patches,rtol=1e-7)
+
+            # -- compare groups --
+            cpp_group = cpp_group.ravel()[:cpp_nSimP*psT*psX*psX*c].reshape((1,c,psT,psX,psX,nSimP))
+            py_group = py_group.ravel()[:cpp_nSimP*psT*psX*psX*c].reshape((1,c,psT,psX,psX,nSimP))
+            np.testing.assert_allclose(py_group[...,py_order],cpp_group,rtol=1e-7)
 
             # -- check to break --
             nchecks += 1
@@ -242,7 +259,7 @@ class TestSimSearch(unittest.TestCase):
             # -- cpp exec --
             cpp_data = pyvnlb.simPatchSearch(noisy,sigma,pidx,
                                              tensors=flows,
-                                             params=params)
+                                             params=copy.deepcopy(params))
             # -- unpack --
             patches = cpp_data["patchesNoisy"]
             groups = cpp_data["groupNoisy"]
@@ -272,10 +289,29 @@ class TestSimSearch(unittest.TestCase):
             save_images(patches,SAVE_DIR / f"./patches_pyvnlb.png",imax=255.)
             save_images(gt_patches,SAVE_DIR / f"./patches_gt.png",imax=255.)
 
-
     #
     # -- Call the Tests --
     #
+
+    def test_patches2groups(self):
+
+        checks = np.arange(10)
+        for _ in checks:
+
+            # -- check boarder --
+            nSimP,psX,psT = 9477,7,2
+            ngroups,nParts,c = 9477,1,3
+            groups = np.random.rand(nParts,c,psT,psX,psX,ngroups)
+            groups = groups.astype(np.float32)
+
+            # -- ground truth patches --
+            patches = groups2patches(groups,c,psX,psT,nSimP)
+            groups_rs = patches2groups(patches,c,psX,psT,ngroups,nParts)
+            patches_rs = groups2patches(groups_rs,c,psX,psT,nSimP)
+
+            # -- compare --
+            np.testing.assert_array_equal(patches_rs,patches)
+            np.testing.assert_array_equal(groups_rs,groups)
 
     def test_patches_xfer_groups(self):
 

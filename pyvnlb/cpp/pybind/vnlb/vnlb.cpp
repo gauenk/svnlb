@@ -69,6 +69,9 @@ void runVnlb(VideoNLB::nlbParams& params1, VideoNLB::nlbParams& params2,
     printf("Done. Processed %5.2f%% of possible patch groups in 1st step, and\n"
 		       "%5.2f%% in 2nd step.\n", groupsRatio[0], groupsRatio[1]);
 
+  // save back to python
+  basic.saveVideoToPtr(tensors.basic);
+
   // -- 2nd step --
   params1.sizePatch = 0;
   params2.sizePatch = tmp;
@@ -82,6 +85,5 @@ void runVnlb(VideoNLB::nlbParams& params1, VideoNLB::nlbParams& params2,
 		       "%5.2f%% in 2nd step.\n", groupsRatio[0], groupsRatio[1]);
 
   // copy back to arrays
-  basic.saveVideoToPtr(tensors.basic);
   final.saveVideoToPtr(tensors.denoised);
 }

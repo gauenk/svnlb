@@ -27,8 +27,8 @@ def mask_parser(mask,vnlb_params,info=None):
     params.ending_w = optional(info,'origin_w',w)
 
     params.step_t = optional(info,'step_t',1)
-    params.step_h = optional(info,'procStep',1)
-    params.step_w = optional(info,'procStep',1)
+    params.step_h = optional(vnlb_params,'procStep',1)
+    params.step_w = optional(vnlb_params,'procStep',1)
 
     params.ps = vnlb_params['sizePatch']
     params.ps_t = vnlb_params['sizePatchTime']

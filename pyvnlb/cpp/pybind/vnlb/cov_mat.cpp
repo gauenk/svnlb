@@ -39,15 +39,33 @@ void computeCovMatCpp(CovMatParams params){
   std::vector<float> covEigVals; // buffer to store the eigenvals
 
 
-  // exec search
+  /**************************
+
+      Covariance Matrix
+
+  **************************/
+
+  // exec
   std::memcpy(group.data(),params.groups,params.gsize * sizeof(float));
   covarianceMatrix(group, covMat, params.nSimP, params.pdim);
-  int info = matrixEigs(covMat, params.pdim, params.rank,
-                        covEigVals, covEigVecs);
 
   // copy back
   float* f_ptr = params.covMat;
   std::memcpy(f_ptr,covMat.data(),covMat.size() * sizeof(float));
+
+
+  /**************************
+
+         Eigen Stuff
+
+  **************************/
+
+  int info = matrixEigs(covMat, params.pdim, params.rank,
+                        covEigVals, covEigVecs);
+
+  // copy back
+  // float* f_ptr = params.covMat;
+  // std::memcpy(f_ptr,covMat.data(),covMat.size() * sizeof(float));
   f_ptr = params.covEigVals;
   std::memcpy(f_ptr,covEigVals.data(),covEigVals.size() * sizeof(float));
   f_ptr = params.covEigVecs;
