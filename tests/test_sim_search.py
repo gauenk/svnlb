@@ -3,7 +3,7 @@
 import cv2,tqdm,copy
 import numpy as np
 import unittest
-import pyvnlb
+import vnlb
 import tempfile
 import sys
 from einops import rearrange
@@ -12,12 +12,12 @@ from pathlib import Path
 from easydict import EasyDict as edict
 
 # -- package helper imports --
-from pyvnlb.pylib.tests.data_loader import load_dataset
-from pyvnlb.pylib.tests.file_io import save_images
-from pyvnlb import groups2patches,patches2groups,patches_at_indices
+from vnlb.testing.data_loader import load_dataset
+from vnlb.testing.file_io import save_images
+from vnlb.utils import groups2patches,patches2groups,patches_at_indices
 
 # -- python impl --
-from pyvnlb.pylib.py_impl import runSimSearch,idx2coords
+from vnlb.cpu import runSimSearch,idx2coords
 
 # -- check if reordered --
 from scipy import optimize
@@ -119,7 +119,7 @@ class TestSimSearch(unittest.TestCase):
         flow_params = {"nproc":0,"tau":0.25,"lambda":0.2,"theta":0.3,
                        "nscales":100,"fscale":1,"zfactor":0.5,"nwarps":5,
                        "epsilon":0.01,"verbose":False,"testing":False,'bw':True}
-        fflow,bflow = pyvnlb.runPyFlow(noisy,std,flow_params)
+        fflow,bflow = vnlb.swig.runPyFlow(noisy,std,flow_params)
 
         # -- pack data --
         data = edict()
@@ -158,7 +158,7 @@ class TestSimSearch(unittest.TestCase):
         step = 0
 
         # -- parse parameters --
-        params = pyvnlb.setVnlbParams(noisy.shape,sigma,params=in_params)
+        params = vnlb.swig.setVnlbParams(noisy.shape,sigma,params=in_params)
         params.use_imread = [True,True]
         tensors = {'fflow':tensors['fflow'],'bflow':tensors['bflow']}
         tchecks,nchecks = 200,0
@@ -181,7 +181,7 @@ class TestSimSearch(unittest.TestCase):
             if not(valid_w and valid_h): continue
 
             # -- cpp exec --
-            cpp_data = pyvnlb.simPatchSearch(noisy.copy(),sigma,pidx,tensors,copy.deepcopy(params),step)
+            cpp_data = vnlb.swig.simPatchSearch(noisy.copy(),sigma,pidx,tensors,copy.deepcopy(params),step)
 
             # -- unpack --
             cpp_patches = cpp_data["patchesNoisy"]
@@ -240,7 +240,7 @@ class TestSimSearch(unittest.TestCase):
         t,c,h,w = noisy.shape
 
         # -- parse parameters --
-        params = pyvnlb.setVnlbParams(noisy.shape,sigma,params=in_params)
+        params = vnlb.swig.setVnlbParams(noisy.shape,sigma,params=in_params)
         params.use_imread = [True,True]
         tchecks,nchecks = 10,0
         checks = np.random.permutation(h*w*c*(t-1))[:100]
@@ -257,9 +257,9 @@ class TestSimSearch(unittest.TestCase):
             if not(valid_w and valid_h): continue
 
             # -- cpp exec --
-            cpp_data = pyvnlb.simPatchSearch(noisy,sigma,pidx,
-                                             tensors=flows,
-                                             params=copy.deepcopy(params))
+            cpp_data = vnlb.swig.simPatchSearch(noisy,sigma,pidx,
+                                                tensors=flows,
+                                                params=copy.deepcopy(params))
             # -- unpack --
             patches = cpp_data["patchesNoisy"]
             groups = cpp_data["groupNoisy"]
@@ -286,7 +286,7 @@ class TestSimSearch(unittest.TestCase):
         # -- save [the pretty] results --
         if save:
             save_images(noisy,SAVE_DIR / "./noisy.png",imax=255.)
-            save_images(patches,SAVE_DIR / f"./patches_pyvnlb.png",imax=255.)
+            save_images(patches,SAVE_DIR / f"./patches_vnlb.png",imax=255.)
             save_images(gt_patches,SAVE_DIR / f"./patches_gt.png",imax=255.)
 
     #

@@ -13,9 +13,12 @@ import warnings
 # We import * so that the symbol foo can be accessed as vnlb.foo.
 from .loader import *
 
+_swig_enabled=True
 __version__ = "%d.%d.%d" % (VNLB_VERSION_MAJOR,
                             VNLB_VERSION_MINOR,
                             VNLB_VERSION_PATCH)
 
 # We import * so that the symbol foo can be accessed as vnlb.foo.
-from .pylib import *
+# from .python import *
+# import .swig
+# import .cpu as cpu

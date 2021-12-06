@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 import unittest
-import pyvnlb
+import vnlb
 import tempfile
 import sys
 from einops import rearrange

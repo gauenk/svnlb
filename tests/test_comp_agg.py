@@ -3,7 +3,7 @@
 import cv2,tqdm
 import numpy as np
 import unittest
-import pyvnlb
+import vnlb
 import tempfile
 import sys
 from einops import rearrange
@@ -12,12 +12,12 @@ from pathlib import Path
 from easydict import EasyDict as edict
 
 # -- package helper imports --
-from pyvnlb.pylib.tests.data_loader import load_dataset
-from pyvnlb.pylib.tests.file_io import save_images
-from pyvnlb import groups2patches,patches2groups,patches_at_indices
+from vnlb.testing.data_loader import load_dataset
+from vnlb.testing.file_io import save_images
+from vnlb.utils import groups2patches,patches2groups,patches_at_indices
 
 # -- python impl --
-from pyvnlb.pylib.py_impl import computeAggregation,idx2coords,initMask
+from vnlb.cpu import computeAggregation,idx2coords,initMask
 
 # -- check if reordered --
 from scipy import optimize
@@ -47,7 +47,7 @@ class TestCompAgg(unittest.TestCase):
         flow_params = {"nproc":0,"tau":0.25,"lambda":0.2,"theta":0.3,
                        "nscales":100,"fscale":1,"zfactor":0.5,"nwarps":5,
                        "epsilon":0.01,"verbose":False,"testing":False,'bw':True}
-        fflow,bflow = pyvnlb.runPyFlow(noisy,std,flow_params)
+        fflow,bflow = vnlb.swig.runPyFlow(noisy,std,flow_params)
 
         # -- pack data --
         data = edict()
@@ -87,7 +87,7 @@ class TestCompAgg(unittest.TestCase):
         t,c,h,w = noisy.shape
 
         # -- parse parameters --
-        params = pyvnlb.setVnlbParams(noisy.shape,sigma,params=in_params)
+        params = vnlb.swig.setVnlbParams(noisy.shape,sigma,params=in_params)
         # tensors = {'fflow':tensors['fflow'],'bflow':tensors['bflow']}
 
         tchecks,nchecks = 10,0
@@ -104,7 +104,7 @@ class TestCompAgg(unittest.TestCase):
             # print(pidx,ti,ci,wi,hi)
 
             # -- estimate similar patches --
-            sim_data = pyvnlb.simPatchSearch(noisy,sigma,pidx,tensors,params)
+            sim_data = vnlb.swig.simPatchSearch(noisy,sigma,pidx,tensors,params)
             indices = sim_data['indices']
             sim_patches = sim_data["patchesNoisy"]
             sim_groupNoisy = sim_data["groupNoisy"]
@@ -120,7 +120,7 @@ class TestCompAgg(unittest.TestCase):
             groupNoisy[...,1] = groupNoisy[...,0].copy()
             groupNoisy[...,2] = groupNoisy[...,0].copy()
             groupNoisy.ravel()[0] = 100.
-            # bayes_results = pyvnlb.computeBayesEstimate(sim_groupNoisy.copy(),
+            # bayes_results = vnlb.swig.computeBayesEstimate(sim_groupNoisy.copy(),
             #                                             sim_groupBasic.copy(),0.,
             #                                             nSimP,shape,params,step)
             # groupNoisy = bayes_results['groupNoisy']
@@ -136,9 +136,9 @@ class TestCompAgg(unittest.TestCase):
             cpp_group = groupNoisy
             cpp_weights = np.zeros((t,h,w),dtype=np.float32)
             cpp_mask = mask.copy()
-            results = pyvnlb.computeAggregation(cpp_deno,cpp_group,
-                                                indices,cpp_weights,
-                                                cpp_mask,nSimP)
+            results = vnlb.swig.computeAggregation(cpp_deno,cpp_group,
+                                                   indices,cpp_weights,
+                                                   cpp_mask,nSimP)
 
             # -- unpack --
             cpp_deno = results['deno']

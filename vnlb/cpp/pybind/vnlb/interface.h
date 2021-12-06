@@ -185,6 +185,23 @@ CovMatParams():
 
 };
 
+struct FlatAreaParams {
+FlatAreaParams():
+  chnls(0),gsize(0),nSimP(0),flatAreas(0),flatPatch(0),
+    groupNoisy(nullptr),groupBasic(nullptr) {}
+
+  // sizes
+  int chnls;
+  int gsize;
+  int nSimP;
+  bool flatAreas;
+  bool flatPatch;
+
+  // arrays
+  float* groupNoisy;
+  float* groupBasic;
+};
+
 
 /* void runVnlb(const PyVnlbParams& args, const VnlbTensors& tensors); */
 /* void runVnlbTimed(const PyVnlbParams& args, const VnlbTensors& tensors); */
@@ -210,4 +227,4 @@ void processNLBayesCpp(VideoNLB::nlbParams& params,
                        int& group_counter, int border);
 void init_mask_cpp(MaskParams params, int& ngroups);
 void computeCovMatCpp(CovMatParams params);
-
+void runFlatAreasCpp(FlatAreaParams& flat_params,VideoNLB::nlbParams& params);

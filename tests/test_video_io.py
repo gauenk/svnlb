@@ -2,7 +2,7 @@
 import cv2
 import numpy as np
 import unittest
-import pyvnlb
+import vnlb
 import tempfile
 import sys
 from einops import rearrange
@@ -37,8 +37,8 @@ class TestVideoIO(unittest.TestCase):
         try:
             data = rearrange(data,'t h w c -> t c h w')
             data = np.flip(data,axis=1)
-            data = pyvnlb.rgb2bw(data)
-            read_data = pyvnlb.readVideoForFlow((t,c,h,w),path)
+            data = vnlb.utils.rgb2bw(data)
+            read_data = vnlb.swig.readVideoForFlow((t,c,h,w),path)
         finally:
             shutil.rmtree(dir_path)
         delta = np.abs(read_data - data)
@@ -51,7 +51,7 @@ class TestVideoIO(unittest.TestCase):
         try:
             data = rearrange(data,'t h w c -> t c h w')
             data = np.flip(data,axis=1)
-            read_data = pyvnlb.readVideoForVnlb((t,c,h,w),path)
+            read_data = vnlb.swig.readVideoForVnlb((t,c,h,w),path)
         finally:
             shutil.rmtree(dir_path)
         np.testing.assert_array_equal(read_data,data)

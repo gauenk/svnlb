@@ -2,7 +2,7 @@ import cv2,copy
 import pandas as pd
 import numpy as np
 import unittest
-import pyvnlb
+import vnlb
 import tempfile
 import sys
 from einops import rearrange
@@ -12,13 +12,13 @@ from collections import defaultdict
 from easydict import EasyDict as edict
 
 # -- package helper imports --
-from pyvnlb.pylib.tests.data_loader import load_dataset
-from pyvnlb.pylib.tests.file_io import save_images,save_hist
-from pyvnlb import groups2patches,patches2groups,patches_at_indices
-from pyvnlb import check_omp_num_threads
+from vnlb.testing.data_loader import load_dataset
+from vnlb.testing.file_io import save_images,save_hist
+from vnlb.utils import groups2patches,patches2groups,patches_at_indices
+from vnlb.utils import check_omp_num_threads
 
 # -- python impl --
-from pyvnlb.pylib.py_impl import runPythonVnlb,processNLBayes
+from vnlb.cpu import runPythonVnlb,processNLBayes
 SAVE_DIR = Path("./output/tests/")
 
 
@@ -39,7 +39,7 @@ class TestPythonVnlbDenoiser(unittest.TestCase):
         flow_params = {"nproc":0,"tau":0.25,"lambda":0.2,"theta":0.3,
                        "nscales":100,"fscale":1,"zfactor":0.5,"nwarps":5,
                        "epsilon":0.01,"verbose":False,"testing":False,'bw':True}
-        fflow,bflow = pyvnlb.runPyFlow(noisy,std,flow_params)
+        fflow,bflow = vnlb.swig.runPyFlow(noisy,std,flow_params)
 
         # -- pack data --
         data = edict()
@@ -72,7 +72,7 @@ class TestPythonVnlbDenoiser(unittest.TestCase):
         noisy = tensors.noisy
         # flows = {}
         flows = {'fflow':tensors.fflow,'bflow':tensors.bflow}
-        results = pyvnlb.runPyVnlb(noisy,sigma,flows,params)
+        results = vnlb.swig.runPyVnlb(noisy,sigma,flows,params)
         return results
 
     def do_run_python(self,tensors,sigma,params):
@@ -93,7 +93,7 @@ class TestPythonVnlbDenoiser(unittest.TestCase):
         # noisy = tensors.noisy[:3,:,:36,:36].copy()
         noisy = tensors.noisy
         tensors.noisy = noisy
-        params = pyvnlb.setVnlbParams(noisy.shape,sigma,params=pyargs)
+        params = vnlb.swig.setVnlbParams(noisy.shape,sigma,params=pyargs)
 
         # -- exec both types --
         cpp_results = self.do_run_cpp(tensors,sigma,copy.deepcopy(params))
@@ -123,8 +123,8 @@ class TestPythonVnlbDenoiser(unittest.TestCase):
             msg = f"[{field}] check failed."
             np.testing.assert_allclose(cppField,pyField,rtol=5e-3,err_msg=msg)
 
-            cpp_psnrs = pyvnlb.compute_psnrs(clean,cppField)
-            py_psnrs = pyvnlb.compute_psnrs(clean,pyField)
+            cpp_psnrs = vnlb.utils.compute_psnrs(clean,cppField)
+            py_psnrs = vnlb.utils.compute_psnrs(clean,pyField)
             for ti in range(len(cpp_psnrs)):
                 field_t = field + "_" + str(ti)
                 results['py'][field_t] = py_psnrs[ti]

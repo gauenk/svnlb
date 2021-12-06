@@ -2,7 +2,7 @@
 import cv2
 import numpy as np
 import unittest
-import pyvnlb
+import vnlb
 import tempfile
 import sys
 from einops import rearrange
@@ -13,14 +13,14 @@ class TestSetVnlbParams(unittest.TestCase):
 
     def do_exec_denoiser(self,noisy,std,pyargs):
         # -- TV-L1 Optical Flow --
-        fflow,bflow = pyvnlb.runPyFlow(noisy,std)
+        fflow,bflow = vnlb.swig.runPyFlow(noisy,std)
         pyargs['fflow'] = fflow
         pyargs['bflow'] = bflow
 
         # -- Video Non-Local Bayes --
         pyargs['verbose'] = True
         pyargs['testing'] = True
-        results = pyvnlb.runPyVnlb(noisy,std,pyargs)
+        results = vnlb.swig.runPyVnlb(noisy,std,pyargs)
         basic = results['basic']
         denoised = results['denoised']
 
@@ -38,7 +38,7 @@ class TestSetVnlbParams(unittest.TestCase):
         cppParser_basic,cppParser_denoised = results
 
         # -- exec default params --
-        pyargs = pyvnlb.setVnlbParams(noisy.shape,std)
+        pyargs = vnlb.swig.setVnlbParams(noisy.shape,std)
         results = self.do_exec_denoiser(noisy,std,pyargs)
         pyParser_basic,pyParser_denoised = results
 

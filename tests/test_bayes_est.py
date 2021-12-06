@@ -3,7 +3,7 @@
 import cv2,tqdm
 import numpy as np
 import unittest
-import pyvnlb
+import vnlb
 import tempfile
 import sys
 from einops import rearrange
@@ -12,12 +12,12 @@ from pathlib import Path
 from easydict import EasyDict as edict
 
 # -- package helper imports --
-from pyvnlb.pylib.tests.data_loader import load_dataset
-from pyvnlb.pylib.tests.file_io import save_images
-from pyvnlb import groups2patches,patches2groups,patches_at_indices
+from vnlb.testing.data_loader import load_dataset
+from vnlb.testing.file_io import save_images
+from vnlb.utils import groups2patches,patches2groups,patches_at_indices
 
 # -- python impl --
-from pyvnlb.pylib.py_impl import runBayesEstimate,idx2coords
+from vnlb.cpu import runBayesEstimate,idx2coords
 
 # -- check if reordered --
 from scipy import optimize
@@ -118,7 +118,7 @@ class TestBayesEstimate(unittest.TestCase):
         flow_params = {"nproc":0,"tau":0.25,"lambda":0.2,"theta":0.3,
                        "nscales":100,"fscale":1,"zfactor":0.5,"nwarps":5,
                        "epsilon":0.01,"verbose":False,"testing":False,'bw':True}
-        fflow,bflow = pyvnlb.runPyFlow(noisy,std,flow_params)
+        fflow,bflow = vnlb.swig.runPyFlow(noisy,std,flow_params)
 
         # -- pack data --
         data = edict()
@@ -159,12 +159,12 @@ class TestBayesEstimate(unittest.TestCase):
         step = 0
 
         # -- parse parameters --
-        params = pyvnlb.setVnlbParams(noisy.shape,sigma,params=in_params)
+        params = vnlb.swig.setVnlbParams(noisy.shape,sigma,params=in_params)
         # tensors = {'fflow':tensors['fflow'],'bflow':tensors['bflow']}
 
 
         # -- init mask --
-        rmask = pyvnlb.init_mask(noisy.shape,params,step)
+        rmask = vnlb.swig.init_mask(noisy.shape,params,step)
         # rmask = initMask(noisy.shape,params,0)
         mask = rmask.mask
         ngroups = rmask.ngroups
@@ -195,7 +195,7 @@ class TestBayesEstimate(unittest.TestCase):
 
             # -- estimate similar patches --
             params.use_imread = [False,False]
-            sim_data = pyvnlb.simPatchSearch(noisy,sigma,pidx3,tensors,params)
+            sim_data = vnlb.swig.simPatchSearch(noisy,sigma,pidx3,tensors,params)
             sim_patches = sim_data["patchesNoisy"]
             sim_groupNoisy = sim_data["groupNoisy"]
             nSimP = sim_data['npatches']
@@ -206,9 +206,9 @@ class TestBayesEstimate(unittest.TestCase):
             sim_groupNoisy[...,2] = sim_groupNoisy[...,0].copy()
 
             # -- cpp exec --
-            results = pyvnlb.computeBayesEstimate(sim_groupNoisy.copy(),
-                                                  sim_groupNoisy.copy(),
-                                                  0.,nSimP,shape,params)
+            results = vnlb.swig.computeBayesEstimate(sim_groupNoisy.copy(),
+                                                     sim_groupNoisy.copy(),
+                                                     0.,nSimP,shape,params)
 
             # -- unpack --
             cpp_groupNoisy = results['groupNoisy']/255.

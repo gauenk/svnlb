@@ -17,7 +17,7 @@ from vnlb.testing.file_io import save_images
 from vnlb.utils import groups2patches,patches2groups,patches_at_indices
 
 # -- python impl --
-from vnlb.cpu import computeCovMat
+from vnlb.cpu import runFlatAreas
 from vnlb.cpu import idx2coords
 
 # -- check if reordered --
@@ -28,7 +28,7 @@ SAVE_DIR = Path("./output/tests/")
 # -- Primary Testing Class --
 #
 
-class TestCovMat(unittest.TestCase):
+class TestFlatAreas(unittest.TestCase):
 
     #
     # -- Load Data --
@@ -76,7 +76,7 @@ class TestCovMat(unittest.TestCase):
     # -- [Exec] Cov Checks --
     #
 
-    def do_run_cov_mat(self,tensors,sigma,in_params,save=True):
+    def do_run_flat_areas(self,tensors,sigma,in_params,save=True):
 
         # -- init --
         noisy = tensors.noisy
@@ -109,18 +109,18 @@ class TestCovMat(unittest.TestCase):
             nSimP_og = sim_data['ngroups']
 
             # -- cpp exec --
-            cpp_results = vnlb.swig.computeCovMat(groupNoisy[:,:,0],rank)
+            cpp_results = vnlb.swig.runFlatAreas(groupNoisy[:,:,0],rank)
 
             # -- unpack --
-            cpp_cov = cpp_results['covMat']
+            cpp_cov = cpp_results['flatAreas']
             cpp_evals = cpp_results['covEigVals']
             cpp_evecs = cpp_results['covEigVecs']
 
             # -- python exec --
-            py_results = computeCovMat(groupNoisy[:,:,0],rank)
+            py_results = runFlatAreas(groupNoisy[:,:,0],rank)
 
             # -- unpack --
-            py_cov = py_results['covMat']
+            py_cov = py_results['flatAreas']
             py_evals = py_results['covEigVals']
             py_evecs = py_results['covEigVecs']
 
@@ -150,7 +150,7 @@ class TestCovMat(unittest.TestCase):
     # -- Call the Tests --
     #
 
-    def test_cov_mat(self):
+    def test_flat_areas(self):
 
         # -- init save path --
         np.random.seed(234)
@@ -162,7 +162,7 @@ class TestCovMat(unittest.TestCase):
         pyargs = {}
         vnlb_dataset = "davis_64x64"
         tensors,sigma = self.do_load_data(vnlb_dataset)
-        self.do_run_cov_mat(tensors,sigma,pyargs)
+        self.do_run_flat_areas(tensors,sigma,pyargs)
 
         # # -- modify patch size --
         # pyargs = {}

@@ -17,7 +17,10 @@ import glob
 print("CWD",os.getcwd())
 shutil.rmtree("vnlb", ignore_errors=True)
 os.mkdir("vnlb")
-shutil.copytree("pylib", "vnlb/pylib")
+shutil.copytree("swig", "vnlb/swig")
+shutil.copytree("testing", "vnlb/testing")
+shutil.copytree("utils", "vnlb/utils")
+shutil.copytree("cpu", "vnlb/cpu")
 shutil.copyfile("__init__.py", "vnlb/__init__.py")
 shutil.copyfile("loader.py", "vnlb/loader.py")
 
@@ -50,13 +53,18 @@ setup(
     version='1.0.0',
     description='A library for video image denoising.',
     long_description=long_description,
-    url='https://github.com/gauenk/vnlb',
-    author='Kent Gauen (copied from FAISS)',
+    url='https://github.com/gauenk/pyvnlb',
+    author='Kent Gauen',
     author_email='gauenk@purdue.edu',
     license='MIT',
     keywords='video non-local bayes',
     install_requires=['numpy'],
-    packages=find_packages(include=['vnlb','vnlb.pylib*']),
+    packages=find_packages(include=['vnlb',
+                                    'vnlb.swig*',
+                                    'vnlb.cpu*',
+                                    'vnlb.utils*',
+                                    'vnlb.testing*',
+    ]),
     package_data={
         'vnlb': ['*.so', '*.pyd'],
     },

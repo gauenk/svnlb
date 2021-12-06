@@ -625,8 +625,8 @@ unsigned processNLBayes(
                                                     ij3, params, imClean, imRead);
 			// If we use the homogeneous area trick
 			bool flatPatch = false;
-			// if (params.flatAreas)
-			// 	flatPatch = computeFlatArea(groupNoisy, groupBasic, params, nSimP, sz.channels);
+			if (params.flatAreas)
+				flatPatch = computeFlatArea(groupNoisy, groupBasic, params, nSimP, sz.channels);
 
             // fprintf(stdout,"[pre] groupNoisy(0): %2.3f\n",groupNoisy[0]);
             // fprintf(stdout,"[pre] groupNoisy(1): %2.3f\n",groupNoisy[1]);
@@ -940,7 +940,9 @@ float computeVariance(
 
 		// Sample variance (Bessel's correction)
 		sigma2 += (sum2 - sum * sum / (float) (d * n)) / (float) (d * n - 1);
+        // fprintf(stdout,"sum2,sum: %2.3f,%2.3f\n",sum2,sum);
 	}
+    // fprintf(stdout,"d,n: %d,%d\n",d,n);
 
 	return sigma2 / (float) channels;
 }
@@ -959,6 +961,7 @@ int computeFlatArea(
 	// Compute the standard deviation of the set of patches
 	const float variance = computeVariance(groupNoisy, sP, nSimP, channels);
 
+    // fprintf(stdout,"(var,thresh): %2.3f,%2.3f\n",variance,threshold);
 
 	if (variance < threshold)
 	{
