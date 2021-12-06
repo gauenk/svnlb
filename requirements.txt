@@ -5,3 +5,4 @@ pandas
 setuptools
 opencv_python
 tabulate
+numba
