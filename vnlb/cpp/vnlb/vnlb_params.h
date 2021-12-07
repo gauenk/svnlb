@@ -48,9 +48,13 @@ struct nlbParams {
 	bool verbose;               // verbose output
 	bool testing;               // are we testing?
   VAR_MODE var_mode;
+  int nThreads;
+  int nParts;
 
-  // to allow for inputs in the swig-python code
+  // to allow for inputs in the swig-python code (hacky)
   bool use_imread;
+  bool set_nThreads;
+  bool set_nParts;
   bool set_sizePatch;
   bool set_sizePatchTime;
   bool set_nSim;
@@ -58,4 +62,5 @@ struct nlbParams {
   bool set_aggreBoost; // added for swig; do we reset the "aggreboost" var?
   bool set_procStep;
 };
+
 }

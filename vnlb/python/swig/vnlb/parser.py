@@ -74,6 +74,8 @@ def get_param_translations():
     names['var_mode'] = []
     names['verbose'] = []
     names['testing'] = []
+    names['nThreads'] = ['nthreads']
+    names['nParts'] = ['nparts']
 
     names['use_imread'] = []
     names['set_sizePatch'] = []
@@ -82,6 +84,9 @@ def get_param_translations():
     names['set_rank'] = []
     names['set_aggreBoost'] = []
     names['set_procStep'] = []
+    names['set_nThreads'] = []
+    names['set_nParts'] = []
+
 
     return names
 
@@ -109,6 +114,8 @@ def get_param_type():
     types['verbose'] = np.bool_
     types['testing'] = np.bool_
     types['var_mode'] = np.int32
+    types['nThreads'] = np.int32
+    types['nParts'] = np.uint32
 
     types['use_imread'] = np.bool_
     types['set_sizePatch'] = np.bool_
@@ -117,6 +124,8 @@ def get_param_type():
     types['set_rank'] = np.bool_
     types['set_aggreBoost'] = np.bool_
     types['set_procStep'] = np.bool_
+    types['set_nThreads'] = np.bool_
+    types['set_nParts'] = np.bool_
 
     return types
 
@@ -144,6 +153,8 @@ def get_defaults():
     defaults.var_mode = [vnlb.CLIPPED,vnlb.CLIPPED]
     defaults.verbose = [False,False]
     defaults.testing = [False,False]
+    defaults.nThreads = [0,0]
+    defaults.nParts = [0,0]
 
     # -- must be set using "handle_set_bools" --
     defaults.use_imread = False
@@ -153,6 +164,8 @@ def get_defaults():
     defaults.set_rank = None
     defaults.set_aggreBoost = None
     defaults.set_procStep = None
+    defaults.set_nThreads = None
+    defaults.set_nParts = None
 
     return defaults
 
@@ -182,6 +195,9 @@ def handle_set_bools(pydict):
     pydict['set_rank'] = check_any_exists("rank")
     pydict['set_aggreBoost'] = check_any_exists("aggreBoost")
     pydict['set_procStep'] = check_any_exists("procStep")
+    pydict['set_nThreads'] = check_any_exists("nThreads")
+    pydict['set_nParts'] = check_any_exists("nParts")
+
 
 def get_param_fields():
     names = get_param_translations()

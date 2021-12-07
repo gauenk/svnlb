@@ -3,7 +3,7 @@
 import cv2,tqdm,copy
 import numpy as np
 import unittest
-import pyvnlb
+import vnlb
 import tempfile
 import sys
 from einops import rearrange
@@ -12,12 +12,13 @@ from pathlib import Path
 from easydict import EasyDict as edict
 
 # -- package helper imports --
-from pyvnlb.pylib.tests.data_loader import load_dataset
-from pyvnlb.pylib.tests.file_io import save_images
-from pyvnlb import groups2patches,patches2groups,patches_at_indices
+from vnlb.testing.data_loader import load_dataset
+from vnlb.testing.file_io import save_images
+from vnlb.utils import groups2patches,patches2groups,patches_at_indices
 
 # -- python impl --
-from pyvnlb.pylib.py_impl import initMask,processNLBayes,idx2coords
+from vnlb.cpu import initMask,processNLBayes
+from vnlb.utils import idx2coords
 
 # -- check if reordered --
 from scipy import optimize
@@ -44,7 +45,7 @@ class TestProcNlb(unittest.TestCase):
         flow_params = {"nproc":0,"tau":0.25,"lambda":0.2,"theta":0.3,
                        "nscales":100,"fscale":1,"zfactor":0.5,"nwarps":5,
                        "epsilon":0.01,"verbose":False,"testing":False,'bw':True}
-        fflow,bflow = pyvnlb.runPyFlow(noisy,std,flow_params)
+        fflow,bflow = vnlb.swig.runPyFlow(noisy,std,flow_params)
 
         # -- pack data --
         data = edict()
@@ -85,7 +86,7 @@ class TestProcNlb(unittest.TestCase):
         t,c,h,w = noisy.shape
 
         # -- parse parameters --
-        params = pyvnlb.setVnlbParams(noisy.shape,sigma,params=in_params)
+        params = vnlb.swig.setVnlbParams(noisy.shape,sigma,params=in_params)
         # tensors = {'fflow':tensors['fflow'],'bflow':tensors['bflow']}
 
         # -- exec pix --
@@ -102,7 +103,7 @@ class TestProcNlb(unittest.TestCase):
             if not(valid_w and valid_h): continue
 
             # -- cpp exec --
-            cpp_results = pyvnlb.init_mask(noisy.shape,params)
+            cpp_results = vnlb.swig.initMask(noisy.shape,params)
             cpp_mask = cpp_results.mask
             cpp_ngroups = cpp_results.ngroups
 
@@ -129,13 +130,13 @@ class TestProcNlb(unittest.TestCase):
         t,c,h,w = noisy.shape
 
         # -- parse parameters --
-        params = pyvnlb.setVnlbParams(noisy.shape,sigma,params=in_params)
+        params = vnlb.swig.setVnlbParams(noisy.shape,sigma,params=in_params)
         # tensors = {'fflow':tensors['fflow'],'bflow':tensors['bflow']}
         tensors = {}
 
         # -- cpp exec --
         cpp_params = copy.deepcopy(params)
-        cpp_results = pyvnlb.processNLBayes(noisy,sigma,0,tensors,cpp_params)
+        cpp_results = vnlb.swig.processNLBayes(noisy,sigma,0,tensors,cpp_params)
 
         # -- unpack --
         cpp_denoised = cpp_results['denoised']
@@ -166,7 +167,6 @@ class TestProcNlb(unittest.TestCase):
 
         # -- save samples --
         if save:
-            print(SAVE_DIR)
             save_images(cpp_denoised,SAVE_DIR / "./cpp_denoised.png",imax=255.)
             save_images(py_denoised,SAVE_DIR / "./py_denoised.png",imax=255.)
             save_images(cpp_basic,SAVE_DIR / "./cpp_basic.png",imax=255.)

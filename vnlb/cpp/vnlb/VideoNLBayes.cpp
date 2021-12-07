@@ -73,6 +73,10 @@ void defaultParameters(
 	using std::max;
 	using std::min;
 
+    // default is "use max num of threads"
+    prms.nThreads = prms.set_nThreads ? prms.nThreads : 0;
+    prms.nParts = prms.set_nParts ? prms.nParts : 0;
+
 	// Default patch size
 	if (psz_x == -1 || psz_t == -1)
 	{
@@ -360,14 +364,31 @@ std::vector<float> runNLBayesThreads(
 	if (steps == 2) VideoUtils::transformColorSpace(imBasic, true);
 
 	// Multithreading: split video in tiles
+    int maxThreads = -1;
 	unsigned nThreads = 1;
 #ifdef _OPENMP
-	nThreads = omp_get_max_threads();
-	if (prms1.verbose) printf(ANSI_CYN "OpenMP is using %d threads\n" ANSI_RST, nThreads);
+	maxThreads = omp_get_max_threads();
+    assert (prms1.nThreads == prms2.nThreads);
+    if ( (prms1.nThreads > maxThreads) || (prms1.nThreads == 0) ){
+      nThreads = maxThreads;
+    }else{
+      nThreads = prms1.nThreads;
+      omp_set_num_threads(nThreads);
+      // omp_set_dynamic(1);
+    }
+	if (prms1.verbose){
+      printf(ANSI_CYN "OpenMP is using %d threads\n" ANSI_RST, nThreads);
+    }
 #endif
-	const unsigned nParts = 2 * nThreads; // number of video parts
-    // const unsigned nParts = 1;
-    // nThreads = 1;
+
+    // Parse num parts from paramters
+	unsigned nParts = 2 * nThreads; // number of video parts
+    assert(prms1.nParts == prms2.nParts);
+    if (prms1.nParts > 0){
+      nParts = prms1.nParts;
+    }
+    assert(nThreads <= nParts);
+    // fprintf(stdout,"nThreads,nParts: %d,%d\n",nThreads,nParts);
 
 	// Borders added to each sub-division of the image (for multi-threading)
 	const int border = std::max(2*(prms1.sizeSearchWindow/2) + prms1.sizePatch - 1,
@@ -420,10 +441,12 @@ std::vector<float> runNLBayesThreads(
 			// it causes a compilation error with OpenMP (only on IPOL server)
 			nlbParams prms_cpy(prms[iter]);
 #pragma omp parallel for schedule(dynamic, nParts/nThreads) \
+			num_threads(4) \
 			shared(imNoisySub, imBasicSub, imFinalSub) \
-			firstprivate (prms_cpy)
+			firstprivate(prms_cpy)
 #endif
 			for (int n = 0; n < (int)nParts; n++){
+              // fprintf(stdout,"iter,n: %d,%d\n",iter,n);
               // fprintf(stdout,"n: %d,%d,%d\n",n,
               //         imNoisySub[n].sz.width,imNoisySub[n].sz.whcf);
 				groupsProcessedSub[n] =

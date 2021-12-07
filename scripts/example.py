@@ -15,9 +15,7 @@ from vnlb.testing.file_io import save_images
 # -- load & denoise a video --
 #
 
-# -- check omp --
 print("Running example script.")
-vnlb.check_omp_num_threads()
 
 # -- get data --
 clean = load_dataset("davis_64x64",vnlb=False)[0]['clean']
@@ -30,7 +28,7 @@ noisy = np.random.normal(clean,scale=std)
 fflow,bflow = vnlb.swig.runPyFlow(noisy,std)
 
 # -- Video Non-Local Bayes --
-result = vnlb.swig.runPyVnlb(noisy,std,{'fflow':fflow,'bflow':bflow})
+result = vnlb.swig.runPyVnlb(noisy,std,{'fflow':fflow,'bflow':bflow,'nThreads':4})
 denoised = result['denoised']
 
 # -- compute denoising quality --

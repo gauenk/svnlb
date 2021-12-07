@@ -8,11 +8,12 @@ from einops import rearrange
 import shutil
 from pathlib import Path
 from collections import defaultdict
+import pytest
 
 # -- add data/file io --
 from scripts.compare_cpp import run_method
 
-
+@pytest.mark.order(1)
 class TestVnlbDenoiser(unittest.TestCase):
 
     def do_run_get_target_results(self,vnlb_dataset):

@@ -39,9 +39,13 @@ def check_and_expand_flows(pyargs,t):
 
 def check_omp_num_threads(nthreads=4):
     omp_nthreads = omp_num_threads()
-    if (omp_nthreads != nthreads):
+    check_eq = omp_nthreads == nthreads
+    # check_geq = omp_nthreads >= nthreads
+    # check_bool = check_geq if geq else check_eq
+    if not(check_eq):
         msg = f"Please run `export OMP_NUM_THREADS={nthreads}` "
-        msg += "before running this file."
+        msg += "before running this file.\n"
+        msg += f"Currently set to [{omp_nthreads}] threads"
         print(msg)
         sys.exit(1)
 

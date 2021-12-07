@@ -1,4 +1,4 @@
-import cv2,copy
+import cv2,copy,pytest
 import pandas as pd
 import numpy as np
 import unittest
@@ -18,10 +18,11 @@ from vnlb.utils import groups2patches,patches2groups,patches_at_indices
 from vnlb.utils import check_omp_num_threads
 
 # -- python impl --
-from vnlb.cpu import runPythonVnlb,processNLBayes
+from vnlb.cpu import runPythonVnlb
 SAVE_DIR = Path("./output/tests/")
 
 
+@pytest.mark.order(2)
 class TestPythonVnlbDenoiser(unittest.TestCase):
 
     #
@@ -137,8 +138,7 @@ class TestPythonVnlbDenoiser(unittest.TestCase):
             # delta = np.abs(totalError-tgt)/(tgt+1e-12)
             # assert delta < 1e-5
         results = pd.DataFrame(results)
-        print(results.to_markdown())
-
+        # print(results.to_markdown())
 
     def test_python_denoiser(self):
 
@@ -149,10 +149,10 @@ class TestPythonVnlbDenoiser(unittest.TestCase):
             save_dir.mkdir(parents=True)
 
         # -- check omp threads --
-        check_omp_num_threads(nthreads=1)
+        # check_omp_num_threads(nthreads=1)
 
         # -- no args --
-        pyargs = {}
+        pyargs = {'nThreads':[1,1],'nParts':[1,1]}
         vnlb_dataset = "davis_64x64"
         tensors,sigma = self.do_load_data(vnlb_dataset)
         self.do_run_comparison(tensors,sigma,pyargs)

@@ -171,12 +171,12 @@ class TestBayesEstimate(unittest.TestCase):
 
         # -- loop params --
         tchecks,nchecks = 10,0
-        checks = np.arange(h*w*t)
-        # checks = np.random.permutation(h*w*(t-1))[:1000]
+        # checks = np.arange(h*w*(t-1))
+        checks = np.random.permutation(h*w*(t-1))[:100]
         # checks[0] = 522
         # checks[1] = 523
         # checks[2] = 524
-        for pidx in tqdm.tqdm(checks):
+        for pidx in checks:
 
             # -- check boarder --
             pidx = pidx.item()
