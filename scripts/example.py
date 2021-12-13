@@ -16,23 +16,34 @@ from vnlb.testing.file_io import save_images
 #
 
 print("Running example script.")
+vnlb.check_omp_num_threads()
 
 # -- get data --
-clean = load_dataset("davis_64x64",vnlb=False)[0]['clean']
+clean = load_dataset("davis_64x64",vnlb=False)[0]['clean'].copy()[:3]
 
 # -- add noise --
+np.random.seed(123)
 std = 20.
-noisy = np.random.normal(clean,scale=std)
+noisy = np.random.normal(clean.copy(),scale=std)
 
 # -- TV-L1 Optical Flow --
 fflow,bflow = vnlb.swig.runPyFlow(noisy,std)
 
 # -- Video Non-Local Bayes --
-result = vnlb.swig.runPyVnlb(noisy,std,{'fflow':fflow,'bflow':bflow,'nThreads':4})
+# result = vnlb.swig.runPyVnlb(noisy,std,{'fflow':fflow,'bflow':bflow,'nThreads':4})
+# denoised = result['denoised']
+
+# -- Video Non-Local Bayes --
+result = vnlb.cpu.runPythonVnlb(noisy,std,{},
+                                #{'fflow':fflow,'bflow':bflow,'nThreads':4},
+                                None,
+                                clean)
 denoised = result['denoised']
+basic = result['basic']
 
 # -- compute denoising quality --
 psnrs = vnlb.utils.compute_psnrs(clean,denoised)
+psnrs_basic = vnlb.utils.compute_psnrs(clean,basic)
 
 # -- compare with original  --
 noisy_psnrs = vnlb.utils.compute_psnrs(clean,noisy)
@@ -47,6 +58,9 @@ if print_report:
     # -- print psnrs --
     print("Denoised PSNRs:")
     print(psnrs)
+
+    print("Basic PSNRs:")
+    print(psnrs_basic)
 
     print("Starting PSNRs:")
     print(noisy_psnrs)

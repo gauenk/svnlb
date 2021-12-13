@@ -160,9 +160,9 @@ class TestSimSearch(unittest.TestCase):
         # -- parse parameters --
         params = vnlb.swig.setVnlbParams(noisy.shape,sigma,params=in_params)
         params.use_imread = [True,True]
-        tensors = {'fflow':tensors['fflow'],'bflow':tensors['bflow']}
+        tensors = {}#{'fflow':tensors['fflow'],'bflow':tensors['bflow']}
         tchecks,nchecks = 200,0
-        checks = np.random.permutation(h*w*c*(t-1))[:1000]
+        checks = np.random.permutation(h*w*c*(t-1))[:20]
         # 4364 0 1 4 12
         # 4364 0 1 4 12 64 64 3 True True
         checks[0] = 10605

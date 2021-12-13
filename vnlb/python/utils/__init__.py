@@ -1,6 +1,6 @@
 from .utils import check_omp_num_threads,patches2groups,groups2patches
 from .utils import get_patch_shapes_from_params,optional,groups2patches,check_flows,check_and_expand_flows,optional_swig_ptr,assign_swig_args
-from .utils import ndarray_ctg_dtype,rgb2bw,check_none,compute_psnrs
+from .utils import ndarray_ctg_dtype,rgb2bw,check_none,compute_psnrs,divUp
 # from .utils import idx2coords,coords2idx,patches2groups,groups2patches
 
 from .image_utils import est_sigma,idx2coords,coords2idx

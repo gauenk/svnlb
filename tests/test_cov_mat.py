@@ -18,7 +18,7 @@ from vnlb.utils import groups2patches,patches2groups,patches_at_indices
 
 # -- python impl --
 from vnlb.cpu import computeCovMat
-from vnlb.cpu import idx2coords
+from vnlb.utils import idx2coords
 
 # -- check if reordered --
 from scipy import optimize

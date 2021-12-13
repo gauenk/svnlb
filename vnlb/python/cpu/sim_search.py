@@ -10,7 +10,7 @@ from vnlb.utils import get_patch_shapes_from_params,optional,groups2patches,chec
 
 from vnlb.testing import save_images
 
-def runSimSearch(noisy,sigma,pidx,tensors,params,step=0):
+def runSimSearch(noisy,sigma,pidx,tensors,params,step=0,clean=None):
 
     # -- extract info for explicit call --
     t,c,h,w = noisy.shape
@@ -38,16 +38,23 @@ def runSimSearch(noisy,sigma,pidx,tensors,params,step=0):
     # -- color transform --
     noisy_yuv = apply_color_xform_cpp(noisy)
     basic_yuv = apply_color_xform_cpp(basic)
+    # print(noisy_yuv[0,0,0,0])
 
     # -- find the best patches using c++ logic --
     srch_img = noisy_yuv if step1 else basic_yuv
-    values,indices,nsearch = exec_cpp_sim_search(pidx,srch_img,fflow,bflow,sigma,
-                                                 ps,ps_t,npatches,nwindow_xy,nfwd,nbwd,
-                                                 couple_ch,step1)
+    if not(clean is None):
+        srch_img = apply_color_xform_cpp(clean)
+    values,indices,access,nsearch = exec_cpp_sim_search(pidx,srch_img,fflow,bflow,sigma,
+                                                        ps,ps_t,npatches,nwindow_xy,nfwd,nbwd,
+                                                        couple_ch,step1)
 
     # -- group the values and indices --
     img_noisy = noisy if use_imread else noisy_yuv
     img_basic = basic if use_imread else basic_yuv
+    # clean_yuv = apply_color_xform_cpp(clean)
+    # print("use_imread: ",use_imread)
+    # print("delta1: ",np.sqrt(np.mean((noisy_yuv - clean_yuv)**2)))
+    # print("delta2: ",np.sqrt(np.mean((noisy - clean)**2)))
 
     # patchesNoisy = exec_select_cpp_patches(img_noisy,indices,ps,ps_t)
     # patchesBasic = exec_select_cpp_patches(img_basic,indices,ps,ps_t)
@@ -55,6 +62,14 @@ def runSimSearch(noisy,sigma,pidx,tensors,params,step=0):
     groupBasic = exec_select_cpp_groups(img_basic,indices,ps,ps_t)
     patchesNoisy = groups2patches(groupNoisy)
     patchesBasic = groups2patches(groupBasic)
+
+    # -- handle clean image --
+    patchesClean,groupClean = None,None
+    if not(clean is None):
+        clean_yuv = apply_color_xform_cpp(clean)
+        img_clean = clean if use_imread else clean_yuv
+        groupClean = exec_select_cpp_groups(img_clean,indices,ps,ps_t)
+        patchesClean = groups2patches(groupClean)
 
     # -- extract some params info --
     i_params = edict({k:v[step] if isinstance(v,list) else v for k,v in params.items()})
@@ -66,18 +81,22 @@ def runSimSearch(noisy,sigma,pidx,tensors,params,step=0):
     results.patches = patchesNoisy
     results.patchesNoisy = patchesNoisy
     results.patchesBasic = patchesBasic
+    results.patchesClean = patchesClean
     results.groupNoisy = groupNoisy
     results.groupBasic = groupBasic
+    results.groupClean = groupClean
     results.values = values
     results.indices = indices
     results.nSimP = len(indices)
     results.nflat = results.nSimP * ps * ps * ps_t * c
     results.nsearch = nsearch
     results.ngroups = patch_num
+    results.npatches = len(patchesNoisy)
     results.ps = ps
     results.ps_t = ps_t
     results.psX = ps
     results.psT = ps_t
+    results.access = access
 
     return results
 
@@ -188,11 +207,13 @@ def exec_cpp_sim_search(pidx,noisy,fflow,bflow,sigma,ps,ps_t,
     # patches = np.zeros((npatches,ps_t,c,ps,ps))
     vals = np.ones((t-ps_t+1,nwindow_xy,nwindow_xy),dtype=np.float32)*np.inf
     indices = np.zeros((t-ps_t+1,nwindow_xy,nwindow_xy),dtype=np.uint32)
+    access = np.zeros((3,t-ps_t+1,nwindow_xy,nwindow_xy),dtype=np.uint32)
     nsearch = indices.size
 
     # -- search --
     # print("-"*30)
-    numba_cpp_sim_search(pidx,vals,indices,noisy,fflow,bflow,sigma,
+    # print("exec_cpp: ",noisy[0,0,0,0])
+    numba_cpp_sim_search(pidx,vals,indices,access,noisy,fflow,bflow,sigma,
                          ps,ps_t,nwindow_xy,nWt_f,nWt_b,couple_ch,step1)
 
     # -- remove ref frame --
@@ -217,10 +238,10 @@ def exec_cpp_sim_search(pidx,noisy,fflow,bflow,sigma,ps,ps_t,
     # print("nsearch: %d\n" % nsearch)
     # print("npatches: %d\n" % npatches)
 
-    return vals,indices,nsearch
+    return vals,indices,access,nsearch
 
-@njit
-def numba_cpp_sim_search(pidx,vals,indices,noisy,fflow,bflow,sigma,
+# @njit
+def numba_cpp_sim_search(pidx,vals,indices,access,noisy,fflow,bflow,sigma,
                          ps,ps_t,nWxy,nWt_f,nWt_b,couple_ch,step1):
     # -- init shapes --
     t,c,h,w = noisy.shape
@@ -295,6 +316,7 @@ def numba_cpp_sim_search(pidx,vals,indices,noisy,fflow,bflow,sigma,
     # exit()
 
     # -- start search --
+    t_idx = 0
     for t_i in trange:
 
         # -------------------------------------
@@ -337,8 +359,7 @@ def numba_cpp_sim_search(pidx,vals,indices,noisy,fflow,bflow,sigma,
 
             cw = max(0,min(w-1,round(cw_f)))
             ch = max(0,min(h-1,round(ch_f)))
-            ct = t_idx
-
+            ct = t_i#dx
         else:
             cw = w_c
             ch = h_c
@@ -401,6 +422,7 @@ def numba_cpp_sim_search(pidx,vals,indices,noisy,fflow,bflow,sigma,
 
         # print("rangex[0,1]: (%d,%d,%d,%d)" % (w_start,w_end,shift_w,cw))
         # print("rangey[0,1]: (%d,%d,%d,%d)" % (h_start,h_end,shift_h,ch))
+
         h_range = np.arange(h_start,h_end)
         w_range = np.arange(w_start,w_end)
         for h_idx in prange(len(h_range)):
@@ -408,6 +430,17 @@ def numba_cpp_sim_search(pidx,vals,indices,noisy,fflow,bflow,sigma,
             for w_idx in prange(len(w_range)):
                 w_i = w_range[w_idx]
                 # pix_idx = coords2pix(h_i,w_i,t_i)
+
+                # c_ind = coords2pix(h_c,w_c,t_c)
+                # i_ind = coords2pix(h_i,w_i,t_i)
+                # if i_ind == 712:
+                #     print("[cpu] t: ",t_i,ps_t,nframes,t_i+ps_t-1,trange_s)
+                #     print("[cpu] h: ",h_idx,h_start,h_end,shift_h)
+                #     print("[cpu] w: ",w_idx,w_start,w_end,shift_w)
+                #     print("misc: ",c_ind,i_ind)
+                #     for iiii,iiiii in enumerate(trange):
+                #         print("trange[%d]: %d" % (iiii,iiiii))
+
 
                 # -- compute patch deltas --
                 delta = 0.
@@ -420,3 +453,9 @@ def numba_cpp_sim_search(pidx,vals,indices,noisy,fflow,bflow,sigma,
                                 delta += (pix_l - pix_k)**2.
                 vals[t_idx,h_idx,w_idx] = delta/(ps*ps*ps_t*chnls)
                 indices[t_idx,h_idx,w_idx] = coords2pix(h_i,w_i,t_i)
+
+                # -- for testing --
+                access[0,t_idx,h_idx,w_idx] = t_i
+                access[1,t_idx,h_idx,w_idx] = h_i
+                access[2,t_idx,h_idx,w_idx] = w_i
+        t_idx += 1

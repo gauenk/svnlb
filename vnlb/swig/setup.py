@@ -21,6 +21,8 @@ shutil.copytree("swig", "vnlb/swig")
 shutil.copytree("testing", "vnlb/testing")
 shutil.copytree("utils", "vnlb/utils")
 shutil.copytree("cpu", "vnlb/cpu")
+shutil.copytree("gpu", "vnlb/gpu")
+shutil.copytree("exps", "vnlb/exps")
 shutil.copyfile("__init__.py", "vnlb/__init__.py")
 shutil.copyfile("loader.py", "vnlb/loader.py")
 
@@ -62,8 +64,10 @@ setup(
     packages=find_packages(include=['vnlb',
                                     'vnlb.swig*',
                                     'vnlb.cpu*',
+                                    'vnlb.gpu*',
                                     'vnlb.utils*',
                                     'vnlb.testing*',
+                                    'vnlb.exps*'
     ]),
     package_data={
         'vnlb': ['*.so', '*.pyd'],

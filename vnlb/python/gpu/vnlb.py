@@ -1,10 +1,7 @@
 
 # -- python deps --
-import numpy as np
+import torch as th
 from easydict import EasyDict as edict
-
-# -- package imports --
-import vnlb
 
 # -- local imports --
 from .sim_search import runSimSearch
@@ -16,27 +13,20 @@ from .proc_nlb import processNLBayes
 # -- project imports --
 from vnlb.utils import groups2patches,patches2groups
 
-def runPythonVnlb(noisy,sigma,flows,params=None,clean=None):
+def runPythonVnlb(noisy,sigma,flows,params,gpuid=0):
     """
 
-    A Python implementation of the C++ code.
+    A GPU-Python implementation of the C++ code.
 
     """
 
-    # -- create params --
-    if params is None:
-        params = vnlb.swig.setVnlbParams(noisy.shape,sigma,None)
-        # print(list(params.keys()))
-        # print(params.aggreBoost)
-        # params.aggreBoost = [False,False]
-        # params.psX = [3,3]
-        # params.nSimilarPatches = [100,60]
-    # print(params.sizePatch)
-    # print(params.nSimilarPatches)
-    # print(params.aggreBoost)
+    # -- place on cuda --
+    device = gpuid
+    noisy = th.FloatTensor(noisy).to(device)
+    flows = edict({k:th.FloatTensor(v).to(device) for k,v in flows.items()})
 
     # -- step 1 --
-    step_results = processNLBayes(noisy,sigma,0,flows,params,clean)
+    step_results = processNLBayes(noisy,sigma,0,flows,params)
     step1_results = step_results
     basic = step1_results.basic.copy()
 

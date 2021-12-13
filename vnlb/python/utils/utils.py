@@ -1,9 +1,12 @@
 import os,sys
 import cv2
 import vnlb
+import torch
 import numpy as np
 from einops import rearrange
 
+
+def divUp(a,b): return (a-1)//b+1
 
 def get_patch_shapes_from_params(params,channels):
     step1 = params.isFirstStep
@@ -97,7 +100,6 @@ def compute_psnrs(img1,img2,imax=255.):
     psnr = 10 * log_mse
     return psnr
 
-
 def optional_pair(pydict,key,default,dtype):
     value = optional(pydict,key,default,dtype)
     if not(hasattr(value,"__getitem__")):
@@ -148,6 +150,31 @@ def check_none(pyobj,mode):
         raise ValueError(f"unknown mode [{mode}]")
 
 def expand_flows(pydict,axis=0):
+    fflow = pydict['fflow']
+    if torch.is_tensor(fflow):
+        return expand_flows_th(pydict,axis)
+    else:
+        return expand_flows_np(pydict,axis)
+
+def expand_flows_th(pydict,axis=0):
+    # -- unpack --
+    fflow,bflow = pydict['fflow'],pydict['bflow']
+
+    # -- expand according to original c++ repo --
+    if axis == 0:
+        fflow = torch.cat([fflow,fflow[[-1]]],dim=axis)
+        bflow = torch.cat([bflow[[0]],bflow],dim=axis)
+    elif axis == 1:
+        fflow = torch.cat([fflow,fflow[:,[-1]]],dim=1)
+        bflow = torch.cat([bflow[:,[0]],bflow],dim=1)
+    else:
+        raise ValueError(f"Invalid axis {axis}")
+
+    # -- update --
+    pydict['fflow'],pydict['bflow'] = fflow,bflow
+
+
+def expand_flows_np(pydict,axis=0):
     """
     CPP requires the flows be repeated so
     the number of temporal flows matches

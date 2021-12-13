@@ -12,8 +12,8 @@ def check_steps(step1,step):
     is_not_step_1 = (step1 == False) and (step == 1)
     assert is_step_1 or is_not_step_1
 
-def runBayesEstimate(groupNoisy,groupBasic,rank_var,nSimP,shape,
-                     params,step=0,flatPatch=False,groupClean=None):
+def runBayesEstimate(groupNoisy,groupBasic,rank_var,nSimP,shape,params,
+                     step=0,flatPatch=False):
 
     # # -- create python-params for parser --
     # params,swig_params,_,_ = parse_args(deno,0.,None,params)
@@ -39,7 +39,7 @@ def runBayesEstimate(groupNoisy,groupBasic,rank_var,nSimP,shape,
 
     # -- exec python version --
     results = exec_bayes_estimate(groupNoisy,groupBasic,sigma,sigmab2,rank,nSimP,
-                                  c,group_chnls,thresh,step==1,flatPatch,groupClean)
+                                  c,group_chnls,thresh,step==1,flatPatch)
 
     # -- format results --
     results['psX'] = ps
@@ -95,88 +95,9 @@ def centering_v1(groupNoisy,groupBasic):
         groupBasic -= centerBasic[:,:,None]
     return groupNoisy,groupBasic,centerNoisy,centerBasic
 
-def exec_bayes_estimate_v2(groupNoisy,groupBasic,sigma,sigmab2,
-                           rank,nSimP,channels,group_chnls,thresh,
-                           step2,flatPatch,groupClean=None,mod_sel="clipped"):
-
-    # -- shaping --
-    shape = list(groupNoisy.shape)
-    shape[1] = 1
-    shape[-1] = nSimP
-    p,c,psT,psX,psX,n = groupNoisy.shape
-    pdim = psX*psX*psT*p
-
-    # -- group noisy --
-    centerBasic = None
-    if step2:
-        centerBasic = centering(groupBasic,nSimP,pdim,c)
-    # centers = centering_v1(groupNoisy,groupBasic)
-    # groupNoisy,groupBasic,centerNoisy,centerBasic = centers
-
-    # -- group basic --
-    centerNoisy = None
-    if step2 and flatPatch:
-        centerNoisy = centerBasic
-    centerNoisy = centering(groupNoisy,nSimP,pdim,c,centerNoisy)
-
-    # -- group clean --
-    centerClean = None
-    if not(groupClean is None):
-        centerClean = centering(groupClean,nSimP,pdim,c)
-
-    # -- denoising! --
-    rank_var = 0.
-    for chnl in range(group_chnls):
-
-        # -- select data to compute filter --
-        groupInput = groupNoisy if not(step2) else groupBasic
-        if not(groupClean is None): groupInput = groupClean
-
-        # -- compute denoiser params --
-        group_c = index_groups(groupInput,nSimP,pdim,chnl)
-        covMat,eigVals,eigVecs = compute_eig_stuff(group_c,shape,rank)
-        eigVals = denoise_eigvals(eigVals,sigmab2,mod_sel,rank)
-        rank_var += np.sum(eigVals[:rank].astype(np.float32))
-        eigVals = bayes_filter_coeff(eigVals,sigma,thresh)
-
-        # -- run the denoiser --
-        # groupNoisy_c = groupNoisy[chnl]
-        groupNoisy_c = index_groups(groupNoisy,nSimP,pdim,chnl)
-
-        group_c,mat_group,eigVecs = update_group(groupNoisy_c,eigVals,eigVecs,rank)
-
-        groupNoisy.ravel()[nSimP*pdim * chnl:nSimP*pdim * (chnl+1)] = group_c.ravel()
-
-    # -- add back center --
-    centerToAdd = centerNoisy if (centerClean is None) else centerClean
-    add_back_center(groupNoisy,centerToAdd,nSimP,pdim,c)
-    # print(groupNoisy.shape)
-    # groupNoisy += centerNoisy[:,:,None]
-
-    # -- rearrange --
-    # shape_str = 'c (p pst ps1 ps2) n -> p c pst ps1 ps2 n'
-    # kwargs = {'p':p,'pst':psT,'ps1':psX,'ps2':psX}
-    # gnoisy = rearrange(groupNoisy,shape_str,**kwargs)
-    gnoisy = groupNoisy
-    gbasic = groupBasic
-    # if step2:
-    #     gbasic = rearrange(groupBasic,shape_str,**kwargs)
-
-    # -- pack results --
-    results = {}
-    results['groupNoisy'] = gnoisy
-    results['groupBasic'] = gbasic
-    results['group'] = gnoisy
-    results['center'] = centerNoisy
-    results['covMat'] = covMat
-    results['covEigVecs'] = eigVecs
-    results['covEigVals'] = eigVals
-    results['rank_var'] = rank_var
-    return results
-
 def exec_bayes_estimate(groupNoisy,groupBasic,sigma,sigmab2,
                         rank,nSimP,channels,group_chnls,thresh,
-                        step2,flatPatch,groupClean=None,mod_sel="clipped"):
+                        step2,flatPatch,mod_sel="clipped"):
 
     # -- shaping --
     shape = list(groupNoisy.shape)
@@ -192,32 +113,21 @@ def exec_bayes_estimate(groupNoisy,groupBasic,sigma,sigmab2,
     # centers = centering_v1(groupNoisy,groupBasic)
     # groupNoisy,groupBasic,centerNoisy,centerBasic = centers
 
-    # -- check something --
-    # print("delta: ",np.sqrt(np.mean((groupClean[:300] - groupNoisy[:300])**2)))
-
-    # -- group clean --
-    centerClean = None
-    if not(groupClean is None):
-        centerClean = centering(groupClean,nSimP,pdim,c)
-
     # -- group basic --
     centerNoisy = None
     if step2 and flatPatch:
         centerNoisy = centerBasic
-    if not(centerClean is None):
-        centerNoisy = centerClean
     centerNoisy = centering(groupNoisy,nSimP,pdim,c,centerNoisy)
 
     # -- denoising! --
     rank_var = 0.
     for chnl in range(group_chnls):
 
-        # -- select data to create denoiser --
+        # -- compute denoiser params --
+        # group_c = groupNoisy[chnl] if not(step2) else groupBasic[chnl]
         groupInput = groupNoisy if not(step2) else groupBasic
-        if not(groupClean is None): groupInput = groupClean
-
-        # -- compute the denoiser info --
         group_c = index_groups(groupInput,nSimP,pdim,chnl)
+
         covMat,eigVals,eigVecs = compute_eig_stuff(group_c,shape,rank)
         eigVals = denoise_eigvals(eigVals,sigmab2,mod_sel,rank)
         rank_var += np.sum(eigVals[:rank].astype(np.float32))
@@ -232,9 +142,7 @@ def exec_bayes_estimate(groupNoisy,groupBasic,sigma,sigmab2,
         groupNoisy.ravel()[nSimP*pdim * chnl:nSimP*pdim * (chnl+1)] = group_c.ravel()
 
     # -- add back center --
-    # centerToAdd = centerNoisy if (centerClean is None) else centerClean
     add_back_center(groupNoisy,centerNoisy,nSimP,pdim,c)
-    # add_back_center(groupNoisy,centerNoisy,nSimP,pdim,c)
     # print(groupNoisy.shape)
     # groupNoisy += centerNoisy[:,:,None]
 

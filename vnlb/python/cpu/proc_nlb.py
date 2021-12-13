@@ -22,7 +22,7 @@ def optional(pydict,key,default):
     if key in pydict: return pydict[key]
     else: return default
 
-def processNLBayes(noisy,sigma,step,tensors,params):
+def processNLBayes(noisy,sigma,step,tensors,params,clean=None):
     """
 
     A Python implementation for one step of the NLBayes code
@@ -35,10 +35,14 @@ def processNLBayes(noisy,sigma,step,tensors,params):
     denoised = np.zeros_like(noisy)
     basic = optional(tensors,'basic',zero_basic)
     weights = np.zeros((t,h,w),dtype=np.float32)
-    flows = tensors
+
+    # -- extract flows --
+    flows = {}
+    if 'fflow' in tensors and 'bflow' in tensors:
+        flows = edict({'fflow':tensors['fflow'],'bflow':tensors['bflow']})
 
     # -- run the step --
-    step_results = exec_step(noisy,basic,weights,sigma,flows,params,step)
+    step_results = exec_step(noisy,basic,weights,sigma,flows,params,step,clean)
 
     # -- format outputs --
     results = edict()
@@ -48,7 +52,7 @@ def processNLBayes(noisy,sigma,step,tensors,params):
 
     return results
 
-def exec_step(noisy,basic,weights,sigma,flows,params,step):
+def exec_step(noisy,basic,weights,sigma,flows,params,step,clean=None):
     """
 
     Primary sub-routine of VNLB
@@ -105,8 +109,9 @@ def exec_step(noisy,basic,weights,sigma,flows,params,step):
         # print("ij,ij3: %d,%d\n" % (pidx,pidx3))
 
         # -- sim search --
-        sim_results = estimateSimPatches(noisy,basic,sigma,pidx3,flows,params,step)
-        groupNoisy,groupBasic,indices = sim_results
+        sim_results = estimateSimPatches(noisy,basic,sigma,pidx3,flows,
+                                         params,step,clean)
+        groupNoisy,groupBasic,groupClean,indices = sim_results
         nSimP = len(indices)
 
         # -- optional flat patch --
@@ -121,7 +126,7 @@ def exec_step(noisy,basic,weights,sigma,flows,params,step):
         rank_var = 0.
         groupNoisy,rank_var = computeBayesEstimate(groupNoisy,groupBasic,
                                                    nSimP,shape,params,
-                                                   step,flatPatch)
+                                                   step,flatPatch,groupClean)
         # print(groupNoisy.ravel()[0])
 
         # -- debug zone. --
@@ -141,13 +146,15 @@ def exec_step(noisy,basic,weights,sigma,flows,params,step):
         g_remain -= nmasked
 
     # -- reduce using weighted ave --
-    weightedAggregation(deno,noisy_yuv,weights)
+    wimg = noisy if params.use_imread[step] else noisy_yuv
+    weightedAggregation(deno,wimg,weights)
     # deno = numpy_div0(deno,weights[:,None],0.)
     # print(weights[0,0,0])
     # print(deno[0,0,0])
 
     # -- re-colorize --
-    deno = yuv2rgb_cpp(deno)
+    if not(params.use_imread[step]):
+        deno = yuv2rgb_cpp(deno)
     # basic = yuv2rgb_cpp(basic)
 
     # -- pack results --
@@ -159,7 +166,7 @@ def exec_step(noisy,basic,weights,sigma,flows,params,step):
     return results
 
 
-def estimateSimPatches(noisy,basic,sigma,pidx,flows,params,step):
+def estimateSimPatches(noisy,basic,sigma,pidx,flows,params,step,clean=None):
 
     # -- unpack --
     t,c,h,w = noisy.shape
@@ -178,18 +185,22 @@ def estimateSimPatches(noisy,basic,sigma,pidx,flows,params,step):
     # sim_indices = sim_results.indices
 
     # -- sim search --
-    params.use_imread = [False,False]
+    # params.use_imread = [False,False]
     tensors = edict({k:v for k,v in flows.items()})
     tensors.basic = basic
-    sim_results = runSimSearch(noisy,sigma,pidx,tensors,params,step)
+    sim_results = runSimSearch(noisy,sigma,pidx,tensors,params,step,clean)
 
     patchesNoisy = sim_results.patchesNoisy
     patchesBasic = sim_results.patchesBasic
+    patchesClean = sim_results.patchesClean
     indices = sim_results.indices
     nSimP = sim_results.nSimP
     ngroups = sim_results.ngroups
     groupsNoisy = patches2groups(patchesNoisy,c,psX,psT,ngroups,1)
     groupsBasic = patches2groups(patchesBasic,c,psX,psT,ngroups,1)
+    groupsClean = None
+    if not(patchesClean is None):
+        groupsClean = patches2groups(patchesClean,c,psX,psT,ngroups,1)
 
     # -- check -- # 563
     # delta = np.sum(np.sort(indices) - np.sort(sim_indices))
@@ -216,9 +227,10 @@ def estimateSimPatches(noisy,basic,sigma,pidx,flows,params,step):
     # patches_rgb = yuv2rgb_cpp(patches)
     # save_images(patches_rgb,"output/patches.png",imax=255.)
 
-    return groupsNoisy,groupsBasic,indices
+    return groupsNoisy,groupsBasic,groupsClean,indices
 
-def computeBayesEstimate(groupNoisy,groupBasic,nSimP,shape,params,step,flatPatch):
+def computeBayesEstimate(groupNoisy,groupBasic,nSimP,shape,params,
+                         step,flatPatch,groupClean):
 
     # -- prepare --
     rank_var = 0.
@@ -228,7 +240,8 @@ def computeBayesEstimate(groupNoisy,groupBasic,nSimP,shape,params,step,flatPatch
     #                                             groupBasic.copy(),0.,
     #                                             nSimP,shape,params,step)
     bayes_results = runBayesEstimate(groupNoisy.copy(),groupBasic.copy(),
-                                     rank_var,nSimP,shape,params,step,flatPatch)
+                                     rank_var,nSimP,shape,params,step,
+                                     flatPatch,groupClean)
 
     # -- format --
     groups = bayes_results['groupNoisy']

@@ -359,7 +359,8 @@ def parse_params(shape,sigma,pyargs=None):
 
     # -- set python parameters --
     pyargs = edict(pyargs)
-    pyargs.sigma = sigma if hasattr(sigma,'__getitem__') else [sigma,sigma]
+    if not('sigma' in pyargs):
+        pyargs.sigma = sigma if hasattr(sigma,'__getitem__') else [sigma,sigma]
     handle_set_bools(pyargs) # set bools before copying over
     params_1 = reindex_and_fill_dict(pyargs,0)
     params_2 = reindex_and_fill_dict(pyargs,1)
