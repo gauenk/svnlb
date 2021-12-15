@@ -81,7 +81,13 @@ def exec_aggregation(deno,patches,indices,weights,mask,
         ind = indices[n]
         ind1 = pixRmColor(ind,c,h,w)
         t0,c0,h0,w0 = idx2coords(ind,w,h,c)
-        t1,c1,h1,w1 = idx2coords(ind1,w,h,1)
+        # t1,c1,h1,w1 = idx2coords(ind1,w,h,1)
+        t1,c1,h1,w1 = t0,c0,h0,w0
+
+        # -- why do we have different coords for deno and weight? --
+        # print(t0,t1)
+        # print(h0,h1)
+        # print(w0,w1)
 
         # -- handle "only frame" case --
         if onlyFrame >= 0 and onlyFrame != t0:

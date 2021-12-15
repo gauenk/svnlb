@@ -16,8 +16,8 @@ from einops import rearrange,repeat
 from numba import jit,njit,prange,cuda
 
 
-def compute_l2norm_cuda(noisy,fflow,bflow,h_start,w_start,h_batch,w_batch,ps,ps_t,
-                        w_s,w_t,nWt_f,nWt_b,k=1):
+def compute_l2norm_cuda(noisy,fflow,bflow,step_s,access,h_start,w_start,
+                        bsize,ps,ps_t,w_s,nWt_f,nWt_b,step1,cs,k=1):
 
     # -- create output --
     device = noisy.device
@@ -25,18 +25,19 @@ def compute_l2norm_cuda(noisy,fflow,bflow,h_start,w_start,h_batch,w_batch,ps,ps_
 
     # -- init dists --
     # (w_s = windowSpace), (w_t = windowTime)
-    dists = torch.ones(w_t,w_s,w_s,t,h_batch,w_batch).type(torch.float32).to(device)
-    indices = torch.zeros(w_t,w_s,w_s,t,h_batch,w_batch).type(torch.int32).to(device)
-    access = torch.zeros(3,w_t,w_s,w_s,t,h_batch,w_batch).type(torch.int32).to(device)
-    bufs = torch.zeros(3,w_t,w_s,w_s,h_batch,w_batch).type(torch.int32).to(device)
+    w_t = min(nWt_f + nWt_b + 1,t-1)
+    dists = torch.ones(w_t,w_s,w_s,t,bsize,bsize).type(torch.float32).to(device)
+    indices = torch.zeros(w_t,w_s,w_s,t,bsize,bsize).type(torch.int32).to(device)
+    bufs = torch.zeros(3,w_t,w_s,w_s,bsize,bsize).type(torch.int32).to(device)
 
     # -- run launcher --
     dists *= torch.inf
+    indices[...] = -1
     # print("cuda_l2: ",noisy[0,0,0,0])
-    compute_l2norm_launcher(dists,indices,fflow,bflow,bufs,noisy,access,
-                            h_start,w_start,ps,ps_t,nWt_f,nWt_b,True)
+    compute_l2norm_launcher(dists,indices,fflow,bflow,access,bufs,noisy,step_s,
+                            h_start,w_start,ps,ps_t,nWt_f,nWt_b,step1,cs)
 
-    return dists,indices,access
+    return dists,indices
 
 
 def create_frame_range(nframes,nWt_f,nWt_b,ps_t,device):
@@ -75,14 +76,14 @@ def create_frame_range(nframes,nWt_f,nWt_b,ps_t,device):
 
     return tranges,n_tranges,min_tranges
 
-def compute_l2norm_launcher(dists,indices,fflow,bflow,
-                            bufs,noisy,access,h_start,w_start,
-                            ps,ps_t,nWt_f,nWt_b,step1):
+def compute_l2norm_launcher(dists,indices,fflow,bflow,access,
+                            bufs,noisy,step_s,h_start,w_start,
+                            ps,ps_t,nWt_f,nWt_b,step1,cs):
 
     # -- shapes --
     nframes,c,h,w = noisy.shape
-    w_t,w_s,w_s,t,h_batch,w_batch = dists.shape
-    w_t,w_s,w_s,t,h_batch,w_batch = indices.shape
+    w_t,w_s,w_s,t,bsize,bsize = dists.shape
+    w_t,w_s,w_s,t,bsize,bsize = indices.shape
     tranges,n_tranges,min_tranges = create_frame_range(nframes,nWt_f,nWt_b,
                                                        ps_t,noisy.device)
 
@@ -91,33 +92,38 @@ def compute_l2norm_launcher(dists,indices,fflow,bflow,
     indices_nba = cuda.as_cuda_array(indices)
     fflow_nba = cuda.as_cuda_array(fflow)
     bflow_nba = cuda.as_cuda_array(bflow)
-    bufs_nba = cuda.as_cuda_array(bufs)
     access_nba = cuda.as_cuda_array(access)
+    bufs_nba = cuda.as_cuda_array(bufs)
     noisy_nba = cuda.as_cuda_array(noisy)
     tranges_nba = cuda.as_cuda_array(tranges)
     n_tranges_nba = cuda.as_cuda_array(n_tranges)
     min_tranges_nba = cuda.as_cuda_array(min_tranges)
+    cs_nba = cuda.external_stream(cs)
+
+    # -- batches per block --
+    batches_per_block = 4
 
     # -- launch params --
     threads = (w_s,w_s)
-    blocks = (h_batch,w_batch)
+    blocks = bsize*bsize/batches_per_block
     # print(threads,blocks)
     # print(tranges)
     # print(n_tranges)
     # print(min_tranges)
 
     # -- launch kernel --
-    compute_l2norm_kernel[blocks,threads](dists_nba,indices_nba,
-                                          fflow_nba,bflow_nba,bufs_nba,access_nba,
-                                          noisy_nba,tranges_nba,n_tranges_nba,
-                                          min_tranges_nba,
-                                          h_start,w_start,
-                                          ps,ps_t,nWt_f,nWt_b,step1)
+    compute_l2norm_kernel[blocks,threads,cs_nba](dists_nba,indices_nba,
+                                                 fflow_nba,bflow_nba,
+                                                 access_nba,bufs_nba,
+                                                 noisy_nba,tranges_nba,
+                                                 n_tranges_nba,min_tranges_nba,
+                                                 step_s,h_start,w_start,
+                                                 ps,ps_t,nWt_f,nWt_b,step1)
 
 
 @cuda.jit(max_registers=64)
-def compute_l2norm_kernel(dists,inds,fflow,bflow,bufs,access,noisy,tranges,n_tranges,
-                          min_tranges,h_start,w_start,ps,ps_t,nWt_f,nWt_b,step1):
+def compute_l2norm_kernel(dists,inds,fflow,bflow,access,bufs,noisy,tranges,n_tranges,
+                          min_tranges,step_s,h_start,w_start,ps,ps_t,nWt_f,nWt_b,step1):
 
     # -- local function --
     def bounds(val,lim):
@@ -143,23 +149,22 @@ def compute_l2norm_kernel(dists,inds,fflow,bflow,bufs,access,noisy,tranges,n_tra
 
     # -- shapes --
     nframes,color,h,w = noisy.shape
-    w_t,w_s,w_s,t,h_batch,w_batch = dists.shape
-    w_t,w_s,w_s,t,h_batch,w_batch = inds.shape
+    w_t,w_s,w_s,t,bsize,bsize = dists.shape
+    w_t,w_s,w_s,t,bsize,bsize = inds.shape
     chnls = 1 if step1 else color
+    height,width = h,w
     Z = ps*ps*ps_t*chnls
     nWxy = w_s
 
     # -- access with blocks and threads --
-    hi = cuda.blockIdx.x
-    wi = cuda.blockIdx.y
+    bH = cuda.blockIdx.x
+    bW = cuda.blockIdx.y
+    # hi = cuda.blockIdx.x
+    # wi = cuda.blockIdx.y
 
     # -- cuda threads --
     tidX = cuda.threadIdx.x
     tidY = cuda.threadIdx.y
-
-    # -- thread idx --
-    si = cuda.threadIdx.x - w_s//2
-    sj = cuda.threadIdx.y - w_s//2
 
     # -- pixel we are sim-searching for --
     top,left = h_start+hi,w_start+wi
@@ -167,34 +172,64 @@ def compute_l2norm_kernel(dists,inds,fflow,bflow,bufs,access,noisy,tranges,n_tra
     # -- create a range --
     w_t = nWt_f + nWt_b + 1
 
+    # ---------------------------
+    #
+    #      search frames
+    #
+    # ---------------------------
+
     # -- we want enough work per thread, so we keep the "t" loop --
-    for ti in range(nframes-1):
+    for elem in range(batches_per_block):
+    # for ti in range(nframes-1):
+
+        # ---------------------------
+        #    extract anchor pixel
+        # ---------------------------
+
+
+        # ---------------------------
+        #     valid (anchor pixel)
+        # ---------------------------
+
+        valid_t = (ti+ps_t-1) < nframes
+        valid_t = valid_t and (ti >= 0)
+
+        valid_top = (top+ps-1) < height
+        valid_top = valid_top and (top >= 0)
+
+        valid_left = (left+ps-1) < width
+        valid_left = valid_left and (left >= 0)
+
+        valid_anchor = valid_t and valid_top and valid_left
+        # print_anchor = 1 if valid_anchor else 0
+        # print(ti,top,left,print_anchor,tidX,tidY)
+
+        # ---------------------------------------
+        #     searching loop for (ti,top,left)
+        # ---------------------------------------
 
         trange = tranges[ti]
-
-        # print(np.where(trange==-1))
-        # n_trange = np.min(np.where(trange==-1)[0])
-        # print("n_trange: ",n_trange)
         n_trange = n_tranges[ti]
         min_trange = min_tranges[ti]
+
         for tidZ in range(n_trange):
 
             # -------------------
             #    search frame
             # -------------------
-            st = trange[tidZ]
+            n_ti = trange[tidZ]
             dt = trange[tidZ] - min_trange
 
             # ------------------------
             #      init direction
             # ------------------------
 
-            direction = max(-1,min(1,st - ti))
+            direction = max(-1,min(1,n_ti - ti))
             # print("(t_i,t_idx,dir): (%d,%d,%d)" % (t_i,t_idx,direction))
             if direction != 0:
-                cw0 = bufs[0,dt-direction,tidX,tidY,hi,wi]#cw_vals[ti-direction]
-                ch0 = bufs[1,dt-direction,tidX,tidY,hi,wi]#ch_vals[t_idx-direction]
-                ct0 = bufs[2,dt-direction,tidX,tidY,hi,wi]#ct_vals[t_idx-direction]
+                cw0 = bufs[0,dt-direction,tidX,tidY,bH,bW]#cw_vals[ti-direction]
+                ch0 = bufs[1,dt-direction,tidX,tidY,bH,bW]#ch_vals[t_idx-direction]
+                ct0 = bufs[2,dt-direction,tidX,tidY,bH,bW]#ct_vals[t_idx-direction]
 
                 flow = fflow if direction > 0 else bflow
 
@@ -206,7 +241,7 @@ def compute_l2norm_kernel(dists,inds,fflow,bflow,bufs,access,noisy,tranges,n_tra
 
                 cw = max(0,min(w-1,round(cw_f)))
                 ch = max(0,min(h-1,round(ch_f)))
-                ct = st
+                ct = n_ti
             else:
                 cw = left
                 ch = top
@@ -216,9 +251,9 @@ def compute_l2norm_kernel(dists,inds,fflow,bflow,bufs,access,noisy,tranges,n_tra
             #     update
             # ----------------
 
-            bufs[0,dt,tidX,tidY,hi,wi] = cw#cw_vals[ti-direction]
-            bufs[1,dt,tidX,tidY,hi,wi] = ch#ch_vals[t_idx-direction]
-            bufs[2,dt,tidX,tidY,hi,wi] = ct#ct_vals[t_idx-direction]
+            bufs[0,dt,tidX,tidY,bH,bW] = cw#cw_vals[ti-direction]
+            bufs[1,dt,tidX,tidY,bH,bW] = ch#ch_vals[t_idx-direction]
+            bufs[2,dt,tidX,tidY,bH,bW] = ct#ct_vals[t_idx-direction]
 
 
             # --------------------
@@ -239,10 +274,8 @@ def compute_l2norm_kernel(dists,inds,fflow,bflow,bufs,access,noisy,tranges,n_tra
             # if (ti + st) >= nframes: dist = np.inf
 
             # -- target pixel we are searching --
-            # n_top,n_left = top+si,left+sj
-            n_ti = st
             if (n_ti) < 0: dist = np.inf
-            if (n_ti) >= nframes: dist = np.inf
+            if (n_ti) >= (nframes-ps_t+1): dist = np.inf
 
             # -----------------
             #    spatial dir
@@ -262,42 +295,36 @@ def compute_l2norm_kernel(dists,inds,fflow,bflow,bufs,access,noisy,tranges,n_tra
             n_top = sh_start + tidX
             n_left = sw_start + tidY
 
-            # i_ind = ti * h * w * color
-            # i_ind += top * w
-            # i_ind += left
-
-            # n_ind = n_ti * h * w * color
-            # n_ind += n_top * w
-            # n_ind += n_left
-
-            # -------------------
-            #      valid
-            # -------------------
+            # ---------------------------
+            #      valid (search "n")
+            # ---------------------------
 
             valid_t = (n_ti+ps_t-1) < nframes
             valid_t = valid_t and (n_ti >= 0)
 
-            valid_top = (n_top + ps - 1) < h
+            valid_top = n_top < sh_end
             valid_top = valid_top and (n_top >= 0)
 
-            valid_left = (n_left + ps - 1) < w
+            valid_left = n_left < sw_end
             valid_left = valid_left and (n_left >= 0)
 
             valid = valid_t and valid_top and valid_left
+            valid = valid and valid_anchor
             if not(valid): dist = np.inf
+
             # if not(valid): continue
 
             # 712 = 11 + 8*64
             # 14596 = 4 + 36*64 + 64*64*3
-            p_top = n_top == 11
-            p_left = n_left == 8
-            p_t = n_ti == 0
+            # p_top = n_top == 11
+            # p_left = n_left == 8
+            # p_t = n_ti == 0
             # if p_top and p_left and p_t:# and i_ind == 14596:
             #     print("ptop: ", n_ind)
 
-            p_top = top == 36
-            p_left = left == 4
-            p_t = ti == 1
+            # p_top = top == 36
+            # p_left = left == 4
+            # p_t = ti == 1
             # if p_top and p_left and p_t:# and i_ind == 14596:
             #     print("ptop: ", i_ind,n_ind,shift_h,shift_w)
 
@@ -348,16 +375,16 @@ def compute_l2norm_kernel(dists,inds,fflow,bflow,bufs,access,noisy,tranges,n_tra
                                 dist += (v_pix - n_pix)**2
 
             # -- dists --
-            dists[dt,tidX,tidY,ti,hi,wi] = dist/Z
+            dists[tidZ,tidX,tidY,ti,bH,bW] = dist/Z
 
             # -- inds --
-            ind = n_ti * h * w * color
-            ind += n_top * w
+            ind = n_ti * height * width * color
+            ind += n_top * width
             ind += n_left
-            inds[dt,tidX,tidY,ti,hi,wi] = ind
+            inds[tidZ,tidX,tidY,ti,bH,bW] = ind if dist < np.infty else -1
 
             # -- access pattern --
-            access[0,dt,tidX,tidY,ti,hi,wi] = n_ti
-            access[1,dt,tidX,tidY,ti,hi,wi] = n_top
-            access[2,dt,tidX,tidY,ti,hi,wi] = n_left
+            # access[0,dt,tidX,tidY,ti,hi,wi] = n_ti
+            # access[1,dt,tidX,tidY,ti,hi,wi] = n_top
+            # access[2,dt,tidX,tidY,ti,hi,wi] = n_left
 

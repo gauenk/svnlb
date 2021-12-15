@@ -13,13 +13,14 @@ from numba import jit,njit,prange,cuda
 # -- local imports --
 from .streams import init_streams,wait_streams,get_hw_batches,view_batch,vprint
 
-def fill_patches_img(noisy,indices,ps):
+def fill_patches_img(noisy,indices,ps,ps_t,patches=None):
 
     # -- init --
     device = noisy.device
     t,c,h,w = noisy.shape
     k = indices.shape[0]
-    patches = torch.zeros(k,t,ps,ps,h,w).to(device)
+    if patches is None:
+        patches = torch.zeros(k,t,ps_t,c,ps,ps,h,w).to(device)
 
     # -- iter over batches --
     bsize = 32
@@ -48,7 +49,7 @@ def fill_patches_img(noisy,indices,ps):
             bufs.indsView[cs] = view_batch(indices,h_start,w_start,bsize)
 
             # -- fill_patches --
-            fill_patches(bufs.patchesView[cs],bufs.noisyView[cs],bufs.indsView[cs])
+            fill_patches(bufs.patchesView[cs],bufs.noisyView[cs],bufs.indsView[cs],cs)
 
             # -- change stream --
             if nstreams > 0: curr_stream = (curr_stream + 1) % nstreams
@@ -58,36 +59,36 @@ def fill_patches_img(noisy,indices,ps):
 
     return patches
 
-def fill_patches(patches,noisy,inds):
+def fill_patches(patches,noisy,inds,cs):
 
     # -- create output --
     t,c,h,w = noisy.shape
     k,t,h_batch,w_batch = inds.shape
-    k,t,ps,ps,h_batch,w_batch = patches.shape
+    k,t,ps_t,c,ps,ps,h_batch,w_batch = patches.shape
 
     # -- run launcher --
-    fill_patches_launcher(patches,noisy,inds)
+    fill_patches_launcher(patches,noisy,inds,cs)
 
 
-def fill_patches_launcher(patches,noisy,inds):
+def fill_patches_launcher(patches,noisy,inds,cs):
 
     # -- create output --
     t,c,h,w = noisy.shape
     k,t,h_batch,w_batch = inds.shape
-    k,t,ps,ps,h_batch,w_batch = patches.shape
+    k,t,ps_t,c,ps,ps,h_batch,w_batch = patches.shape
 
     # -- to numba --
     patches_nba = cuda.as_cuda_array(patches)
     noisy_nba = cuda.as_cuda_array(noisy)
     inds_nba = cuda.as_cuda_array(inds)
+    cs_nba = cuda.external_stream(cs)
 
     # -- thread and blocks --
-    threads = k
     blocks = (h_batch,w_batch)
+    threads = k
 
     # -- launch --
-    fill_patches_kernel[threads,blocks](patches,noisy,inds)
-
+    fill_patches_kernel[blocks,threads,cs_nba](patches_nba,noisy_nba,inds_nba)
 
 @cuda.jit
 def fill_patches_kernel(patches,noisy,inds):
@@ -113,21 +114,28 @@ def fill_patches_kernel(patches,noisy,inds):
         return t,c,y,x
 
     # -- shapes --
-    t,c,h,w = noisy.shape
-    w_t,w_s,w_s,t,h_batch,w_batch = inds.shape
-    k,t,ps,ps,h_batch,w_batch = patches.shape
+    nframes,color,height,width = noisy.shape
+    # w_t,w_s,w_s,t,h_batch,w_batch = inds.shape
+    k,bt,ps_t,color,ps,ps,h_batch,w_batch = patches.shape
+    t = nframes
+    whc = width*height*color
+    wh = width*height
 
     # -- access with blocks and threads --
-    bH = cuda.blockIdx.x
-    bW = cuda.blockIdx.y
-    ki = cuda.threadIdx.x
+    ni = cuda.threadIdx.x
+    bH,bW = cuda.blockIdx.x,cuda.blockIdx.y
 
     # -- compute dists --
-    for ti in range(t):
-        ind = inds[ki,ti,bH,bW]
-        nT,_,nH,nW = idx2coords(ind,c,h,w)
-        for pi in range(ps):
-            for pj in range(ps):
-                for ci in range(c):
-                    val = noisy[nT,ci,nH+pi,nW+pj]
-                    patches[ki,ti,pi,pj,bH,bW] = val
+    for bT in range(nframes):
+        ind = inds[ni,bT,bH,bW]
+        nT,_,nH,nW = idx2coords(ind,color,height,width)
+        # nT = (ind      ) // whc
+        # nH = (ind % wh ) // width
+        # nW = ind % width
+
+        for pt in range(ps_t):
+            for ci in range(color):
+                for pi in range(ps):
+                    for pj in range(ps):
+                        val = noisy[nT+pt,ci,nH+pi,nW+pj]
+                        patches[ni,bT,pt,ci,pi,pj,bH,bW] = val

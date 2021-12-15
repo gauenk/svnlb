@@ -3,45 +3,35 @@ import numpy as np
 import torch as th
 
 def yuv2rgb_cpp(burst):
-    # burst.shape = (...,c,h,w) in YUV
 
     # -- n-dim -> 4-dim --
+    # burst.shape = (...,c,h,w) in YUV
     shape = burst.shape
     shape_rs = (-1,shape[-3],shape[-2],shape[-1])
     burst = burst.reshape(shape_rs)
 
     # -- color convert --
-    burst = apply_yuv2rgb(burst)
-
-    # -- 4-dim -> n-dim --
-    burst = burst.reshape(shape)
-    return burst
+    apply_yuv2rgb(burst)
 
 def apply_yuv2rgb(burst):
     """
     rgb -> yuv [using the "cpp repo" logic]
     """
-    burst_rgb = []
-    # burst = rearrange(burst,'t c h w -> t h w c')
     t,h,w,c = burst.shape
-    for ti in range(t):
 
-        # -- init --
-        image = burst[ti]
-        image_rgb = th.zeros_like(image)
-        weights = [1./np.sqrt(3),1./np.sqrt(2),np.sqrt(2.)/np.sqrt(3)]
-        w = weights
+    # -- weights --
+    weights = [1./np.sqrt(3),1./np.sqrt(2),np.sqrt(2.)/np.sqrt(3)]
+    w = weights
 
-        # -- rgb -> yuv --
-        image_rgb[0] = w[0] * image[0] + w[1] * image[1] + w[2] * 0.5 * image[2]
-        image_rgb[1] = w[0] * image[0] - w[2] * image[2]
-        image_rgb[2] = w[0] * image[0] - w[1] * image[1] + w[2] * 0.5 * image[2]
+    # -- copy channels --
+    y = burst[:,0].clone()
+    u = burst[:,1].clone()
+    v = burst[:,2].clone()
 
-        # -- append --
-        burst_rgb.append(image_rgb)
-    burst_rgb = th.stack(burst_rgb)
-
-    return burst_rgb
+    # -- rgb -> yuv --
+    burst[:,0,...] = w[0] * y + w[1] * u + w[2] * 0.5 * v
+    burst[:,1,...] = w[0] * y - w[2] * v
+    burst[:,2,...] = w[0] * y - w[1] * u + w[2] * 0.5 * v
 
 def rgb2yuv_cpp(burst):
     """

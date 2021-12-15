@@ -13,6 +13,7 @@ from .init_mask import initMask
 from .flat_areas import runFlatAreas
 from vnlb.utils import idx2coords,coords2idx,patches2groups,groups2patches
 from vnlb.utils import apply_color_xform_cpp,numpy_div0,yuv2rgb_cpp
+from vnlb.testing import save_images
 
 # -- project imports --
 from vnlb.utils import groups2patches,patches2groups
@@ -60,10 +61,13 @@ def exec_step(noisy,basic,weights,sigma,flows,params,step,clean=None):
     """
 
 
-    # -- init denoised image --
+    # -- shapes --
     shape = noisy.shape
     t,c,h,w = noisy.shape
-    chnls = c
+    nframes,chnls,height,width = t,c,h,w
+    ps,ps_t = params['sizePatch'][step],params['sizePatchTime'][step]
+
+    # -- init denoised --
     # deno = basic if step == 0 else np.zeros_like(noisy)
     deno = np.zeros_like(noisy)
 
@@ -71,6 +75,7 @@ def exec_step(noisy,basic,weights,sigma,flows,params,step,clean=None):
     minfo = initMask(noisy.shape,params,step)
     # minfo = vnlb.init_mask(noisy.shape,params,step)
     mask,n_groups = minfo['mask'],minfo['ngroups']
+    access = np.zeros_like(mask)
 
     # -- color xform --
     noisy_yuv = apply_color_xform_cpp(noisy)
@@ -97,9 +102,19 @@ def exec_step(noisy,basic,weights,sigma,flows,params,step,clean=None):
         # t1,c1,h1,w1 = idx2coords(pidx3,1,h,w)
         pidx3 = ti*w*h*c + hi*w + wi
 
+        # -- skip if invalid --
+        valid_t = (ti + ps_t - 1) < nframes
+        valid_h = (hi + ps - 1) < height
+        valid_w = (wi + ps - 1) < width
+        valid = valid_t and valid_h and valid_w
+        if not(valid): continue
+        access[ti,hi,wi] = 1
+
         # -- skip masked --
-        if not(mask[ti,hi,wi] == 1): continue
+        # if not(mask[ti,hi,wi] == 1): continue
         # print("mask: ",mask[0,0,0],mask[0,0,1],mask[0,0,2],mask[0,0,3])
+        # print("pidx3: ",pidx,pidx3,ti,hi,wi)
+
 
         # -- inc counter --
         # if g_counter > 2: break
@@ -116,11 +131,11 @@ def exec_step(noisy,basic,weights,sigma,flows,params,step,clean=None):
 
         # -- optional flat patch --
         flatPatch = False
-        if params.flatAreas[step]:
-            # flatPatch = runFlatAreas(groupNoisy,groupBasic,nSimP,chnls)
-            psX,psT = params.sizePatch[step],params.sizePatchTime[step]
-            gamma = params.gamma[step]
-            flatPatch = runFlatAreas(groupNoisy,psX,psT,nSimP,chnls,gamma,sigma)
+        # if params.flatAreas[step]:
+        #     # flatPatch = runFlatAreas(groupNoisy,groupBasic,nSimP,chnls)
+        #     psX,psT = params.sizePatch[step],params.sizePatchTime[step]
+        #     gamma = params.gamma[step]
+        #     flatPatch = runFlatAreas(groupNoisy,psX,psT,nSimP,chnls,gamma,sigma)
 
         # -- bayes estimate --
         rank_var = 0.
@@ -144,6 +159,14 @@ def exec_step(noisy,basic,weights,sigma,flows,params,step,clean=None):
         # print("deno.ravel()[0]: ",deno.ravel()[0])
         # print("deno.ravel()[1]: ",deno.ravel()[1])
         g_remain -= nmasked
+
+    # -- save --
+    wmax = weights.max().item()
+    save_images(weights[:,None],"output/weights.png",imax=wmax)
+
+    amax = access.max().item()
+    print("amax")
+    save_images(access[:,None],"output/access.png",imax=amax)
 
     # -- reduce using weighted ave --
     wimg = noisy if params.use_imread[step] else noisy_yuv

@@ -1,11 +1,12 @@
 
 # -- python deps --
+import torch
 import scipy
 import numpy as np
 from einops import rearrange
 
 # -- numba --
-from numba import njit
+from numba import njit,cuda
 
 # -- package --
 from vnlb.utils import groups2patches
@@ -42,6 +43,134 @@ def computeAggregation(deno,group,indices,weights,mask,nSimP,params=None,step=0)
     results['psT'] = ps_t
 
     return results
+
+def compute_agg_batch(deno,patches,inds,weights,ps,ps_t,cs_ptr):
+
+    # -- numbify the torch tensors --
+    deno_nba = cuda.as_cuda_array(deno)
+    patches_nba = cuda.as_cuda_array(patches)
+    inds_nba = cuda.as_cuda_array(inds)
+    weights_nba = cuda.as_cuda_array(weights)
+    cs_nba = cuda.external_stream(cs_ptr)
+
+    # -- launch params --
+    # num = patches.shape[0]
+    num,t_bsize,h_bsize,w_bsize = inds.shape
+    # bsize,bsize = patches.shape[-2:]
+    threads = num
+    blocks = (h_bsize,w_bsize)
+
+    # -- launch kernel --
+    # print(deno.shape,weights.shape)
+    # print("[agg] deno: ",deno.min().item(),deno.max().item())
+    # print("[agg] weights: ",weights.min().item(),weights.max().item())
+    # exec_agg[blocks,threads,cs_nba](deno_nba,patches_nba,inds_nba,
+    #                                 weights_nba,ps,ps_t)
+    exec_agg_simple(deno,patches,inds,weights,ps,ps_t)
+    # print("[agg (post)] deno: ",deno.min().item(),deno.max().item())
+    # print("[agg (post)] weights: ",weights.min().item(),weights.max().item())
+
+
+def exec_agg_simple(deno,patches,inds,weights,ps,ps_t):
+
+    # -- numbify --
+    device = deno.device
+    deno_nba = deno.cpu().numpy()
+    patches_nba = patches.cpu().numpy()
+    inds_nba = inds.cpu().numpy()
+    weights_nba = weights.cpu().numpy()
+    # print("patches.shape: ",patches.shape)
+
+    # -- exec numba --
+    exec_agg_simple_numba(deno_nba,patches_nba,inds_nba,weights_nba,ps,ps_t)
+
+    # -- back pack --
+    deno_nba = torch.FloatTensor(deno_nba).to(device)
+    deno[...] = deno_nba
+    weights_nba = torch.FloatTensor(weights_nba).to(device)
+    weights[...] = weights_nba
+
+
+@njit
+def exec_agg_simple_numba(deno,patches,inds,weights,ps,ps_t):
+
+    # -- shape --
+    nframes,color,height,width = deno.shape
+    chw = color*height*width
+    hw = height*width
+    num,tb,hb,wb = inds.shape
+
+    for ni in range(len(inds)):
+        for ti in range(tb):
+            for hi in range(hb):
+                for wi in range(wb):
+
+                    ind = inds[ni,ti,hi,wi]
+                    if ind == -1: continue
+                    t0 = ind // chw
+                    h0 = (ind % hw) // width
+                    w0 = ind % width
+
+                    # print(t0,h0,w0)
+                    for pt in range(ps_t):
+                        for pi in range(ps):
+                            for pj in range(ps):
+                                for ci in range(color):
+                                    gval = patches[ni,ti,pt,ci,pi,pj,hi,wi]
+                                    deno[t0+pt,ci,h0+pi,w0+pj] += gval
+                                weights[t0+pt,h0+pi,w0+pj] += 1.
+
+
+
+@cuda.jit(max_registers=64)
+def exec_agg(deno,patches,inds,weights,ps,ps_t):
+
+    # -- shape --
+    nframes,color,height,width = deno.shape
+    chw = color*height*width
+    hw = height*width
+    t_bsize = inds.shape[1]
+
+    # -- access with blocks and threads --
+    hi = cuda.blockIdx.x
+    wi = cuda.blockIdx.y
+
+    # -- cuda threads --
+    pindex = cuda.threadIdx.x
+
+    # -> race condition across "batches [t,h,w]"
+    # -- we want enough work per thread, so we keep the "t" loop --
+    for ti in range(t_bsize):
+
+        # -- unpack ind --
+        ind = inds[pindex,ti,hi,wi]
+        t0 = ind // chw
+        c0 = (ind % chw) // hw
+        h0 = (ind % hw) // width
+        w0 = ind % width
+
+        # -- set using patch info --
+        for pt in range(ps_t):
+            for pi in range(ps):
+                for pj in range(ps):
+                    # for ci in range(color):
+                    #     gval = 1#patches[pindex,ti,pt,ci,pi,pj,hi,wi]
+                    #     deno[t0+pt,ci,h0+pi,w0+pj] += gval
+                    # deno[t0+pt,0,h0+pi,w0+pj] += 1.
+                    # deno[t0+pt,1,h0+pi,w0+pj] += 1.
+                    # deno[t0+pt,2,h0+pi,w0+pj] += 1.
+
+                    deno[0,0,0,0] += 1.
+                    weights[0,0,0] += 1.
+
+                    # deno[t0,0,h0,w0] += 1.
+                    # weights[t0,h0,w0] += 1.
+                    # weights[t0+pt,h0+pi,w0+pj] += 1.
+
+
+# @njit
+# def exec_aggregation_batch(deno,patches,indices,weights,mask,
+#                            ps,ps_t,onlyFrame,aggreBoost):
 
 
 @njit

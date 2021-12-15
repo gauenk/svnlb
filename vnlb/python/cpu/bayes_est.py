@@ -218,7 +218,10 @@ def exec_bayes_estimate(groupNoisy,groupBasic,sigma,sigmab2,
 
         # -- compute the denoiser info --
         group_c = index_groups(groupInput,nSimP,pdim,chnl)
+        # print("g: ",group_c.min(),group_c.max())
         covMat,eigVals,eigVecs = compute_eig_stuff(group_c,shape,rank)
+        # print("c: ",covMat.min(),covMat.max())
+        # print(chnl,eigVals)
         eigVals = denoise_eigvals(eigVals,sigmab2,mod_sel,rank)
         rank_var += np.sum(eigVals[:rank].astype(np.float32))
         eigVals = bayes_filter_coeff(eigVals,sigma,thresh)
@@ -294,12 +297,17 @@ def update_group(groupInput,eigVals,eigVecs,rank):
     #  hX' = X' * U * (W * U')
     eigVecs = eigVecs[:,:rank]
     eigVals = eigVals[:rank]
+    # print("ugroup: ",groupInput.shape,eigVecs.shape,eigVals.shape)
 
     # Z = X'*U
     Z = groupInput.transpose(1,0) @ eigVecs
 
-    # R = U*W
+    # R = U*W [ (p x r) x (diag(r)) ]
     R = eigVecs @ np.diag(eigVals)
+    # print(eigVecs.shape)
+    # print("-"*30)
+    # print(eigVecs[:3,:3])
+    # print(eigVecs[-3:,-3:])
 
     # hX' = Z'*R' = (X'*U)'*(U*W)'
     group = Z @ R.transpose(1,0)

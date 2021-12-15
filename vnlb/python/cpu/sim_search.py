@@ -45,8 +45,8 @@ def runSimSearch(noisy,sigma,pidx,tensors,params,step=0,clean=None):
     if not(clean is None):
         srch_img = apply_color_xform_cpp(clean)
     values,indices,access,nsearch = exec_cpp_sim_search(pidx,srch_img,fflow,bflow,sigma,
-                                                        ps,ps_t,npatches,nwindow_xy,nfwd,nbwd,
-                                                        couple_ch,step1)
+                                                        ps,ps_t,npatches,nwindow_xy,
+                                                        nfwd,nbwd,couple_ch,step1)
 
     # -- group the values and indices --
     img_noisy = noisy if use_imread else noisy_yuv
@@ -99,6 +99,50 @@ def runSimSearch(noisy,sigma,pidx,tensors,params,step=0,clean=None):
     results.access = access
 
     return results
+
+# -----------------------------------
+#
+#      Estimate Sim Search
+#
+# -----------------------------------
+
+def simSearchImage(noisy,basic,sigma,flows,params,step,clean=None):
+    # -- run npixels --
+    npatches = 100
+    t,c,h,w = noisy.shape
+    nframes,height,width = t,h,w
+    npixels = t*h*w
+    ps = params['sizePatch'][step]
+    ps_t = params['sizePatchTime'][step]
+    inds = np.zeros((npatches,t,h,w)).astype(np.int32)
+    for pidx in range(npixels):
+
+        # -- pix index to coords --
+        ti = pidx // (w*h)
+        hi = (pidx - ti*w*h) // w
+        wi = pidx - ti*w*h - hi*w
+        pidx3 = ti*w*h*c + hi*w + wi
+
+        # -- skip --
+        valid_t = (ti + ps_t - 1) < nframes
+        valid_h = (hi + ps - 1) < height
+        valid_w = (wi + ps - 1) < width
+        valid = valid_t and valid_h and valid_w
+        if not(valid):
+            inds[:,ti,hi,wi] = -1
+            continue
+
+        # -- sim search --
+        sim_results = runSimSearch(noisy,sigma,pidx3,flows,params,step)
+        # sim_results = estimateSimPatches(noisy,basic,sigma,pidx3,flows,
+        #                                  params,step,clean)
+        pix_inds = sim_results.indices
+
+        # -- fill output --
+        inds[:,ti,hi,wi] = pix_inds
+
+    return inds
+
 
 #
 # -- select patches of noisy regions --
@@ -441,6 +485,11 @@ def numba_cpp_sim_search(pidx,vals,indices,access,noisy,fflow,bflow,sigma,
                 #     for iiii,iiiii in enumerate(trange):
                 #         print("trange[%d]: %d" % (iiii,iiiii))
 
+                # -- valid check --
+                valid_t = (t_i + ps_t - 1) < nframes
+                valid_h = (h_i + ps - 1) < height
+                valid_w = (w_i + ps - 1) < width
+                invalid = not(valid_h and valid_w and valid_t)
 
                 # -- compute patch deltas --
                 delta = 0.
@@ -448,9 +497,10 @@ def numba_cpp_sim_search(pidx,vals,indices,access,noisy,fflow,bflow,sigma,
                     for pi in range(ps):
                         for pj in range(ps):
                             for c_i in range(chnls):
-                                pix_l = noisy[t_c+pt,c_i,h_c+pi,w_c+pj]/255.
-                                pix_k = noisy[t_i+pt,c_i,h_i+pi,w_i+pj]/255.
+                                pix_l = 0 if invalid else noisy[t_c+pt,c_i,h_c+pi,w_c+pj]/255.
+                                pix_k = 0 if invalid else noisy[t_i+pt,c_i,h_i+pi,w_i+pj]/255.
                                 delta += (pix_l - pix_k)**2.
+                delta = np.inf if invalid else delta
                 vals[t_idx,h_idx,w_idx] = delta/(ps*ps*ps_t*chnls)
                 indices[t_idx,h_idx,w_idx] = coords2pix(h_i,w_i,t_i)
 
