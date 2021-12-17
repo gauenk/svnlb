@@ -156,6 +156,7 @@ class TestSimSearch(unittest.TestCase):
 
         # -- unpack shapes --
         noisy = tensors.noisy[:3,:,:16,:16]
+        # noisy = tensors.noisy[:3,:,:8,:8]
         # noisy = tensors.noisy
         t,c,h,w = noisy.shape
         step = 0
@@ -174,22 +175,9 @@ class TestSimSearch(unittest.TestCase):
         tf32 = torch.float32
         noisy_th = torch.FloatTensor(noisy).to(device)
         deno = torch.zeros_like(noisy_th)
-        patches = torch.zeros(npatches,t,ps_t,c,ps,ps,h,w).to(device)
+        # patches = torch.zeros(npatches,t,ps_t,c,ps,ps,h,w).to(device)
         cs = torch.cuda.default_stream()
         cs_ptr = cs.cuda_stream
-
-        # -- cpp exec --
-        cpp_params = copy.deepcopy(params)
-        cpp_inds = vnlb.cpu.simSearchImage(noisy,noisy,sigma,flows,cpp_params,step)
-        cpp_inds = torch.IntTensor(cpp_inds).to(device)
-
-        # -- cpp weights --
-        cpp_weights = torch.zeros(t,h,w).type(tf32).to(device)
-        vnlb.gpu.compute_agg_batch(deno,patches,cpp_inds,
-                                   cpp_weights,ps,ps_t,cs_ptr)
-        weights = cpp_weights.cpu().numpy()[:,None]
-        wmax = weights.max().item()
-        save_images(SAVE_DIR / "cpp_weights.png",weights,imax=wmax)
 
         # -- python exec --
         gpu_params = copy.deepcopy(params)
@@ -201,13 +189,50 @@ class TestSimSearch(unittest.TestCase):
         print("exec time: ",end)
         py_inds = py_data.indices.clone()
 
+        # -- python stats --
+        n_invalid = torch.sum(py_inds == -1).item()
+        n_zero = torch.sum(py_inds == 0).item()
+        n_elems = py_inds.numel()*1.
+        perc_invalid = n_invalid / n_elems * 100
+        perc_zero = n_zero / n_elems * 100
+        print("py_inds.shape: ",py_inds.shape)
+        print("[Py] Percent Invalid: %2.1f" % perc_invalid)
+        print("[Py] Percent Zero: %2.1f" % perc_zero)
+
         # -- python weights --
+        pshape = (py_inds.shape[0],py_inds.shape[1],ps_t,c,ps,ps)
+        patches = torch.zeros(pshape).to(device)
         python_weights = torch.zeros(t,h,w).type(tf32).to(device)
         vnlb.gpu.compute_agg_batch(deno,patches,py_inds,
                                    python_weights,ps,ps_t,cs_ptr)
         weights = python_weights.cpu().numpy()[:,None]
         wmax = weights.max().item()
         save_images(SAVE_DIR / "python_weights.png",weights,imax=wmax)
+
+        # -- cpp exec --
+        cpp_params = copy.deepcopy(params)
+        cpp_inds = vnlb.cpu.simSearchImage(noisy,noisy,sigma,flows,cpp_params,step)
+        cpp_inds = torch.IntTensor(cpp_inds).to(device)
+        cpp_inds = rearrange(cpp_inds,'n bT bH bW -> (bT bH bW) n')
+        # print("cpp_inds.shape: ",cpp_inds.shape)
+
+        # -- cpp stats --
+        n_invalid = torch.sum(cpp_inds == -1).item()
+        n_zero = torch.sum(cpp_inds == 0).item()
+        n_elems = cpp_inds.numel()*1.
+        perc_invalid = n_invalid / n_elems * 100
+        perc_zero = n_zero / n_elems * 100
+        print("cpp_inds.shape: ",cpp_inds.shape)
+        print("[Cpp] Percent Invalid: %2.1f" % perc_invalid)
+        print("[Cpp] Percent Zero: %2.1f" % perc_zero)
+
+        # -- cpp weights --
+        cpp_weights = torch.zeros(t,h,w).type(tf32).to(device)
+        vnlb.gpu.compute_agg_batch(deno,patches,cpp_inds,
+                                   cpp_weights,ps,ps_t,cs_ptr)
+        weights = cpp_weights.cpu().numpy()[:,None]
+        wmax = weights.max().item()
+        save_images(SAVE_DIR / "cpp_weights.png",weights,imax=wmax)
 
         # -- delta --
         delta = torch.sum(torch.abs(python_weights - cpp_weights))
@@ -220,6 +245,9 @@ class TestSimSearch(unittest.TestCase):
         noisy = tensors.noisy[:3,:,:16,:16]
         # noisy = tensors.noisy
         t,c,h,w = noisy.shape
+        nframes,height,width = t,h,w
+        chw = c*h*w
+        hw = h*w
         step = 0
         device = 0
 
@@ -230,17 +258,21 @@ class TestSimSearch(unittest.TestCase):
         flows = {'fflow':tensors['fflow'],'bflow':tensors['bflow']}
         tensors = {'fflow':tensors['fflow'],'bflow':tensors['bflow']}
         tchecks,nchecks = 200,0
-        checks = np.random.permutation(h*w*c*(t-1))[:10]
+        checks = np.random.permutation(h*w*(t-1))[:10]
         # checks[0] = 2518
         for pidx in checks:
 
             # -- check boarder --
             pidx = pidx.item()
-            print("pidx: ",pidx)
+            pidx3 = pidx
+            print("pidx3: ",pidx3)
             step = 0
-            ti,ci,wi,hi = idx2coords(pidx,c,h,w)
-            valid_w = (wi + params.sizePatch[step]) < w
-            valid_h = (hi + params.sizePatch[step]) < h
+            ti = pidx // (height*width)
+            hi = (pidx % hw) // width
+            wi = pidx % width
+            # ti,_,wi,hi = idx2coords(pidx,1,h,w)
+            valid_w = (wi + params.sizePatch[step]-1) < w
+            valid_h = (hi + params.sizePatch[step]-1) < h
             # print(pidx,ti,ci,wi,hi,w,h,c,valid_w,valid_h)
             if not(valid_w and valid_h): continue
 
@@ -248,7 +280,9 @@ class TestSimSearch(unittest.TestCase):
             # cpp_data = vnlb.swig.simPatchSearch(noisy.copy(),sigma,pidx,
             #                                     tensors,
             #                                     copy.deepcopy(params),step)
-            cpp_data = vnlb.cpu.runSimSearch(noisy.copy(),sigma,pidx,
+            pidx4 = ti*chw + hi*w + wi
+            print("pidx4: ",pidx4)
+            cpp_data = vnlb.cpu.runSimSearch(noisy.copy(),sigma,pidx4,
                                              tensors,copy.deepcopy(params),step)
 
             # -- unpack --
@@ -291,8 +325,12 @@ class TestSimSearch(unittest.TestCase):
 
             # -- allow for swapping of "close" values --
             # print(py_access.shape,cpp_access.shape)
-            py_indices = py_indices[:,ti,wi,hi]#.cpu().numpy()
-            py_vals = py_vals[:,ti,wi,hi].cpu().numpy()
+            # pidx = ti*height*width + hi*width + width
+            # print(pidx,py_indices.shape,py_vals.shape)
+
+            py_indices = py_indices[pidx3,:]#.cpu().numpy()
+            py_vals = py_vals[pidx3,:].cpu().numpy()
+            # py_vals = py_vals[:,ti,wi,hi].cpu().numpy()
             # py_access = py_access[...,ti,wi,hi].cpu().numpy()
 
             # -- stats about indices --
@@ -307,7 +345,8 @@ class TestSimSearch(unittest.TestCase):
 
             # -- create sim search image --
             # cpp_params = copy.deepcopy(params)
-            # cpp_inds = vnlb.cpu.simSearchImage(noisy,noisy,sigma,flows,cpp_params,step)
+            # cpp_inds = vnlb.cpu.simSearchImage(noisy,noisy,sigma,
+            #                                    flows,cpp_params,step)
             # cpp_inds = torch.IntTensor(cpp_inds).to(device)
 
             # -- save weights --
@@ -319,7 +358,8 @@ class TestSimSearch(unittest.TestCase):
             noisy_th = torch.FloatTensor(noisy).to(device)
             deno = torch.zeros_like(noisy_th)
             # patches[ni,ti,pt,ci,pi,pj,hi,wi]
-            patches = torch.zeros(inds.shape[0],t,ps_t,c,ps,ps,h,w).to(device)
+            pshape = (inds.shape[0],inds.shape[1],ps_t,c,ps,ps)
+            patches = torch.zeros(pshape).to(device)
             # inds = torch.zeros(100,t,h,w).type(torch.int32).to(device)
             weights = torch.zeros(t,h,w).type(tf32).to(device)
             cs = torch.cuda.default_stream()

@@ -16,8 +16,10 @@ from einops import rearrange,repeat
 from numba import jit,njit,prange,cuda
 
 
-def compute_l2norm_cuda(noisy,fflow,bflow,step_s,access,h_start,w_start,
-                        bsize,ps,ps_t,w_s,nWt_f,nWt_b,step1,cs,k=1):
+def divUp(a,b): return (a-1)//b+1
+
+def compute_l2norm_cuda(noisy,fflow,bflow,access,step_s,
+                        ps,ps_t,w_s,nWt_f,nWt_b,step1,cs,k=1):
 
     # -- create output --
     device = noisy.device
@@ -25,24 +27,30 @@ def compute_l2norm_cuda(noisy,fflow,bflow,step_s,access,h_start,w_start,
 
     # -- init dists --
     # (w_s = windowSpace), (w_t = windowTime)
+    bsize,three = access.shape
     w_t = min(nWt_f + nWt_b + 1,t-1)
-    dists = torch.ones(w_t,w_s,w_s,t,bsize,bsize).type(torch.float32).to(device)
-    indices = torch.zeros(w_t,w_s,w_s,t,bsize,bsize).type(torch.int32).to(device)
-    bufs = torch.zeros(3,w_t,w_s,w_s,bsize,bsize).type(torch.int32).to(device)
+    dists = torch.ones(bsize,w_t,w_s,w_s).type(torch.float32).to(device)
+    indices = torch.zeros(bsize,w_t,w_s,w_s).type(torch.int32).to(device)
+    bufs = torch.zeros(bsize,3,w_t,w_s,w_s).type(torch.int32).to(device)
 
     # -- run launcher --
     dists *= torch.inf
     indices[...] = -1
     # print("cuda_l2: ",noisy[0,0,0,0])
+    # print("[l2norm_cuda] ps,ps_t: ",ps,ps_t)
     compute_l2norm_launcher(dists,indices,fflow,bflow,access,bufs,noisy,step_s,
-                            h_start,w_start,ps,ps_t,nWt_f,nWt_b,step1,cs)
+                            ps,ps_t,nWt_f,nWt_b,step1,cs)
+
+    # -- reshape --
+    dists = rearrange(dists,'b wT wH wW -> b (wT wH wW)')
+    indices = rearrange(indices,'b wT wH wW -> b (wT wH wW)')
 
     return dists,indices
 
 
 def create_frame_range(nframes,nWt_f,nWt_b,ps_t,device):
     tranges,n_tranges,min_tranges = [],[],[]
-    for t_c in range(nframes-1):
+    for t_c in range(nframes-ps_t+1):
 
         # -- limits --
         shift_t = min(0,t_c - nWt_b) + max(0,t_c + nWt_f - nframes + ps_t)
@@ -77,13 +85,13 @@ def create_frame_range(nframes,nWt_f,nWt_b,ps_t,device):
     return tranges,n_tranges,min_tranges
 
 def compute_l2norm_launcher(dists,indices,fflow,bflow,access,
-                            bufs,noisy,step_s,h_start,w_start,
+                            bufs,noisy,step_s,
                             ps,ps_t,nWt_f,nWt_b,step1,cs):
 
     # -- shapes --
     nframes,c,h,w = noisy.shape
-    w_t,w_s,w_s,t,bsize,bsize = dists.shape
-    w_t,w_s,w_s,t,bsize,bsize = indices.shape
+    bsize,w_t,w_s,w_s = dists.shape
+    bsize,w_t,w_s,w_s = indices.shape
     tranges,n_tranges,min_tranges = create_frame_range(nframes,nWt_f,nWt_b,
                                                        ps_t,noisy.device)
 
@@ -102,14 +110,11 @@ def compute_l2norm_launcher(dists,indices,fflow,bflow,access,
 
     # -- batches per block --
     batches_per_block = 4
+    bpb = batches_per_block
 
     # -- launch params --
     threads = (w_s,w_s)
-    blocks = bsize*bsize/batches_per_block
-    # print(threads,blocks)
-    # print(tranges)
-    # print(n_tranges)
-    # print(min_tranges)
+    blocks = divUp(bsize,batches_per_block)
 
     # -- launch kernel --
     compute_l2norm_kernel[blocks,threads,cs_nba](dists_nba,indices_nba,
@@ -117,13 +122,12 @@ def compute_l2norm_launcher(dists,indices,fflow,bflow,access,
                                                  access_nba,bufs_nba,
                                                  noisy_nba,tranges_nba,
                                                  n_tranges_nba,min_tranges_nba,
-                                                 step_s,h_start,w_start,
-                                                 ps,ps_t,nWt_f,nWt_b,step1)
+                                                 bpb,step_s,ps,ps_t,nWt_f,nWt_b,step1)
 
 
 @cuda.jit(max_registers=64)
 def compute_l2norm_kernel(dists,inds,fflow,bflow,access,bufs,noisy,tranges,n_tranges,
-                          min_tranges,step_s,h_start,w_start,ps,ps_t,nWt_f,nWt_b,step1):
+                          min_tranges,bpb,step_s,ps,ps_t,nWt_f,nWt_b,step1):
 
     # -- local function --
     def bounds(val,lim):
@@ -149,25 +153,19 @@ def compute_l2norm_kernel(dists,inds,fflow,bflow,access,bufs,noisy,tranges,n_tra
 
     # -- shapes --
     nframes,color,h,w = noisy.shape
-    w_t,w_s,w_s,t,bsize,bsize = dists.shape
-    w_t,w_s,w_s,t,bsize,bsize = inds.shape
+    bsize,w_t,w_s,w_s = dists.shape
+    bsize,w_t,w_s,w_s = inds.shape
     chnls = 1 if step1 else color
     height,width = h,w
     Z = ps*ps*ps_t*chnls
     nWxy = w_s
 
-    # -- access with blocks and threads --
-    bH = cuda.blockIdx.x
-    bW = cuda.blockIdx.y
-    # hi = cuda.blockIdx.x
-    # wi = cuda.blockIdx.y
-
     # -- cuda threads --
     tidX = cuda.threadIdx.x
     tidY = cuda.threadIdx.y
 
-    # -- pixel we are sim-searching for --
-    top,left = h_start+hi,w_start+wi
+    # # -- pixel we are sim-searching for --
+    # top,left = h_start+hi,w_start+wi
 
     # -- create a range --
     w_t = nWt_f + nWt_b + 1
@@ -178,14 +176,23 @@ def compute_l2norm_kernel(dists,inds,fflow,bflow,access,bufs,noisy,tranges,n_tra
     #
     # ---------------------------
 
-    # -- we want enough work per thread, so we keep the "t" loop --
-    for elem in range(batches_per_block):
+    # -- access with blocks and threads --
+    block_start = cuda.blockIdx.x*bpb
+
+    # -- we want enough work per thread, so we process multiple per block --
+    for _bidx in range(bpb):
     # for ti in range(nframes-1):
 
         # ---------------------------
         #    extract anchor pixel
         # ---------------------------
-
+        bidx = block_start + _bidx
+        if bidx >= access.shape[0]: continue
+        ti = access[bidx,0]
+        hi = access[bidx,1]
+        wi = access[bidx,2]
+        top = hi
+        left = wi
 
         # ---------------------------
         #     valid (anchor pixel)
@@ -201,7 +208,7 @@ def compute_l2norm_kernel(dists,inds,fflow,bflow,access,bufs,noisy,tranges,n_tra
         valid_left = valid_left and (left >= 0)
 
         valid_anchor = valid_t and valid_top and valid_left
-        # print_anchor = 1 if valid_anchor else 0
+        print_anchor = 1 if valid_anchor else 0
         # print(ti,top,left,print_anchor,tidX,tidY)
 
         # ---------------------------------------
@@ -227,9 +234,9 @@ def compute_l2norm_kernel(dists,inds,fflow,bflow,access,bufs,noisy,tranges,n_tra
             direction = max(-1,min(1,n_ti - ti))
             # print("(t_i,t_idx,dir): (%d,%d,%d)" % (t_i,t_idx,direction))
             if direction != 0:
-                cw0 = bufs[0,dt-direction,tidX,tidY,bH,bW]#cw_vals[ti-direction]
-                ch0 = bufs[1,dt-direction,tidX,tidY,bH,bW]#ch_vals[t_idx-direction]
-                ct0 = bufs[2,dt-direction,tidX,tidY,bH,bW]#ct_vals[t_idx-direction]
+                cw0 = bufs[bidx,0,dt-direction,tidX,tidY]#cw_vals[ti-direction]
+                ch0 = bufs[bidx,1,dt-direction,tidX,tidY]#ch_vals[t_idx-direction]
+                ct0 = bufs[bidx,2,dt-direction,tidX,tidY]#ct_vals[t_idx-direction]
 
                 flow = fflow if direction > 0 else bflow
 
@@ -251,9 +258,9 @@ def compute_l2norm_kernel(dists,inds,fflow,bflow,access,bufs,noisy,tranges,n_tra
             #     update
             # ----------------
 
-            bufs[0,dt,tidX,tidY,bH,bW] = cw#cw_vals[ti-direction]
-            bufs[1,dt,tidX,tidY,bH,bW] = ch#ch_vals[t_idx-direction]
-            bufs[2,dt,tidX,tidY,bH,bW] = ct#ct_vals[t_idx-direction]
+            bufs[bidx,0,dt,tidX,tidY] = cw#cw_vals[ti-direction]
+            bufs[bidx,1,dt,tidX,tidY] = ch#ch_vals[t_idx-direction]
+            bufs[bidx,2,dt,tidX,tidY] = ct#ct_vals[t_idx-direction]
 
 
             # --------------------
@@ -375,13 +382,13 @@ def compute_l2norm_kernel(dists,inds,fflow,bflow,access,bufs,noisy,tranges,n_tra
                                 dist += (v_pix - n_pix)**2
 
             # -- dists --
-            dists[tidZ,tidX,tidY,ti,bH,bW] = dist/Z
+            dists[bidx,tidZ,tidX,tidY] = dist/Z
 
             # -- inds --
             ind = n_ti * height * width * color
             ind += n_top * width
             ind += n_left
-            inds[tidZ,tidX,tidY,ti,bH,bW] = ind if dist < np.infty else -1
+            inds[bidx,tidZ,tidX,tidY] = ind if dist < np.infty else -1
 
             # -- access pattern --
             # access[0,dt,tidX,tidY,ti,hi,wi] = n_ti

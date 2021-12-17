@@ -65,16 +65,21 @@ def centering(patches,center=None):
     return center
 
 def centering_patches(patchesNoisy,patchesBasic,step2,flat_patch):
+
     # -- center basic --
     centerBasic = None
     if step2:
         centerBasic = centering(patchesBasic)
 
+    # -- choose center for noisy --
+    centerNoisy = patchesNoisy.mean(dim=2,keepdim=True)
+    if step2:
+        flat_inds = torch.where(flat_patch == 1)[0]
+        centerNoisy[flat_inds] = centerBasic[flat_inds]
+
     # -- center noisy --
-    centerNoisy = None
-    if step2 and flat_patch:
-        centerNoisy = centerBasic
     centerNoisy = centering(patchesNoisy,centerNoisy)
+
     return centerNoisy,centerBasic
 
 def compute_cov_mat(patches,rank):
@@ -141,38 +146,75 @@ def compute_cov_mat_v1(patches,rank):
 
 def compute_cov_mat_v2(patches,rank):
 
-    # -- cov mat --
-    bsize,chnls,num,pdim = patches.shape
+    import time
 
-    patches = rearrange(patches,'b c n p -> (b c) n p')
-    covMat = torch.matmul(patches.transpose(2,1),patches)
-    covMat /= num
+    with torch.no_grad():
+        # -- cov mat --
+        bsize,num,pdim = patches.shape
+        covMat = torch.matmul(patches.transpose(2,1),patches)
+        covMat /= num
 
-    # -- eigen stuff --
-    eigVals,eigVecs = torch.linalg.eig(covMat)
+        # -- eigen stuff --
 
-    # -- eig --
-    eigVals = rearrange(eigVals,'(b c) p -> b c p',b=bsize)
-    eigVecs = rearrange(eigVecs,'(b c) p p2 -> b c p p2',b=bsize)
+        # start = time.perf_counter()
+        # eigVals,eigVecs = torch.linalg.eig(covMat)
+        # end = time.perf_counter() - start
 
-    # -- rank --
-    eigVals = torch.real(eigVals)#[...,:rank])
-    eigVecs = torch.real(eigVecs[...,:rank])
-    eigVals[...,rank:] = 0
+        # print("Eig Lin Time: ",end)
+        # print("a: ",eigVals.shape,eigVecs.shape)
+
+        # eigVals = torch.real(eigVals)#[...,:rank])
+        # eigVecs = torch.real(eigVecs[...,:rank])
+        # eigVals[...,rank:] = 0
+        # print(eigVals[0])
+        # print(eigVecs[0,0,:])
+
+        # -- svd stuff --
+        eigVals,eigVecs = torch.linalg.eigh(covMat)
+        # print(eigVals[0])
+        eigVals= torch.flip(eigVals,dims=(1,))
+        # print(eigVals[0])
+        # print(eigVecs[0,0,:])
+        eigVecs = torch.flip(eigVecs,dims=(2,))[...,:rank]
+        # print(eigVals[0])
+        # print(eigVecs[0,0,:])
+
+        # print("eigh: ",end)
+        # print("b: ",eigVals.shape,eigVecs.shape)
+
+        # # -- qr stuff --
+        # start = time.perf_counter()
+        # Q,R = torch.linalg.qr(covMat)
+        # end = time.perf_counter() - start
+        # print("qr: ",end)
+        # print("QR: ",Q.shape,R.shape)
+
+        # -- chol stuff --
+        # start = time.perf_counter()
+        # L,info = torch.linalg.cholesky_ex(covMat)
+        # end = time.perf_counter() - start
+        # print("chol: ",end)
+        # print("chol: ",L.shape)
+
+        # -- eig --
+        # eigVals = rearrange(eigVals,'(b c) p -> b c p',b=bsize)
+        # eigVecs = rearrange(eigVecs,'(b c) p p2 -> b c p p2',b=bsize)
+
+        # -- rank --
 
     return covMat,eigVals,eigVecs
 
 def denoise_eigvals(eigVals,sigmab2,mod_sel,rank):
     if mod_sel == "clipped":
         th_sigmab2 = torch.FloatTensor([sigmab2]).reshape(1,1,1)
-        emin = torch.min(eigVals[:,:,:rank],th_sigmab2.to(eigVals.device))
-        eigVals[:,:,:rank] -= emin
+        emin = torch.min(eigVals[...,:rank],th_sigmab2.to(eigVals.device))
+        eigVals[...,:rank] -= emin
     else:
         raise ValueError(f"Uknown eigen-stuff modifier: [{mod_sel}]")
-    return eigVals
 
 def bayes_filter_coeff(eigVals,sigma2,thresh):
-    bayes_filter_coeff_v2(eigVals,sigma2,thresh)
+    # bayes_filter_coeff_v2(eigVals,sigma2,thresh)
+    bayes_filter_coeff_v1(eigVals,sigma2,thresh)
 
 def bayes_filter_coeff_v2(eigVals,sigma2,thresh):
     for n in range(eigVals.shape[0]):
@@ -215,17 +257,17 @@ def filter_patches_v1(patches,eigVals,eigVecs,rank):
 
     # reshape
     bsize = patches.shape[0]
-    print(patches.shape,eigVals.shape,eigVecs.shape)
-    patches_rs = rearrange(patches,'b c n p -> (b c) n p')
-    eigVals = rearrange(eigVals,'b c p -> (b c) p')
-    eigVecs = rearrange(eigVecs,'b c p r -> (b c) p r')
+    # print(patches.shape,eigVals.shape,eigVecs.shape)
+    # patches_rs = rearrange(patches,'b c n p -> (b c) n p')
+    # eigVals = rearrange(eigVals,'b c p -> (b c) p')
+    # eigVecs = rearrange(eigVecs,'b c p r -> (b c) p r')
 
     # ---------------------------------
     #      hX' = X' * U * (W * U')
     # ---------------------------------
 
     # Z = X'*U; (n x p) x (p x r) = (n x r)
-    Z = torch.matmul(patches_rs,eigVecs)
+    Z = torch.matmul(patches,eigVecs)
 
     # R = U*W; p x r
     R = eigVecs * eigVals[:,None,:rank]
@@ -237,7 +279,8 @@ def filter_patches_v1(patches,eigVals,eigVecs,rank):
 
     # hX' = Z'*R' = (X'*U)'*(U*W)'; (n x r) x (r x p) = (n x p)
     tmp = torch.matmul(Z,R.transpose(2,1))
-    tmp = rearrange(tmp,'(b c) n p -> b c n p',b=bsize)
+    # tmp = rearrange(tmp,'(b c) n p -> b c n p',b=bsize)
+    # print("tmp.shape: ",tmp.shape)
     patches[...] = tmp
 
 def bayes_estimate_batch(in_patchesNoisy,patchesBasic,sigma2,
@@ -249,36 +292,61 @@ def bayes_estimate_batch(in_patchesNoisy,patchesBasic,sigma2,
     shape = list(patchesNoisy.shape)
     # shape[1],shape[-1] = 1,nSimP
     # print("patchesNoisy.shape: ",patchesNoisy.shape)
-    num,t_bsize,ps_t,chnls,ps,ps,h_bsize,w_bsize = patchesNoisy.shape
-    bsize = h_bsize*w_bsize*t_bsize
+    bsize,num,ps_t,chnls,ps,ps = patchesNoisy.shape
     pdim = ps*ps*ps_t
 
-    # -- ravel out that pdim --
-    shape_str = "n tb pt c ph pw hb wb -> (tb hb wb) c n (pt ph pw)"
+    # -- reshape for centering --
+    shape_str = "b n pt c ph pw -> b c n (pt ph pw)"
     patchesNoisy = rearrange(patchesNoisy,shape_str)
-    if step2: patchesBasic = rearrange(patchesBasic,shape_str)
-    # shape = (b c n p)
+    patchesBasic = rearrange(patchesBasic,shape_str)
 
     # -- group noisy --
     centerNoisy,centerBasic = centering_patches(patchesNoisy,patchesBasic,
                                                 step2,flat_patch)
+
+    # -- reshape for processing --
+    shape_str = "b c n p -> (b c) n p"
+    patchesNoisy = rearrange(patchesNoisy,shape_str)
+    if step2: patchesBasic = rearrange(patchesBasic,shape_str)
+
+    shape_str = "b c 1 p -> (b c) 1 p"
+    centerNoisy = rearrange(centerNoisy,shape_str)
+    if step2: centerBasic = rearrange(centerBasic,shape_str)
+
     # -- denoising! --
     rank_var = 0.
 
+    import time
+
     # -- compute eig stuff --
+    start = time.perf_counter()
     patchesInput = patchesNoisy if not(step2) else patchesBasic
     covMat,eigVals,eigVecs = compute_cov_mat(patchesInput,rank)
-    eigVals = denoise_eigvals(eigVals,sigmab2,mod_sel,rank)
-    rank_var = torch.mean(torch.sum(eigVals,dim=2),dim=1)
+    end = time.perf_counter() - start
+    print("Eig Time: ",end)
+
+    # -- modify eigenvals --
+    start = time.perf_counter()
+    # print(eigVals.shape)
+    eigVals_rs = rearrange(eigVals,'(b c) p -> b c p',b=bsize)
+    rank_var = torch.mean(torch.sum(eigVals_rs,dim=2),dim=1)
+    denoise_eigvals(eigVals_rs,sigmab2,mod_sel,rank)
     bayes_filter_coeff(eigVals,sigma2,thresh)
+    end = time.perf_counter() - start
+    print("DN + Filter Time: ",end)
+
+
+    # -- denoise! --
     filter_patches(patchesNoisy,eigVals,eigVecs,rank)
 
     # -- add back center --
     patchesNoisy[...] += centerNoisy
 
     # -- reshape --
-    shape_str = '(bt bh bw) c n (pt px py) -> n bt pt c px py bh bw'
-    kwargs = {"pt":ps_t,"px":ps,"bh":h_bsize,"bw":w_bsize}
+    # shape_str = '(bt bh bw) c n (pt px py) -> n bt pt c px py bh bw'
+    # kwargs = {"pt":ps_t,"px":ps,"bh":h_bsize,"bw":w_bsize}
+    shape_str = '(b c) n (pt ph pw) -> b n pt c ph pw'
+    kwargs = {"pt":ps_t,"ph":ps,"pw":ps,"b":bsize}
     patchesNoisy = rearrange(patchesNoisy,shape_str,**kwargs)
     if step2:
         patchesBasic = rearrange(patchesBasic,shape_str,**kwargs)
@@ -296,4 +364,4 @@ def bayes_estimate_batch(in_patchesNoisy,patchesBasic,sigma2,
     # results['rank_var'] = rank_var
     # return results
 
-    return rank_var,patchesNoisy
+    return rank_var#,patchesNoisy

@@ -11,6 +11,7 @@ from vnlb.utils.gpu_utils import apply_color_xform_cpp
 from vnlb.testing import save_images
 
 # -- local imports --
+from ..init_mask import initMask,mask2inds,update_mask
 from .streams import init_streams,wait_streams,get_hw_batches,view_batch,vprint
 from .subave_impl import compute_subset_ave
 from .l2norm_impl import compute_l2norm_cuda
@@ -57,7 +58,8 @@ def runSimSearch(noisy,sigma,tensors,params,step=0,gpuid=0):
     basic_yuv = apply_color_xform_cpp(basic)
 
     # -- create mask --
-    mask = torch.zeros_like(noisy).type(torch.byte)
+    nframes,chnls,height,width = noisy.shape
+    mask = torch.zeros(nframes,height,width).type(torch.int8).to(device)
     # mask = torch.ByteTensor(mask).to(device)
 
     # -- find the best patches using c++ logic --
@@ -66,6 +68,8 @@ def runSimSearch(noisy,sigma,tensors,params,step=0,gpuid=0):
                               sigma,ps,ps_t,npatches,step_s,nwindow_xy,
                               nfwd,nbwd,couple_ch,step1,nstreams)
     patchesNoisy,patchesBasic,dists,indices = results
+    dists = rearrange(dists,'nb b p -> (nb b) p')
+    indices = rearrange(indices,'nb b p -> (nb b) p')
 
     # -- group the values and indices --
     img_noisy = noisy if use_imread else noisy_yuv
@@ -109,13 +113,6 @@ def runSimSearch(noisy,sigma,tensors,params,step=0,gpuid=0):
 
     return results
 
-def mask2inds(mask,bsize):
-    index = torch.nonzero(mask-1)
-    return index[:bsize]
-
-def update_mask(mask,inds):
-    mask[inds] = 1
-
 def exec_sim_search(noisy,basic,fflow,bflow,mask,sigma,ps,ps_t,npatches,
                     step_s,w_s,nWt_f,nWt_b,couple_ch,step1,nstreams):
     """
@@ -138,8 +135,9 @@ def exec_sim_search(noisy,basic,fflow,bflow,mask,sigma,ps,ps_t,npatches,
     nsearch = w_s * w_s * w_t
 
     # -- batching height and width --
-    bsize = 16
-    h_batches,w_batches = get_hw_batches(h,w,bsize*step_s)
+    bsize = 64
+    nelems = torch.sum(mask==0).item()
+    nbatches = divUp(nelems,bsize)
 
     # -- synch before start --
     curr_stream = 0
@@ -148,81 +146,76 @@ def exec_sim_search(noisy,basic,fflow,bflow,mask,sigma,ps,ps_t,npatches,
 
     # -- create shell --
     ns,np = nstreams,npatches
-    patchesNoisy = torch.zeros(npatches,t,ps_t,c,ps,ps,h,w).to(device)
-    patchesBasic = torch.zeros(npatches,t,ps_t,c,ps,ps,h,w).to(device)
-    vals = torch.zeros(np,t,h,w).type(torch.float32).to(device)
-    inds = -torch.ones(np,t,h,w).type(torch.int32).to(device)
+    patchesNoisy = torch.zeros(nbatches,bsize,npatches,ps_t,c,ps,ps).to(device)
+    patchesBasic = torch.zeros(nbatches,bsize,npatches,ps_t,c,ps,ps).to(device)
+    vals = torch.zeros(nbatches,bsize,npatches).type(torch.float32).to(device)
+    inds = -torch.ones(nbatches,bsize,npatches).type(torch.int32).to(device)
     # vals = torch.zeros(npatches,t,h,w).type(torch.float32).to(device)
     # inds = torch.zeros(npatches,t,h,w).type(torch.int32).to(device)
 
     # -- exec search --
-    for h_start in h_batches:
-        h_start = h_start.item()
+    for batch in range(nbatches):
 
-        for w_start in w_batches:
-            w_start = w_start.item()
+        # -- assign to stream --
+        cs = curr_stream
+        torch.cuda.set_stream(streams[cs])
+        cs_ptr = streams[cs].cuda_stream
 
-            # -- assign to stream --
-            cs = curr_stream
-            torch.cuda.set_stream(streams[cs])
-            cs_ptr = streams[cs].cuda_stream
+        # -- grab access --
+        access = mask2inds(mask,bsize)
+        if access.shape[0] == 0: break
 
-            # -- grab access --
-            access = mask2inds(mask,bsize*bsize)
+        # -- grab data for current stream --
+        vals_s = vals[batch]
+        inds_s = inds[batch]
+        patchesNoisy_s = patchesNoisy[batch]
+        patchesBasic_s = patchesBasic[batch]
 
-            # -- grab data for current stream --
-            vals_s = view_batch(vals,h_start,w_start,bsize)
-            inds_s = view_batch(inds,h_start,w_start,bsize)
-            patchesNoisy_s = view_batch(patchesNoisy,h_start,w_start,bsize)
-            patchesBasic_s = view_batch(patchesBasic,h_start,w_start,bsize)
+        # -- sim search block --
+        sim_search_batch(noisy,basic,patchesNoisy_s,patchesBasic_s,
+                         access,vals_s,inds_s,fflow,bflow,
+                         step_s,bsize,ps,ps_t,w_s,nWt_f,nWt_b,step1,cs,cs_ptr)
 
-            # -- sim search block --
-            sim_search_batch(noisy,basic,patchesNoisy_s,patchesBasic_s,
-                             access,vals_s,inds_s,fflow,bflow,h_start,w_start,
-                             step_s,bsize,ps,ps_t,w_s,nWt_f,nWt_b,step1,cs,cs_ptr)
+        # -- update mask naccess --
+        update_mask(mask,access)
 
-            # -- update mask naccess --
-            update_mask(mask,access)
-
-            # -- change stream --
-            if nstreams > 0: curr_stream = (curr_stream + 1) % nstreams
+        # -- change stream --
+        if nstreams > 0: curr_stream = (curr_stream + 1) % nstreams
 
     # -- wait for all streams --
     torch.cuda.synchronize()
 
     return patchesNoisy,patchesBasic,vals,inds
 
-
-def sim_search_batch(noisy,basic,patchesNoisy,patchesBasic,access,vals,inds,
-                     fflow,bflow,step_s,h_start,w_start,bsize,ps,ps_t,w_s,
+def sim_search_batch(noisy,basic,patchesNoisy,patchesBasic,access,
+                     vals,inds,fflow,bflow,step_s,bsize,ps,ps_t,w_s,
                      nWt_f,nWt_b,step1,cs,cs_ptr):
 
 
     # -- compute difference --
     srch_img = noisy if step1 else basic
-    l2_dists,l2_inds = compute_l2norm_cuda(srch_img,fflow,bflow,step_s,
-                                           access,h_start,w_start,bsize,ps,ps_t,
-                                           w_s,nWt_f,nWt_b,step1,cs_ptr)
+    l2_dists,l2_inds = compute_l2norm_cuda(srch_img,fflow,bflow,access,step_s,
+                                           ps,ps_t,w_s,nWt_f,nWt_b,step1,cs_ptr)
     # -- get inds info --
-    nzero = torch.sum(l2_inds==0).item()
-    size = l2_inds.numel()
-    print("[sim_search: l2_inds] perc zero: %2.3f" % (nzero / size * 100))
+    # nzero = torch.sum(l2_inds==0).item()
+    # size = l2_inds.numel()
+    # print("[sim_search: l2_inds] perc zero: %2.3f" % (nzero / size * 100))
+
+    # nzero = torch.sum(l2_inds==-1).item()
+    # size = l2_inds.numel()
+    # print("[sim_search: l2_inds] perc invalid: %2.3f" % (nzero / size * 100))
 
     # -- compute topk --
     get_topk(l2_dists,l2_inds,vals,inds)
 
-    # -- [toy] top k --
-    # print(inds.shape)
-    # t,c,h,w = noisy.shape
-    # bh,bw = patchesNoisy.shape[-2:]
-    # inds_toy = (torch.arange(bh*bw*t)*c)%(h*w*c)#*(t-1)*c)
-    # inds_toy = repeat(inds_toy,'(bt bh bw) -> n bt bh bw',n=100,bt=t,bh=bh)
-    # inds[...] = inds_toy
-
     # -- get inds info --
-    nzero = torch.sum(inds==0).item()
-    size = inds.numel()
-    print("[sim_search: inds] perc zero: %2.3f" % (nzero / size * 100))
+    # nzero = torch.sum(inds==0).item()
+    # size = inds.numel()
+    # print("[sim_search: inds] perc zero: %2.3f" % (nzero / size * 100))
+
+    # nzero = torch.sum(inds==-1).item()
+    # size = inds.numel()
+    # print("[sim_search: inds] perc invalid: %2.3f" % (nzero / size * 100))
 
     # -- fill noisy patches --
     fill_patches(patchesNoisy,noisy,inds,cs_ptr)
@@ -230,21 +223,16 @@ def sim_search_batch(noisy,basic,patchesNoisy,patchesBasic,access,vals,inds,
     # -- fill basic patches --
     if not(step1): fill_patches(patchesBasic,basic,inds,cs_ptr)
 
-def get_topk(dists,inds,distsView,indsView):
-
-    # -- reshape for selection --
-    dists = rearrange(dists,'wt wh ww t h w -> (wt wh ww) t h w')
-    inds = rearrange(inds,'wt wh ww t h w -> (wt wh ww) t h w')
+def get_topk(l2_vals,l2_inds,vals,inds):
 
     # -- take mins --
-    order = torch.argsort(dists,dim=0,descending=False)
+    order = torch.argsort(l2_vals,dim=1,descending=False)
 
     # -- get top k --
-    print(order.shape)
-    print(distsView.shape,indsView.shape)
-    k = distsView.shape[0]
-    distsView[...] = torch.gather(dists,0,order[:k])
-    indsView[...] = torch.gather(inds,0,order[:k])
+    b,_ = l2_vals.shape
+    _,k = vals.shape
+    vals[:b,:] = torch.gather(l2_vals,1,order[:,:k])
+    inds[:b,:] = torch.gather(l2_inds,1,order[:,:k])
 
 # ------------------------------
 #
@@ -259,5 +247,7 @@ def swap_2d_dim(tensor,dim):
     tensor[0] = tensor[1].clone()
     tensor[1] = tmp
     return tensor
+
+def divUp(a,b): return (a-1)//b+1
 
 

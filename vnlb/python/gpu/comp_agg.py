@@ -55,10 +55,12 @@ def compute_agg_batch(deno,patches,inds,weights,ps,ps_t,cs_ptr):
 
     # -- launch params --
     # num = patches.shape[0]
-    num,t_bsize,h_bsize,w_bsize = inds.shape
+    # print("inds.shape: ",inds.shape)
+    # print("patches.shape: ",patches.shape)
+    bsize,num = inds.shape
     # bsize,bsize = patches.shape[-2:]
     threads = num
-    blocks = (h_bsize,w_bsize)
+    blocks = bsize
 
     # -- launch kernel --
     # print(deno.shape,weights.shape)
@@ -98,28 +100,24 @@ def exec_agg_simple_numba(deno,patches,inds,weights,ps,ps_t):
     nframes,color,height,width = deno.shape
     chw = color*height*width
     hw = height*width
-    num,tb,hb,wb = inds.shape
+    bsize,npatches = inds.shape
 
-    for ni in range(len(inds)):
-        for ti in range(tb):
-            for hi in range(hb):
-                for wi in range(wb):
+    for bi in range(bsize):
+        for ni in range(npatches):
+            ind = inds[bi,ni]
+            if ind == -1: continue
+            t0 = ind // chw
+            h0 = (ind % hw) // width
+            w0 = ind % width
 
-                    ind = inds[ni,ti,hi,wi]
-                    if ind == -1: continue
-                    t0 = ind // chw
-                    h0 = (ind % hw) // width
-                    w0 = ind % width
-
-                    # print(t0,h0,w0)
-                    for pt in range(ps_t):
-                        for pi in range(ps):
-                            for pj in range(ps):
-                                for ci in range(color):
-                                    gval = patches[ni,ti,pt,ci,pi,pj,hi,wi]
-                                    deno[t0+pt,ci,h0+pi,w0+pj] += gval
-                                weights[t0+pt,h0+pi,w0+pj] += 1.
-
+            # print(t0,h0,w0)
+            for pt in range(ps_t):
+                for pi in range(ps):
+                    for pj in range(ps):
+                        for ci in range(color):
+                            gval = patches[bi,ni,pt,ci,pi,pj]
+                            deno[t0+pt,ci,h0+pi,w0+pj] += gval
+                        weights[t0+pt,h0+pi,w0+pj] += 1.
 
 
 @cuda.jit(max_registers=64)

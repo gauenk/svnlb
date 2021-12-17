@@ -1,14 +1,150 @@
 
 
 # -- python deps --
+import torch
 import numpy as np
+from einops import rearrange
 from easydict import EasyDict as edict
 
 # -- numba --
-from numba import njit,prange
+from numba import jit,njit,prange,cuda
 
 # -- parser for cpp --
 from vnlb.swig.vnlb.mask_parser import mask_parser
+
+def mask2inds(mask,bsize,order=None):
+    index = torch.nonzero(mask)
+    if index.shape[0] == 0: return index
+    # return index[:bsize]
+
+    # -- randomly shuffly
+    mlen = max(len(index),bsize)
+    if order is None or mlen == bsize:
+        order = torch.randperm(index.shape[0])
+    return index[order[:bsize]]
+
+def update_mask(mask,access,val=0):
+    assert access.shape[1] == 3
+    mask[access[:,0],access[:,1],access[:,2]] = val
+
+def update_mask_inds(mask,inds,chnls,cs_ptr,boost=True,val=0):
+
+    # -- shape --
+    t,h,w = mask.shape
+    bsize,num = inds.shape
+    hw,chw = h*w,chnls*h*w
+
+    # -- rm "-1" inds --
+    if inds.shape[0] == 0: return
+    args = torch.where(torch.all(inds != -1,1))
+    print("A",inds.shape)
+    inds = inds[args]
+    print("B",inds.shape)
+    f_bsize,_ = inds.shape
+    if inds.shape[0] == 0: return
+
+    # -- augment inds --
+    aug_inds = torch.zeros((3,f_bsize,num),dtype=torch.int64)
+    aug_inds = aug_inds.to(inds.device)
+
+    # -- (one #) -> (three #s) --
+    tdiv = torch.div
+    tmod = torch.remainder
+    aug_inds[0,...] = tdiv(inds,chw,rounding_mode='floor') # inds // chw
+    aug_inds[1,...] = tdiv(tmod(inds,hw),w,rounding_mode='floor') # (inds % hw) // w
+    aug_inds[2,...] = tmod(inds,w)
+    aug_inds = rearrange(aug_inds,'three b n -> (b n) three')
+
+    # -- aggregate boost --
+    if boost:
+        aug_inds = agg_boost(aug_inds,t,chnls,h,w,cs_ptr)
+
+    # -- assign mask info --
+    update_mask(mask,aug_inds,val)
+
+def agg_boost(inds,t,c,h,w,cs_ptr):
+
+    # include neighbor pixels as "masked"
+
+    # -- deltas --
+    deltas = [[0,0,0],[0,0,-1],[0,0,1],[0,1,0],[0,-1,0]]
+    deltas = torch.IntTensor(deltas).to(inds.device)
+
+    # -- create var --
+    aggMult = len(deltas)
+    B,three = inds.shape
+    agg = -torch.ones(B,aggMult,3,dtype=torch.int64).to(inds.device)
+
+    # -- launch --
+    agg_boost_launcher(agg,inds,deltas,t,c,h,w,cs_ptr)
+
+    # -- remove "-1" --
+    agg = rearrange(agg,'b four three -> (b four) three')
+    check = torch.all(agg != -1,1)
+    args = torch.where(check)[0]
+    agg = agg[args]
+
+    return agg
+
+def agg_boost_launcher(agg,inds,deltas,t,c,h,w,cs_ptr):
+
+    # -- numba-fy --
+    agg_nba = cuda.as_cuda_array(agg)
+    inds_nba = cuda.as_cuda_array(inds)
+    deltas_nba = cuda.as_cuda_array(deltas)
+    cs_nba = cuda.external_stream(cs_ptr)
+
+    # -- launch --
+    B,three = inds.shape
+    work_per_thread = 1
+    threads = 512
+    blocks = divUp(B,threads*work_per_thread)
+    agg_boost_cuda[blocks,threads,cs_nba](agg_nba,inds_nba,deltas_nba,
+                                          work_per_thread,t,c,h,w)
+
+
+@cuda.jit(max_registers=64)
+def agg_boost_cuda(agg,inds,deltas,wpt,t,c,h,w):
+
+    # -- access with blocks and threads --
+    ndeltas = len(deltas)
+    bdimX = cuda.blockDim.x
+    tIdx = cuda.threadIdx.x
+    bIdx = cuda.blockIdx.x
+    start_idx = tIdx*wpt + bIdx*bdimX*wpt
+    for work_idx in range(wpt):
+        idx = start_idx + work_idx
+
+        ti = inds[idx,0]
+        hi = inds[idx,1]
+        wi = inds[idx,2]
+
+        # -- valid ind --
+        valid_t = (0 <= ti) and (ti < t)
+        valid_h = (0 <= hi) and (hi < h)
+        valid_w = (0 <= wi) and (wi < w)
+        valid_ind = valid_t and valid_h and valid_w
+
+        for d in range(ndeltas):
+            delta = deltas[d]
+
+            # -- modify values --
+            mT = ti+delta[0]
+            mH = hi+delta[1]
+            mW = wi+delta[2]
+
+            # -- valid change --
+            valid_t = (0 <= mT) and (mT < t)
+            valid_h = (0 <= mH) and (mH < h)
+            valid_w = (0 <= mW) and (mW < w)
+            valid_prop = valid_t and valid_h and valid_w
+
+            # -- fill data --
+            valid = valid_ind and valid_prop
+            agg[idx,d,0] = mT if valid else -1
+            agg[idx,d,1] = mH if valid else -1
+            agg[idx,d,2] = mW if valid else -1
+
 
 def initMask(shape,vnlb_params,step=0,info=None):
 
@@ -136,3 +272,7 @@ def fill_mask(mask,ngroups,step_t,step_h,step_w,
                             ngroups+=1
 
     return ngroups
+
+
+def divUp(a,b): return (a-1)//b+1
+

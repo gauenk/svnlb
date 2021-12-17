@@ -28,7 +28,7 @@ def computeAggregation(deno,group,indices,weights,mask,nSimP,params=None,step=0)
     patches = groups2patches(group,c,ps,ps_t,nSimP)
 
     # -- exec search --
-    deno_clone = deno.copy()
+    # deno_clone = deno.copy()
     nmasked = exec_aggregation(deno,patches,indices,weights,mask,
                                ps,ps_t,onlyFrame,aggreBoost)
 
@@ -79,7 +79,9 @@ def exec_aggregation(deno,patches,indices,weights,mask,
 
         # -- get the sim locaion --
         ind = indices[n]
-        ind1 = pixRmColor(ind,c,h,w)
+        if ind == -1: continue
+
+        # ind1 = pixRmColor(ind,c,h,w)
         t0,c0,h0,w0 = idx2coords(ind,w,h,c)
         # t1,c1,h1,w1 = idx2coords(ind1,w,h,1)
         t1,c1,h1,w1 = t0,c0,h0,w0

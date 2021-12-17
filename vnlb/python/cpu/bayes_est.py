@@ -142,7 +142,6 @@ def exec_bayes_estimate_v2(groupNoisy,groupBasic,sigma,sigmab2,
         # -- run the denoiser --
         # groupNoisy_c = groupNoisy[chnl]
         groupNoisy_c = index_groups(groupNoisy,nSimP,pdim,chnl)
-
         group_c,mat_group,eigVecs = update_group(groupNoisy_c,eigVals,eigVecs,rank)
 
         groupNoisy.ravel()[nSimP*pdim * chnl:nSimP*pdim * (chnl+1)] = group_c.ravel()
@@ -229,7 +228,6 @@ def exec_bayes_estimate(groupNoisy,groupBasic,sigma,sigmab2,
         # -- run the denoiser --
         # groupNoisy_c = groupNoisy[chnl]
         groupNoisy_c = index_groups(groupNoisy,nSimP,pdim,chnl)
-
         group_c,mat_group,eigVecs = update_group(groupNoisy_c,eigVals,eigVecs,rank)
 
         groupNoisy.ravel()[nSimP*pdim * chnl:nSimP*pdim * (chnl+1)] = group_c.ravel()

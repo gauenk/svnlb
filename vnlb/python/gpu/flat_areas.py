@@ -1,32 +1,28 @@
 
 
+import torch
 import numpy as np
 from einops import rearrange
 from easydict import EasyDict as edict
 
-def runFlatAreas(group,psX,psT,nSimP,chnls,gamma,sigma):
+def run_flat_areas(patches,gamma,sigma2):
     """
     Decide if the region's area is "flat"
     """
 
-    # -- create vars --
-    pdim = psX*psX*psT
-    Z = pdim*nSimP
-
     # -- shapes --
-    gflat = group.ravel()[:pdim*nSimP*chnls]
-    gflat = gflat.reshape(chnls,pdim*nSimP).T
+    bsize,num,ps_t,c,ps,ps = patches.shape
+    pflat = rearrange(patches,'b n pt c ph pw -> b c (n pt ph pw)')
 
     # -- compute var --
-    gsum = np.sum(gflat,axis=0)
-    gsum2 = np.sum(gflat**2,axis=0)
-    var = (gsum2 - (gsum*gsum/Z)) / (Z-1)
-    var = np.mean(var)
+    B,C,Z = pflat.shape
+    psum = torch.sum(pflat,dim=2)
+    psum2 = torch.sum(pflat**2,dim=2)
+    var = (psum2 - (psum*psum/Z)) / (Z-1)
+    var = torch.mean(var,dim=1)
 
     # -- compute thresh --
-    thresh = gamma*sigma**2
+    thresh = gamma*sigma2
+    flat_patch = var < thresh
 
-    # -- compare --
-    flatPatch = var < thresh
-
-    return flatPatch
+    return flat_patch

@@ -121,7 +121,7 @@ class TestProcNlb(unittest.TestCase):
                 save_images(py_mask[:,None],SAVE_DIR/"py_mask.png",imax=1.)
 
 
-    def do_run_proc_nlb(self,tensors,sigma,in_params,save=True):
+    def do_run_proc_nlb(self,tensors,sigma,in_params,step,save=True):
 
         # -- init --
         noisy = tensors.noisy[:3,:,:36,:36].copy()
@@ -179,9 +179,12 @@ class TestProcNlb(unittest.TestCase):
         # print(args)
 
         # -- compare --
-        np.testing.assert_allclose(cpp_denoised,py_denoised)
-        np.testing.assert_allclose(cpp_basic,py_basic,rtol=1.5e-3)
-
+        if step == 0:
+            np.testing.assert_allclose(cpp_basic,py_basic,rtol=1.5e-3)
+        elif step == 1:
+            np.testing.assert_allclose(cpp_denoised,py_denoised)
+        else:
+            raise ValueError(f"Uknown step [{step}]")
 
     #
     # -- Call the Tests --
@@ -211,9 +214,10 @@ class TestProcNlb(unittest.TestCase):
 
         # -- no args --
         pyargs = {}
+        step = 0
         vnlb_dataset = "davis_64x64"
         tensors,sigma = self.do_load_data(vnlb_dataset)
-        self.do_run_proc_nlb(tensors,sigma,pyargs)
+        self.do_run_proc_nlb(tensors,sigma,pyargs,step)
 
         # # -- modify patch size --
         # pyargs = {}

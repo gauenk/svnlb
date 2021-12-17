@@ -5,4 +5,4 @@ from .vnlb import runPythonVnlb
 from .proc_nlb import processNLBayes
 from .init_mask import initMask
 from .cov_mat import computeCovMat
-from .flat_areas import runFlatAreas
+from .flat_areas import run_flat_areas

@@ -63,8 +63,8 @@ def fill_patches(patches,noisy,inds,cs):
 
     # -- create output --
     t,c,h,w = noisy.shape
-    k,t,h_batch,w_batch = inds.shape
-    k,t,ps_t,c,ps,ps,h_batch,w_batch = patches.shape
+    bsize,k = inds.shape
+    bsize,k,ps_t,c,ps,ps = patches.shape
 
     # -- run launcher --
     fill_patches_launcher(patches,noisy,inds,cs)
@@ -74,8 +74,9 @@ def fill_patches_launcher(patches,noisy,inds,cs):
 
     # -- create output --
     t,c,h,w = noisy.shape
-    k,t,h_batch,w_batch = inds.shape
-    k,t,ps_t,c,ps,ps,h_batch,w_batch = patches.shape
+    bsize,k = inds.shape
+    bsize,k,ps_t,c,ps,ps = patches.shape
+    # print("fpl: ",patches.shape,noisy.shape,inds.shape)
 
     # -- to numba --
     patches_nba = cuda.as_cuda_array(patches)
@@ -84,14 +85,16 @@ def fill_patches_launcher(patches,noisy,inds,cs):
     cs_nba = cuda.external_stream(cs)
 
     # -- thread and blocks --
-    blocks = (h_batch,w_batch)
+    batches_per_block = 4
+    bpb = batches_per_block
+    blocks = divUp(bsize,batches_per_block)
     threads = k
 
     # -- launch --
-    fill_patches_kernel[blocks,threads,cs_nba](patches_nba,noisy_nba,inds_nba)
+    fill_patches_kernel[blocks,threads,cs_nba](patches_nba,noisy_nba,inds_nba,bpb)
 
 @cuda.jit
-def fill_patches_kernel(patches,noisy,inds):
+def fill_patches_kernel(patches,noisy,inds,bpb):
 
     # -- local function --
     def bounds(val,lim):
@@ -116,26 +119,31 @@ def fill_patches_kernel(patches,noisy,inds):
     # -- shapes --
     nframes,color,height,width = noisy.shape
     # w_t,w_s,w_s,t,h_batch,w_batch = inds.shape
-    k,bt,ps_t,color,ps,ps,h_batch,w_batch = patches.shape
+    k,bsize,ps_t,color,ps,ps = patches.shape
     t = nframes
     whc = width*height*color
     wh = width*height
 
     # -- access with blocks and threads --
-    ni = cuda.threadIdx.x
-    bH,bW = cuda.blockIdx.x,cuda.blockIdx.y
+    batch_start = cuda.blockIdx.x*bpb
+    nidx = cuda.threadIdx.x # top k index "num"
 
     # -- compute dists --
-    for bT in range(nframes):
-        ind = inds[ni,bT,bH,bW]
-        nT,_,nH,nW = idx2coords(ind,color,height,width)
-        # nT = (ind      ) // whc
-        # nH = (ind % wh ) // width
-        # nW = ind % width
+    if nidx < inds.shape[1]:
+        for _bidx in range(bpb):
 
-        for pt in range(ps_t):
-            for ci in range(color):
-                for pi in range(ps):
-                    for pj in range(ps):
-                        val = noisy[nT+pt,ci,nH+pi,nW+pj]
-                        patches[ni,bT,pt,ci,pi,pj,bH,bW] = val
+            bidx = batch_start + _bidx
+            if bidx >= inds.shape[0]: continue
+
+            ind = inds[bidx,nidx]
+            nT,_,nH,nW = idx2coords(ind,color,height,width)
+            for pt in range(ps_t):
+                for ci in range(color):
+                    for pi in range(ps):
+                        for pj in range(ps):
+                            val = noisy[nT+pt,ci,nH+pi,nW+pj]
+                            patches[bidx,nidx,pt,ci,pi,pj] = val
+
+
+def divUp(a,b): return (a-1)//b+1
+

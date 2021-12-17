@@ -223,7 +223,20 @@ def groups2patches(group,c=None,psX=None,psT=None,npatches=None):
     return group
 
 
-def patches2groups(patches,c,psX,psT,nsearch,nParts):
+def patches2groups(patches,c=None,psX=None,psT=None,nsearch=None,nParts=None):
+
+    # -- shapes --
+    shape = patches.shape
+    if c is None:
+        c = shape[2]
+    if psX is None:
+        psX = shape[3]
+    if psT is None:
+        psT = shape[1]
+    if nsearch is None:
+        nsearch = shape[0]
+    if nParts is None:
+        nParts = 1
 
     # -- setup --
     npatches = patches.shape[0]

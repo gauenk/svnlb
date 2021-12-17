@@ -68,8 +68,8 @@ def exec_step(noisy,basic,weights,sigma,flows,params,step,clean=None):
     ps,ps_t = params['sizePatch'][step],params['sizePatchTime'][step]
 
     # -- init denoised --
-    # deno = basic if step == 0 else np.zeros_like(noisy)
-    deno = np.zeros_like(noisy)
+    deno = basic if step == 0 else np.zeros_like(noisy)
+    # deno = np.zeros_like(noisy)
 
     # -- init mask --
     minfo = initMask(noisy.shape,params,step)
@@ -100,7 +100,7 @@ def exec_step(noisy,basic,weights,sigma,flows,params,step,clean=None):
         # ti,ci,hi,wi = idx2coords(pidx,c,h,w)
         # pidx3 = coords2idx(ti,hi,wi,1,h,w)
         # t1,c1,h1,w1 = idx2coords(pidx3,1,h,w)
-        pidx3 = ti*w*h*c + hi*w + wi
+        pidx4 = ti*w*h*c + hi*w + wi
 
         # -- skip if invalid --
         valid_t = (ti + ps_t - 1) < nframes
@@ -111,7 +111,7 @@ def exec_step(noisy,basic,weights,sigma,flows,params,step,clean=None):
         access[ti,hi,wi] = 1
 
         # -- skip masked --
-        # if not(mask[ti,hi,wi] == 1): continue
+        if (mask[ti,hi,wi] == 0): continue
         # print("mask: ",mask[0,0,0],mask[0,0,1],mask[0,0,2],mask[0,0,3])
         # print("pidx3: ",pidx,pidx3,ti,hi,wi)
 
@@ -124,25 +124,23 @@ def exec_step(noisy,basic,weights,sigma,flows,params,step,clean=None):
         # print("ij,ij3: %d,%d\n" % (pidx,pidx3))
 
         # -- sim search --
-        sim_results = estimateSimPatches(noisy,basic,sigma,pidx3,flows,
+        sim_results = estimateSimPatches(noisy,basic,sigma,pidx4,flows,
                                          params,step,clean)
         groupNoisy,groupBasic,groupClean,indices = sim_results
         nSimP = len(indices)
 
         # -- optional flat patch --
         flatPatch = False
-        # if params.flatAreas[step]:
-        #     # flatPatch = runFlatAreas(groupNoisy,groupBasic,nSimP,chnls)
-        #     psX,psT = params.sizePatch[step],params.sizePatchTime[step]
-        #     gamma = params.gamma[step]
-        #     flatPatch = runFlatAreas(groupNoisy,psX,psT,nSimP,chnls,gamma,sigma)
+        if params.flatAreas[step]:
+            psX,psT = params.sizePatch[step],params.sizePatchTime[step]
+            gamma = params.gamma[step]
+            flatPatch = runFlatAreas(groupNoisy,psX,psT,nSimP,chnls,gamma,sigma)
 
         # -- bayes estimate --
         rank_var = 0.
         groupNoisy,rank_var = computeBayesEstimate(groupNoisy,groupBasic,
                                                    nSimP,shape,params,
                                                    step,flatPatch,groupClean)
-        # print(groupNoisy.ravel()[0])
 
         # -- debug zone. --
         # from vnlb.pylib.tests import save_images
@@ -152,6 +150,15 @@ def exec_step(noisy,basic,weights,sigma,flows,params,step,clean=None):
         # patches_rgb = yuv2rgb_cpp(patches_yuv)
         # print(patches_rgb)
         # save_images(patches_rgb,f"output/patches_{pidx}.png",imax=255.)
+
+        # -- stats --
+        # n_neg = np.sum(indices == -1)
+        # n_zero = np.sum(indices == 0)
+        # n_elems = indices.size * 1.
+        # perc_neg = n_neg / n_elems * 100
+        # perc_zero = n_zero / n_elems * 100
+        # print("Perc Neg: %2.1f" % perc_neg)
+        # print("Perc Zero: %2.1f" % perc_zero)
 
         # -- aggregate results --
         deno,weights,mask,nmasked = computeAgg(deno,groupNoisy,indices,weights,
@@ -164,9 +171,9 @@ def exec_step(noisy,basic,weights,sigma,flows,params,step,clean=None):
     wmax = weights.max().item()
     save_images(weights[:,None],"output/weights.png",imax=wmax)
 
-    amax = access.max().item()
-    print("amax")
-    save_images(access[:,None],"output/access.png",imax=amax)
+    # amax = access.max().item()
+    # print("amax")
+    # save_images(access[:,None],"output/access.png",imax=amax)
 
     # -- reduce using weighted ave --
     wimg = noisy if params.use_imread[step] else noisy_yuv
@@ -177,13 +184,14 @@ def exec_step(noisy,basic,weights,sigma,flows,params,step,clean=None):
 
     # -- re-colorize --
     if not(params.use_imread[step]):
-        deno = yuv2rgb_cpp(deno)
+        deno[...] = yuv2rgb_cpp(deno)
     # basic = yuv2rgb_cpp(basic)
 
     # -- pack results --
     results = edict()
-    results.denoised = deno if step == 1 else np.zeros_like(deno)
-    results.basic = deno
+    # results.denoised = deno if step == 1 else np.zeros_like(deno)
+    results.denoised = deno
+    results.basic = basic
     results.ngroups = g_counter
 
     return results

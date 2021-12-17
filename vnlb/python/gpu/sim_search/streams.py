@@ -43,6 +43,13 @@ def wait_streams(waiting,waitOn):
             # stream.wait_event(event)
             event.wait(stream)
 
+def divUp(a,b): return (a-1)//b+1
+
+def get_nbatches(t,h,w,bsize):
+    nelems = t*h*w
+    nbatches = divUp(nelems,bsize)
+    return nbatches
+
 def get_hw_batches(h,w,bsize):
     hbatches = torch.arange(0,h,bsize)
     wbatches = torch.arange(0,w,bsize)

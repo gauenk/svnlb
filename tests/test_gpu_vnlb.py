@@ -18,7 +18,7 @@ from vnlb.testing.file_io import save_images
 from vnlb.utils import groups2patches,patches2groups,patches_at_indices
 
 # -- python impl --
-from vnlb.gpu import initMask,processNLBayes
+from vnlb.gpu import initMask,processNLBayes,runPythonVnlb
 from vnlb.utils import idx2coords,compute_psnrs
 
 # -- check if reordered --
@@ -102,10 +102,10 @@ class TestProcNlb(unittest.TestCase):
 
 
         # -- init --
-        print(tensors.clean.shape)
-        hwSlice = slice(0,64)
+        hwSlice = slice(0,32)
+        # hwSlice = slice(0,64)
         # hwSlice = slice(0,256)
-        hwSlice = slice(200,200+256)
+        # hwSlice = slice(200,200+256)
         # noisy = tensors.noisy[:3,:,:16,:16].copy()
         # noisy = tensors.noisy[:3,:,-16:,-16:].copy()
         clean = tensors.clean[:,:,hwSlice,hwSlice].copy()
@@ -135,49 +135,55 @@ class TestProcNlb(unittest.TestCase):
         py_params['nstreams'] = [4,4]
         print("start python.")
         start = time.perf_counter()
-        py_results = processNLBayes(noisy,basic,sigma,0,tensors,py_params)
+        py_results = runPythonVnlb(noisy,sigma,tensors,py_params)
         end = time.perf_counter() - start
         print("[py] exec time: ",end)
 
         # -- unpack --
         py_denoised = py_results['denoised'].cpu().numpy()
         py_basic = py_results['basic'].cpu().numpy()
-        py_ngroups = py_results['ngroups']
+        # py_ngroups = py_results['ngroups']
 
         # -- python --
         py_min = py_basic.min().item()
         py_mean = py_basic.mean().item()
         py_max = py_basic.max().item()
         py_psnr = compute_psnrs(py_basic,clean)
-        # print("py: ",py_min,py_mean,py_max,py_psnr)
-        print("[py] psnrs: ",py_psnr)
+        print("[py.basic] psnrs: ",py_psnr)
+        py_psnr = compute_psnrs(py_denoised,clean)
+        print("[py.denoised] psnrs: ",py_psnr)
 
         # -- cpp exec --
         cpp_params = copy.deepcopy(params)
-        # cpp_results = vnlb.swig.processNLBayes(noisy,sigma,0,tensors,cpp_params)
         print("start cpp.")
         start = time.perf_counter()
-        cpp_results = vnlb.swig.processNLBayes(noisy,sigma,0,tensors,cpp_params)
+        cpp_results = vnlb.swig.runPyVnlb(noisy,sigma,tensors,cpp_params)
         end = time.perf_counter() - start
         print("[cpp] exec time: ",end)
 
         # -- unpack --
         cpp_denoised = cpp_results['denoised']
         cpp_basic = cpp_results['basic']
-        cpp_ngroups = cpp_results['ngroups']
+        # cpp_ngroups = cpp_results['ngroups']
 
         # -- cpp --
         cpp_min = cpp_basic.min().item()
         cpp_mean = cpp_basic.mean().item()
         cpp_max = cpp_basic.max().item()
         cpp_psnr = compute_psnrs(cpp_basic,clean)
-        # print("cpp: ",cpp_min,cpp_mean,cpp_max,cpp_psnr)
-        print("[cpp] psnrs: ",cpp_psnr)
+        print("[cpp.basic] psnrs: ",cpp_psnr)
+        cpp_psnr = compute_psnrs(cpp_denoised,clean)
+        print("[cpp.denoised] psnrs: ",cpp_psnr)
 
         # -- delta --
         delta = np.abs(cpp_basic - py_basic)
         delta = np.sum(delta).item()
-        print("delta: %2.3f\n" % delta)
+        print("[basic] delta: %2.3f\n" % delta)
+
+        # -- delta --
+        delta = np.abs(cpp_basic - py_basic)
+        delta = np.sum(delta).item()
+        print("[denoised] delta: %2.3f\n" % delta)
 
         # -- save samples --
         print("save: ",save)
@@ -227,8 +233,8 @@ class TestProcNlb(unittest.TestCase):
 
         # -- no args --
         pyargs = {}
-        # vnlb_dataset = "davis_64x64"
-        vnlb_dataset = "davis"
+        vnlb_dataset = "davis_64x64"
+        # vnlb_dataset = "davis"
         tensors,sigma = self.do_load_data(vnlb_dataset)
         # self.do_run_proc_nlb(tensors,sigma,pyargs)
 
