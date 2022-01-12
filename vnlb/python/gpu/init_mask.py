@@ -12,34 +12,43 @@ from numba import jit,njit,prange,cuda
 # -- parser for cpp --
 from vnlb.swig.vnlb.mask_parser import mask_parser
 
-def mask2inds(mask,bsize,order=None):
+def mask2inds(mask,bsize,rand=True,order=None):
     index = torch.nonzero(mask)
     if index.shape[0] == 0: return index
-    # return index[:bsize]
 
-    # -- randomly shuffly
-    mlen = max(len(index),bsize)
-    if order is None or mlen == bsize:
-        order = torch.randperm(index.shape[0])
-    return index[order[:bsize]]
+    if rand:
+        # -- randomly shuffly --
+        mlen = max(len(index),bsize)
+        if order is None or mlen == bsize:
+            order = torch.randperm(index.shape[0])
+        index = index[order[:bsize]]
+        return index
+    else:
+        # -- index in order --
+        return index[:bsize]
 
 def update_mask(mask,access,val=0):
     assert access.shape[1] == 3
     mask[access[:,0],access[:,1],access[:,2]] = val
 
-def update_mask_inds(mask,inds,chnls,cs_ptr,boost=True,val=0):
+def update_mask_inds(mask,inds,chnls,cs_ptr,boost=True,val=0,nkeep=-1):
 
     # -- shape --
     t,h,w = mask.shape
     bsize,num = inds.shape
     hw,chw = h*w,chnls*h*w
 
+    # -- keep only to "nkeep" --
+    if nkeep != -1:
+        inds = inds[:,:nkeep]
+    bsize,num = inds.shape
+
     # -- rm "-1" inds --
     if inds.shape[0] == 0: return
     args = torch.where(torch.all(inds != -1,1))
-    print("A",inds.shape)
+    # print("A",inds.shape)
     inds = inds[args]
-    print("B",inds.shape)
+    # print("B",inds.shape)
     f_bsize,_ = inds.shape
     if inds.shape[0] == 0: return
 
@@ -54,6 +63,13 @@ def update_mask_inds(mask,inds,chnls,cs_ptr,boost=True,val=0):
     aug_inds[1,...] = tdiv(tmod(inds,hw),w,rounding_mode='floor') # (inds % hw) // w
     aug_inds[2,...] = tmod(inds,w)
     aug_inds = rearrange(aug_inds,'three b n -> (b n) three')
+
+    # if f_bsize < 10:
+    #     print("-- inds --")
+    #     print(inds[:,0])
+    #     print("-- aug inds --")
+    #     aug_inds_p = rearrange(aug_inds,'(b n) three -> three b n',b=f_bsize)
+    #     print(aug_inds_p[:,:,0])
 
     # -- aggregate boost --
     if boost:
@@ -99,6 +115,7 @@ def agg_boost_launcher(agg,inds,deltas,t,c,h,w,cs_ptr):
     work_per_thread = 1
     threads = 512
     blocks = divUp(B,threads*work_per_thread)
+    # print(blocks,threads,cs_nba)
     agg_boost_cuda[blocks,threads,cs_nba](agg_nba,inds_nba,deltas_nba,
                                           work_per_thread,t,c,h,w)
 

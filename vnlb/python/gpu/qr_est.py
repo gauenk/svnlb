@@ -42,12 +42,14 @@ def compute_qr(patches,sigma2,rank):
         covMat /= num
 
         # -- Cov + \sigma I --
-        diag_idx = torch.arange(covMat.shape[-1])
-        covMat[:,diag_idx,diag_idx] += sigma2
+        idiag = torch.arange(covMat.shape[-1])
+        covMat[:,idiag,idiag] += sigma2
 
         # -- QR --
         Q,R = torch.linalg.qr(covMat)
-        covMat[:,diag_idx,diag_idx] -= sigma2
+
+        # -- convert back --
+        covMat[:,idiag,idiag] -= sigma2
 
     return covMat,Q,R
 
@@ -74,7 +76,8 @@ def filter_patches(patches,covMat,Q,R,sigma2,rank):
     # -- inv 2 --
     # Z = torch.triangular_solve(patches.transpose(2,1),R).solution
     Pt = patches.transpose(2,1)
-    Qb = torch.matmul(Q.transpose(2,1),Pt)
+    Qb = torch.matmul(Q,Pt)
+    # Qb = torch.matmul(Q.transpose(2,1),Pt)
     # Qb = Q @ Pt
     # Rt = R.transpose(2,1)
     Rt = R.transpose(2,1)
@@ -93,7 +96,7 @@ def filter_patches(patches,covMat,Q,R,sigma2,rank):
     # covSig = covMat + sigma2*torch.eye(covMat.shape)
     # print(covMat.shape)
     tmp = torch.matmul(covMat,covInv)
-    # print("tmp.shape: ",tmp.shape)
+    print("tmp.shape: ",tmp.shape)
 
     # -- fill --
     patches[...] = tmp.transpose(2,1)
@@ -145,13 +148,13 @@ def qr_estimate_batch(in_patchesNoisy,patchesBasic,sigma2,
     print("QR Time: ",end)
 
     # -- modify eigenvals --
-    start = time.perf_counter()
+    # start = time.perf_counter()
     # eigVals_rs = rearrange(eigVals,'(b c) p -> b c p',b=bsize)
     # rank_var = torch.mean(torch.sum(eigVals_rs,dim=2),dim=1)
     # denoise_eigvals(R,sigmab2,mod_sel,rank)
     # bayes_filter_coeff(eigVals,sigma2,thresh)
-    end = time.perf_counter() - start
-    print("DN + Filter Time: ",end)
+    # end = time.perf_counter() - start
+    # print("DN + Filter Time: ",end)
 
     # -- denoise! --
     filter_patches(patchesNoisy,covMat,Q,R,sigma2,rank)

@@ -179,6 +179,23 @@ def save_hist(tensor,fn):
     plt.savefig(fn,bbox_inches='tight')
     plt.close("all")
 
+def save_image(tensor,fn,imax=255.):
+    # -- swap string and tensor --
+    tensor,fn = swap_ndarray_fn(tensor,fn)
+
+    # -- squash image values --
+    tensor = tensor.astype(np.float32) / imax
+    tensor = np.clip(255.*tensor,0,255)
+    tensor = np.uint8(tensor)
+
+    # -- arange --
+    save_img = rearrange(tensor,'c h w -> h w c')
+
+    # -- format for cv2 --
+    if save_img.shape[-1] == 3:
+        save_img = cv2.cvtColor(save_img,cv2.COLOR_RGB2BGR)
+    cv2.imwrite(str(fn),save_img)
+
 def save_images(tensor,fn,imax=255.):
     # -- swap string and tensor --
     tensor,fn = swap_ndarray_fn(tensor,fn)

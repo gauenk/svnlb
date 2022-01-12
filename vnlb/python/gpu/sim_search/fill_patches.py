@@ -65,6 +65,10 @@ def fill_patches(patches,noisy,inds,cs):
     t,c,h,w = noisy.shape
     bsize,k = inds.shape
     bsize,k,ps_t,c,ps,ps = patches.shape
+    # print("patches.shape: ",patches.shape)
+    # print("noisy.shape: ",noisy.shape)
+    # print("inds.shape: ",inds.shape)
+    # print(inds)
 
     # -- run launcher --
     fill_patches_launcher(patches,noisy,inds,cs)
@@ -77,6 +81,7 @@ def fill_patches_launcher(patches,noisy,inds,cs):
     bsize,k = inds.shape
     bsize,k,ps_t,c,ps,ps = patches.shape
     # print("fpl: ",patches.shape,noisy.shape,inds.shape)
+    # print(inds)
 
     # -- to numba --
     patches_nba = cuda.as_cuda_array(patches)
@@ -89,6 +94,7 @@ def fill_patches_launcher(patches,noisy,inds,cs):
     bpb = batches_per_block
     blocks = divUp(bsize,batches_per_block)
     threads = k
+    # print(blocks,threads)
 
     # -- launch --
     fill_patches_kernel[blocks,threads,cs_nba](patches_nba,noisy_nba,inds_nba,bpb)
@@ -119,7 +125,7 @@ def fill_patches_kernel(patches,noisy,inds,bpb):
     # -- shapes --
     nframes,color,height,width = noisy.shape
     # w_t,w_s,w_s,t,h_batch,w_batch = inds.shape
-    k,bsize,ps_t,color,ps,ps = patches.shape
+    bsize,k,ps_t,color,ps,ps = patches.shape
     t = nframes
     whc = width*height*color
     wh = width*height
@@ -136,6 +142,7 @@ def fill_patches_kernel(patches,noisy,inds,bpb):
             if bidx >= inds.shape[0]: continue
 
             ind = inds[bidx,nidx]
+            if ind == -1: continue
             nT,_,nH,nW = idx2coords(ind,color,height,width)
             for pt in range(ps_t):
                 for ci in range(color):

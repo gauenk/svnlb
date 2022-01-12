@@ -18,7 +18,7 @@ from vnlb.testing.file_io import save_images
 from vnlb.utils import groups2patches,patches2groups,patches_at_indices
 
 # -- python impl --
-from vnlb.gpu import initMask,processNLBayes
+from vnlb.gpu import initMask,processNLBayes,processNLMeans,runNLMeans
 from vnlb.utils import idx2coords,compute_psnrs
 
 # -- check if reordered --
@@ -103,7 +103,7 @@ class TestProcNlb(unittest.TestCase):
 
         # -- init --
         print(tensors.clean.shape)
-        hwSlice = slice(0,64)
+        # hwSlice = slice(0,64)
         # hwSlice = slice(0,256)
         hwSlice = slice(200,200+256)
         # noisy = tensors.noisy[:3,:,:16,:16].copy()
@@ -128,6 +128,7 @@ class TestProcNlb(unittest.TestCase):
         params = vnlb.swig.setVnlbParams(noisy.shape,sigma,params=in_params)
         # tensors = {'fflow':tensors['fflow'],'bflow':tensors['bflow']}
         tensors = {}
+        flows = tensors
 
         # -- python exec --
         basic = np.zeros_like(noisy)
@@ -135,7 +136,10 @@ class TestProcNlb(unittest.TestCase):
         py_params['nstreams'] = [4,4]
         print("start python.")
         start = time.perf_counter()
-        py_results = processNLBayes(noisy,basic,sigma,0,tensors,py_params)
+        # py_results = processNLMeans(noisy,basic,sigma,0,flows,params,
+        #                             gpuid=0,clean=clean)
+        py_results = runNLMeans(noisy,clean,sigma,flows,params,gpuid=0)
+        # py_results = processNLBayes(noisy,basic,sigma,0,flows,py_params)
         end = time.perf_counter() - start
         print("[py] exec time: ",end)
 
@@ -148,9 +152,12 @@ class TestProcNlb(unittest.TestCase):
         py_min = py_basic.min().item()
         py_mean = py_basic.mean().item()
         py_max = py_basic.max().item()
+        noisy_psnr = compute_psnrs(noisy,clean)
         py_psnr = compute_psnrs(py_basic,clean)
         # print("py: ",py_min,py_mean,py_max,py_psnr)
+        print("[noisy] psnrs: ",noisy_psnr)
         print("[py] psnrs: ",py_psnr)
+        # return
 
         # -- cpp exec --
         cpp_params = copy.deepcopy(params)

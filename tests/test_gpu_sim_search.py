@@ -155,8 +155,9 @@ class TestSimSearch(unittest.TestCase):
     def do_run_sim_search_full(self,tensors,sigma,in_params,save=True):
 
         # -- unpack shapes --
-        noisy = tensors.noisy[:3,:,:16,:16]
+        # noisy = tensors.noisy[:3,:,:16,:16]
         # noisy = tensors.noisy[:3,:,:8,:8]
+        noisy = tensors.noisy[:3,:,:64,:64]
         # noisy = tensors.noisy
         t,c,h,w = noisy.shape
         step = 0
@@ -242,7 +243,9 @@ class TestSimSearch(unittest.TestCase):
     def do_run_sim_search(self,tensors,sigma,in_params,save=True):
 
         # -- unpack shapes --
-        noisy = tensors.noisy[:3,:,:16,:16]
+        # noisy = tensors.noisy[:3,:,:16,:16]
+        # noisy = tensors.noisy[:3,:,:32,:32]
+        noisy = tensors.noisy[:3,:,:64,:64]
         # noisy = tensors.noisy
         t,c,h,w = noisy.shape
         nframes,height,width = t,h,w
@@ -250,6 +253,8 @@ class TestSimSearch(unittest.TestCase):
         hw = h*w
         step = 0
         device = 0
+
+        print("do_run_sim_search")
 
         # -- parse parameters --
         params = vnlb.swig.setVnlbParams(noisy.shape,sigma,params=in_params)
@@ -284,7 +289,6 @@ class TestSimSearch(unittest.TestCase):
             print("pidx4: ",pidx4)
             cpp_data = vnlb.cpu.runSimSearch(noisy.copy(),sigma,pidx4,
                                              tensors,copy.deepcopy(params),step)
-
             # -- unpack --
             cpp_patches = cpp_data["patchesNoisy"]
             cpp_group = cpp_data["groupNoisy"]
@@ -299,6 +303,7 @@ class TestSimSearch(unittest.TestCase):
             # -- python exec --
             gpu_params = copy.deepcopy(params)
             gpu_params.nstreams = 4
+            gpu_params.rand_mask = False
             gpu_tensors = {k:torch.FloatTensor(v) for k,v in tensors.items()}
             start = time.perf_counter()
             py_data = runSimSearch(noisy,sigma,gpu_tensors,gpu_params,step)
@@ -323,11 +328,16 @@ class TestSimSearch(unittest.TestCase):
             nelems = py_indices.size * 1.
             print("[py_inds (all)]: perc zero %2.3f" % (nzero/nelems*100))
 
+            nzero = np.sum(py_indices == -1).item()
+            nelems = py_indices.size * 1.
+            print("[py_inds (all)]: perc invalid %2.3f" % (nzero/nelems*100))
+
             # -- allow for swapping of "close" values --
             # print(py_access.shape,cpp_access.shape)
             # pidx = ti*height*width + hi*width + width
             # print(pidx,py_indices.shape,py_vals.shape)
 
+            print(py_indices.shape,pidx3,pidx4)
             py_indices = py_indices[pidx3,:]#.cpu().numpy()
             py_vals = py_vals[pidx3,:].cpu().numpy()
             # py_vals = py_vals[:,ti,wi,hi].cpu().numpy()
@@ -337,6 +347,10 @@ class TestSimSearch(unittest.TestCase):
             nzero = np.sum(py_indices == 0).item()
             nelems = py_indices.size * 1.
             print("[py_inds]: perc zero %2.3f" % (nzero/nelems*100))
+
+            nzero = np.sum(py_indices == -1).item()
+            nelems = py_indices.size * 1.
+            print("[py_inds]: perc invalid %2.3f" % (nzero/nelems*100))
 
             nzero = np.sum(cpp_indices == 0).item()
             nelems = cpp_indices.size * 1.
@@ -382,6 +396,11 @@ class TestSimSearch(unittest.TestCase):
             # vals = np.stack([py_vals.ravel(),cpp_vals.ravel()],-1)
             # print(ti,ci,wi,hi)
             # print(np.c_[indices,vals])
+
+            args = np.where(py_indices_full[:,0].cpu().numpy() == 13647)[0]
+            print(args)
+            print(13647./args)
+
 
             np.testing.assert_array_equal(py_indices,cpp_indices)
             try:
@@ -431,7 +450,7 @@ class TestSimSearch(unittest.TestCase):
 
         # -- random data & modified patch size --
         pyargs = {}
-        # tensors,sigma = self.do_load_rand_data(5,3,854,480)
+        tensors,sigma = self.do_load_rand_data(5,3,854,480)
         tensors,sigma = self.do_load_rand_data(5,3,32,32)
         self.do_run_sim_search(tensors,sigma,pyargs)
 

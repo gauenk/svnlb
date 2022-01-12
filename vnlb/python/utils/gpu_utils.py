@@ -17,7 +17,8 @@ def apply_yuv2rgb(burst):
     """
     rgb -> yuv [using the "cpp repo" logic]
     """
-    t,h,w,c = burst.shape
+    #t,h,w,c = burst.shape
+    t,c,h,w = burst.shape
 
     # -- weights --
     weights = [1./np.sqrt(3),1./np.sqrt(2),np.sqrt(2.)/np.sqrt(3)]
@@ -39,7 +40,8 @@ def rgb2yuv_cpp(burst):
     """
     burst_yuv = []
     # burst = rearrange(burst,'t c h w -> t h w c')
-    t,h,w,c = burst.shape
+    # t,h,w,c = burst.shape
+    c,t,h,w = burst.shape
     for ti in range(t):
 
         # -- init --

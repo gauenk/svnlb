@@ -5,7 +5,7 @@ import numpy as np
 from einops import rearrange
 from easydict import EasyDict as edict
 
-def run_flat_areas(patches,gamma,sigma2):
+def run_flat_areas(flat_patch,patches,gamma,sigma2):
     """
     Decide if the region's area is "flat"
     """
@@ -23,6 +23,4 @@ def run_flat_areas(patches,gamma,sigma2):
 
     # -- compute thresh --
     thresh = gamma*sigma2
-    flat_patch = var < thresh
-
-    return flat_patch
+    flat_patch[...] = var < thresh

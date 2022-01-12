@@ -14,11 +14,11 @@ from easydict import EasyDict as edict
 
 # -- package helper imports --
 from vnlb.testing.data_loader import load_dataset
-from vnlb.testing.file_io import save_images
+from vnlb.testing.file_io import save_images,save_image
 from vnlb.utils import groups2patches,patches2groups,patches_at_indices
 
 # -- python impl --
-from vnlb.gpu import initMask,processNLBayes,runPythonVnlb
+from vnlb.gpu import initMask,processNLBayes,runPythonVnlb,patch_est_plot
 from vnlb.utils import idx2coords,compute_psnrs
 
 # -- check if reordered --
@@ -102,14 +102,36 @@ class TestProcNlb(unittest.TestCase):
 
 
         # -- init --
-        hwSlice = slice(0,32)
+        print("tensors.noisy.shape: ",tensors.noisy.shape)
+        # hwSlice = slice(0,32)
         # hwSlice = slice(0,64)
         # hwSlice = slice(0,256)
-        # hwSlice = slice(200,200+256)
+        # hwSlice = slice(300,300+256)
+
+        # hwSliceX = slice(0,0+64)
+        # hwSliceY = slice(0,0+64)
+
+        # hwSliceX = slice(200,200+48)
+        # hwSliceY = slice(600,600+48)
+
+        # hwSliceX = slice(200,200+64)
+        # hwSliceY = slice(600,600+64)
+        # hwSliceX = slice(264,264+256)
+        # hwSliceY = slice(664,664+256)
+        hwSliceX = slice(264+64,264+64+64)
+        hwSliceY = slice(664+64,664+64+64)
+
+        # hwSliceX = slice(200,200+256)
+        # hwSliceY = slice(600,600+256)
+
+        # hwSliceX = slice(264,264+128)
+        # hwSliceY = slice(664,664+128)
+
         # noisy = tensors.noisy[:3,:,:16,:16].copy()
         # noisy = tensors.noisy[:3,:,-16:,-16:].copy()
-        clean = tensors.clean[:,:,hwSlice,hwSlice].copy()
-        noisy = tensors.noisy[:,:,hwSlice,hwSlice].copy()
+        clean = tensors.clean[:,:,hwSliceX,hwSliceY].copy()
+        noisy = tensors.noisy[:,:,hwSliceX,hwSliceY].copy()
+
         # noisy = tensors.noisy[:3,:,16:32,16:32].copy()
         # noisy = tensors.noisy[:3,:,:36,:36].copy()
         # noisy = tensors.noisy[:3,:,:96,:96].copy()
@@ -119,6 +141,13 @@ class TestProcNlb(unittest.TestCase):
         # noisy = tensors.noisy.copy()
         shape = noisy.shape
         t,c,h,w = noisy.shape
+        save_images(noisy,SAVE_DIR / "./noisy.png",imax=255.)
+        for ti in range(t):
+            save_dir = Path("./data/dcrop/")
+            if not(save_dir.exists()): save_dir.mkdir()
+            fn = save_dir / ("%05d.jpg" % ti)
+            print(fn)
+            save_image(clean[ti],fn,imax=255.)
 
         # -- testing info --
         print("nosiy.shape: ",noisy.shape)
@@ -129,13 +158,20 @@ class TestProcNlb(unittest.TestCase):
         # tensors = {'fflow':tensors['fflow'],'bflow':tensors['bflow']}
         tensors = {}
 
+        # -- patch est plot --
+        print("creating error bars.")
+        # patch_est_plot(noisy,clean,sigma,tensors,params)
+        # return
+
         # -- python exec --
         basic = np.zeros_like(noisy)
         py_params = copy.deepcopy(params)
-        py_params['nstreams'] = [4,4]
+        py_params['nstreams'] = [1,1]
+        # py_params['nSimilarPatches'] = [100,60]
         print("start python.")
         start = time.perf_counter()
-        py_results = runPythonVnlb(noisy,sigma,tensors,py_params)
+        # py_results = runPythonVnlb(noisy,sigma,tensors,py_params,clean=clean)
+        py_results = runPythonVnlb(noisy,sigma,tensors,py_params,clean=clean)
         end = time.perf_counter() - start
         print("[py] exec time: ",end)
 
@@ -233,9 +269,12 @@ class TestProcNlb(unittest.TestCase):
 
         # -- no args --
         pyargs = {}
-        vnlb_dataset = "davis_64x64"
-        # vnlb_dataset = "davis"
+        # vnlb_dataset = "davis_64x64"
+        vnlb_dataset = "davis"
         tensors,sigma = self.do_load_data(vnlb_dataset)
+        sigma = 50.
+        shape = list(tensors.clean.shape)
+        tensors.noisy = tensors.clean + sigma * np.random.normal(size=shape)
         # self.do_run_proc_nlb(tensors,sigma,pyargs)
 
 

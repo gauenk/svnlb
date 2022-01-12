@@ -1,5 +1,6 @@
 
 # -- python deps --
+import numpy as np
 import torch
 import torch as th
 from easydict import EasyDict as edict
@@ -12,9 +13,16 @@ from .proc_nlb import processNLBayes
 
 
 # -- project imports --
-from vnlb.utils import groups2patches,patches2groups
+from vnlb.utils import groups2patches,patches2groups,compute_psnrs
 
-def runPythonVnlb(noisy,sigma,flows,params,gpuid=0):
+def runPythonVnlb(noisy,sigma,flows,params,gpuid=0,clean=None):
+    return runPythonVnlb_2step(noisy,sigma,flows,params,gpuid,clean)
+    # if clean is None:
+    #     return runPythonVnlb_2step(noisy,sigma,flows,params,gpuid)
+    # else:
+    #     return runPythonVnlb_clean(noisy,clean,sigma,flows,params,gpuid)
+
+def runPythonVnlb_2step(noisy,sigma,flows,params,gpuid=0,clean=None):
     """
 
     A GPU-Python implementation of the C++ code.
@@ -28,19 +36,256 @@ def runPythonVnlb(noisy,sigma,flows,params,gpuid=0):
     basic = torch.zeros_like(noisy)
 
     # -- step 1 --
-    step_results = processNLBayes(noisy,basic,sigma,0,flows,params)
-    step1_results = step_results
-    basic = step1_results.basic.clone()
+    # params['nSimilarPatches'][0] = 100
+    # params['simPatchRefineKeep'] = [-1,-1]
+    # params['nstreams'] = [1,1]
+    # params['offset'] = [0.,0.]
+    # step_results = processNLBayes(noisy,basic,sigma,0,flows,params,clean=clean)
+    # basic_out = step_results.basic.clone()
+    # basic = step_results.basic.clone()
+    # py_psnr = compute_psnrs(basic.cpu().numpy(),clean)
+    # print(f"[basic (clean)] psnrs: ", py_psnr)
+
+    # params['nSimilarPatches'][0] = 100
+    # params['simPatchRefineKeep'] = [-1,-1]
+    # params['nstreams'] = [1,1]
+    # params['offset'] = [2*(sigma/255.)**2.,0.]
+    # basic = torch.zeros_like(noisy)
+    # step_results = processNLBayes(noisy,basic,sigma,0,flows,params)
+    # basic_out = step_results.basic.clone()
+    # basic = step_results.basic.clone()
+    # py_psnr = compute_psnrs(basic.cpu().numpy(),clean)
+    # print(f"[basic (clean)] psnrs: ", py_psnr)
+
+    # -- step 1 --
+    params['nSimilarPatches'][0] = 100
+    params['useWeights'] = [False,False]
+    # params['simPatchRefineKeep'] = [100,100]
+    params['cleanSearch'] = [True,True]
+    # params['cleanSearch'] = [False,False]
+    # params['variThres'] = [0.,0.]
+    params['useWeights'] = [False,False]
+    params['nfilter'] = [-1,-1]
+    # params['nfilter'] = [500,500]
+    # params['simPatchRefineKeep'] = [5,5]
+    params['offset'] = [2*(sigma/255.)**2.,0.]
+    step_results = processNLBayes(noisy,basic,sigma,0,flows,params,clean=clean)
+    # params['nSimilarPatches'][0] = 500
+    # params['simPatchRefineKeep'] = [-1,-1]
+    # params['offset'] = [0.,0.]
+    # step_results = processNLBayes(noisy,basic,sigma,0,flows,params,clean=clean)
+    basic_out = step_results.basic.clone()
+    basic = step_results.basic.clone()
+    py_psnr = compute_psnrs(basic.cpu().numpy(),clean)
+    print(f"[basic] psnrs: ", py_psnr,np.mean(py_psnr))
+    tmp = basic
+
+
+    # params['nfilter'] = [-1,-1]
+    # params['cleanSearch'] = [True,True]
+    # step_results = processNLBayes(noisy,basic,sigma,0,flows,params,clean=clean)
+    # basic_out = step_results.basic.clone()
+    # basic = step_results.basic.clone()
+    # py_psnr = compute_psnrs(basic.cpu().numpy(),clean)
+    # print(f"[basic-clean] psnrs: ", py_psnr)
+    # exit(0)
+
+    # -- explore --
+    # params['nSimilarPatches'][1] = params['nSimilarPatches'][0]
+    # params['sigmaBasic'] = [sigma,sigma]
+    # params['variThres'] = [2.7,2.7]
+
+    # -- run step pre-explore --
+    params['nSimilarPatches'][1] = 60
+    params['variThres'][1] = .2
+    # params['simPatchRefineKeep'] = [-1,-1]
+    # params['nSimilarPatches'][1] = 250
+    # params['simPatchRefineKeep'] = [25,25]
+    alpha = 1.0
+    in_basic = alpha * basic + (1 - alpha) * noisy
+    step_results = processNLBayes(noisy,in_basic,sigma,1,flows,params,clean=clean)
+    tmp = step_results.denoised.clone()
+    py_psnr = compute_psnrs(tmp.cpu().numpy(),clean)
+    print("[step 1]: ",py_psnr,np.mean(py_psnr))
+    exit()
+
+    # params['nSimilarPatches'][1] = 50
+    # params['variThres'][1] = 0.2
+    # alpha = 0.8
+    # in_basic = alpha * tmp + (1 - alpha) * noisy
+    # step_results = processNLBayes(noisy,in_basic,sigma,1,flows,
+    #                               params)#,clean=clean)
+    # tmp = step_results.denoised.clone()
+
+    # py_psnr = compute_psnrs(tmp.cpu().numpy(),clean)
+    # print("[step 2]: ",py_psnr)
+
+    # explore_depth(noisy,tmp,sigma,flows,params,clean)
+    tmp = basic
+    explore_alpha_patch_sched(noisy,tmp,sigma,flows,params,clean)
 
     # -- step 2 --
-    # tensors = edict(flows)
-    # tensors.basic = step_results.basic.clone()
-    step_results = processNLBayes(noisy,basic,sigma,1,flows,params)
+    # alpha_sched = [0.1,0.15,0.25,0.3,0.4,0.45]
+
+    # alpha_sched = [0.5,0.6,0.7,0.8]#,0.9]
+    # patch_sched = [150,60,60,40]#,40]
+
+    alpha_sched = [.5,.8,.9,1.]#,0.9]
+    patch_sched = [100,50,50,50]#,40]
+    thresh_sched = [0.8,0.1,0.8,.2]
+
+    # alpha_sched = [0.5,0.6,0.7,0.8,0.9]
+    # patch_sched = [150,120,100,80,60,50,40,20,10]
+    # for idx in range(len(alpha_sched)):
+
+    #     alpha = alpha_sched[idx]
+    #     patches = patch_sched[idx]
+    #     thresh = thresh_sched[idx]
+    #     params['nSimilarPatches'][1] = patches
+    #     params['variThres'][1] = thresh
+
+    #     in_basic = alpha * basic + (1 - alpha) * noisy
+    #     step_results = processNLBayes(noisy,in_basic,sigma,1,flows,
+    #                                       params,clean=clean)
+    #     denoised = step_results.denoised.clone()
+    #     basic = step_results.denoised.clone()
+
+    #     py_psnr = compute_psnrs(denoised.cpu().numpy(),clean)
+    #     m_psnr = np.mean(py_psnr)
+    #     print(f"[alpha = {alpha:.2}, patches = {patches}] psnrs: ", py_psnr,m_psnr)
+    denoised = tmp
 
     # -- format --
     results = edict()
-    results.basic = basic
-    results.denoised = step_results.denoised
+    results.basic = basic_out
+    results.denoised = denoised
 
     return results
 
+def explore_depth(noisy,basic,sigma,flows,params,clean):
+    banner = "Exploring depth!"
+    print(banner)
+    alpha_sched = [1.,1.,1.]
+    thresh_sched = [2.7,2.7,2.7]
+    patch_sched = [50,50,50]
+    for idx in range(len(thresh_sched)):
+        alpha = alpha_sched[idx]
+        patches = patch_sched[idx]
+        thresh = thresh_sched[idx]
+
+        params['nSimilarPatches'][1] = patches
+        params['variThres'][1] = thresh
+        in_basic = alpha * basic + (1 - alpha) * noisy
+
+        try:
+            step_results = processNLBayes(noisy,in_basic,sigma,1,
+                                          flows,params)#,clean=clean)
+            denoised = step_results.denoised.clone()
+            py_psnr = compute_psnrs(denoised.cpu().numpy(),clean)
+            m_psnr = np.mean(py_psnr)
+            print(f"[alpha = {alpha:.2}, patches = {patches}, thresh = {thresh:.2}] psnrs: ", py_psnr,m_psnr)
+        except:
+            print(f"[alpha = {alpha:.2}, patches = {patches}, thresh = {thresh:.2}]: error... skipping.")
+        basic = denoised
+
+def explore_alpha_patch_sched(noisy,basic,sigma,flows,params,clean):
+    # alpha_sched = [0.,0.1,0.5,0.8,0.9,1.]
+    # alpha_sched = [0.1,0.25,0.5,0.8,0.9,1.]
+    alpha_sched = [0.5,0.8,0.9,1.]
+    # alpha_sched = [0.8,0.9,1.]
+    # alpha_sched = [0.9,1.]
+    # alpha_sched = [1.]
+    # alpha_sched = [0.8,0.9,1.]
+    # alpha_sched = [0.1,0.5,0.6,0.7,0.8,0.9,0.99]
+    # patch_sched = [300,200,150,100,50,10]
+    # patch_sched = [300,200,150,50]#,100,50,10]
+    # patch_sched = [300,200,150,120,100,80,60,50,40,20,10]
+    # patch_sched = [500,300,100,50]#,75,50,25]#,100,50,10]
+    patch_sched = [100,60,30,20,10]
+    # patch_sched = [200,176,150,125,100,50]#,100,50,10]
+    # thresh_sched = [2.7,1.5,0.8,.2]
+    # thresh_sched = [2.7,1.5,0.8,0.4,.2,.1,.05]
+    thresh_sched = [2.7,1.5,0.8]
+    for kdx in range(len(thresh_sched)):
+        for idx in range(len(alpha_sched)):
+            for jdx in range(len(patch_sched)):
+                alpha = alpha_sched[idx]
+                patches = patch_sched[jdx]
+                thresh = thresh_sched[kdx]
+
+                print(params['nSimilarPatches'][1])
+                params['nSimilarPatches'][1] = patches
+                params['variThres'][1] = thresh
+
+                in_basic = alpha * basic + (1 - alpha) * noisy
+                try:
+                    step_results = processNLBayes(noisy,in_basic,sigma,1,
+                                              flows,params)#,clean=clean)
+                    denoised = step_results.denoised.clone()
+                    py_psnr = compute_psnrs(denoised.cpu().numpy(),clean)
+                    m_psnr = np.mean(py_psnr)
+                    print(f"[alpha = {alpha:.2}, patches = {patches}, thresh = {thresh:.2}] psnrs: ", py_psnr,m_psnr)
+                except Exception as e:
+                    print(e)
+                    print(f"[alpha = {alpha:.2}, patches = {patches}, thresh = {thresh:.2}]: error... skipping.")
+
+    """
+    [step 1]
+
+    alpha = 0.
+    pathcces = 125
+    thresh = 2.7
+
+    alpha = 0.1
+    patches = 100
+    thresh = 2.7
+
+    alpha = 0.5
+    patches = 100
+    thresh = 0.8
+
+    alpha = 0.8
+    patches = 50
+    thresh = 0.1
+
+    alpha = 0.9
+    patches = 50
+    thresh = 0.8
+
+    alpha = 1.0
+    patches = 50
+    thresh = 0.2
+
+    [step 2]
+
+    
+
+    """
+
+def runPythonVnlb_clean(noisy,clean,sigma,flows,params,gpuid=0):
+    """
+
+    A GPU-Python implementation of the C++ code.
+    using the a clean reference to estimate the eigenvals
+
+    """
+
+    # -- place on cuda --
+    device = gpuid
+    noisy = torch.FloatTensor(noisy).to(device)
+    clean = torch.FloatTensor(clean).to(device)
+    flows = edict({k:torch.FloatTensor(v).to(device) for k,v in flows.items()})
+    basic = torch.zeros_like(noisy)
+    params['bsize_s'] = [128,128]
+    params['nSimilarPatches'] = [100,100]
+
+    # -- step using clean values --
+    step_results = processNLBayes(noisy,noisy,sigma,1,flows,params)
+    deno = step_results.denoised.clone()
+
+    # -- format --
+    results = edict()
+    results.basic = noisy
+    results.denoised = deno
+
+    return results
