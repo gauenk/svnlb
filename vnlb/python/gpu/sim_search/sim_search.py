@@ -200,7 +200,7 @@ def exec_sim_search(noisy,basic,clean,fflow,bflow,mask,sigma,ps,ps_t,
 
     return patchesNoisy,patchesBasic,vals,inds
 
-def sim_search_batch(noisy,basic,clean,sigma,patchesNoisy,patchesBasic,
+def sim_search_batch(noisy,basic,clean,sigma,sigmab,patchesNoisy,patchesBasic,
                      patchesClean,access,vals,inds,fflow,bflow,step_s,bsize,
                      ps,ps_t,w_s,nWt_f,nWt_b,step1,offset,cs,cs_ptr,
                      clean_srch=True,nfilter=-1):
@@ -240,14 +240,24 @@ def sim_search_batch(noisy,basic,clean,sigma,patchesNoisy,patchesBasic,
     # -- filter down if we have a positive search num --
     if nfilter > 0:
         # -- filter --
-        nave = 2 if step1 else 3
+        # nave = 2 if step1 else 3
+        nave = 5 if step1 else 3
+        if step1: thresh = 50.**2/30.
+        else: thresh = 5.**2/2.
+        step = 0 if step1 else 1
         img = noisy if step1 else basic
-        pshape = patchesNoisy.shape
-        kwargs = {'nave':nave}
-        filter_patches(inds,l2_vals,l2_inds,img,nfilter,pshape,sigma,cs_ptr,**kwargs)
+        shape = patchesNoisy.shape
+        fsigma = sigma if step1 else sigmab
+        kwargs = {'nave':nave,'thresh':thresh,'step':step,
+                  'clean':clean,'pshape':shape[2:]}
+        out = filter_patches(inds,l2_vals,l2_inds,img,
+                             nfilter,shape,fsigma,cs_ptr,**kwargs)
+        cpatches = out[-2]
+        rpatches = out[-1]
     else:
         # -- compute topk --
         get_topk(l2_vals,l2_inds,vals,inds)
+        rpatches = None
 
 
     # -- fill noisy patches --
@@ -260,6 +270,13 @@ def sim_search_batch(noisy,basic,clean,sigma,patchesNoisy,patchesBasic,
     valid_clean = not(clean is None)
     valid_clean = valid_clean and not(patchesClean is None)
     if valid_clean: fill_patches(patchesClean,clean,inds,cs_ptr)
+
+    # if not(rpatches is None):
+    #     b = rpatches.shape[0]
+    #     delta = torch.sum(torch.abs(patchesNoisy[:b]-rpatches)).sum()
+    #     print("[noisy] delta: ",delta.item())
+    #     delta = torch.sum(torch.abs(patchesClean[:b]-cpatches)).sum()
+    #     print("[clean] delta: ",delta.item())
 
     # -- checking --
     # args = torch.where(torch.all(inds!=-1,1))[0]
@@ -280,7 +297,7 @@ def sim_search_batch(noisy,basic,clean,sigma,patchesNoisy,patchesBasic,
     #         print(inds_v[args,0])
     #     assert delta < 1.
 
-def filter_patches(inds,l2_vals,l2_inds,img,nfilter,pshape,sigma,cs_ptr,**kwargs):
+def filter_patches(inds,l2_vals,l2_inds,img,nfilter,shape,sigma,cs_ptr,**kwargs):
 
     # -- get top-nsearch inds --
     device = l2_inds.device
@@ -291,14 +308,20 @@ def filter_patches(inds,l2_vals,l2_inds,img,nfilter,pshape,sigma,cs_ptr,**kwargs
 
     # -- fill patches to filter --
     nf = nfilter
-    _,np,pt,c,ph,pw = pshape
+    _,np,pt,c,ph,pw = shape
     patches_srch = torch.zeros(b,nf,pt,c,ph,pw,device=device)
     fill_patches(patches_srch,img,inds_srch,cs_ptr)
+    if 'clean' in kwargs and not(kwargs['clean'] is None):
+        patches_clean = torch.zeros(b,nf,pt,c,ph,pw,device=device)
+        fill_patches(patches_clean,kwargs['clean'],inds_srch,cs_ptr)
+        patches_clean = rearrange(patches_clean,'b n t c h w -> b n (t c h w)')
+        kwargs['clean'] = patches_clean
 
     # -- run filtered search --
-    _,inds_k = exec_patch_subset_filter(patches_srch,inds_srch,sigma,np,cs_ptr,**kwargs)
+    _,inds_k,cpatches,rpatches = exec_patch_subset_filter(patches_srch,inds_srch,
+                                                          sigma,np,cs_ptr,**kwargs)
     inds[:b,:] = inds_k
-    return inds
+    return inds,cpatches,rpatches
 
 def get_topk(l2_vals,l2_inds,vals,inds):
 

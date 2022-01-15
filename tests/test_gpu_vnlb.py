@@ -9,6 +9,7 @@ import tempfile
 import sys
 from einops import rearrange
 import shutil
+# from PIL import Image
 from pathlib import Path
 from easydict import EasyDict as edict
 
@@ -57,6 +58,44 @@ class TestProcNlb(unittest.TestCase):
         data.t,data.c,data.h,data.w = data.noisy.shape
 
         return data,std
+
+    def do_load_davis_burst(self,bname,sigma):
+
+        # -- noisy and clean --
+        clean = self.load_davis_burst(bname)
+        shape = clean.shape
+        noisy = clean + sigma * np.random.normal(size=shape)
+
+        # -- create data --
+        t,c,h,w = clean.shape
+
+        data = edict()
+        data.clean = clean
+        data.noisy = noisy
+        data.fflow = (np.random.rand(t,2,h,w)-0.5)*5.
+        data.bflow = (np.random.rand(t,2,h,w)-0.5)*5.
+        data.t,data.c,data.h,data.w = data.noisy.shape
+        return data,sigma
+
+    def load_davis_burst(self,bname):
+        path = Path("./data/davis/")
+        path = path / bname
+        if not(path.exists()):
+            print(f"path {str(path)} dne.")
+        burst = []
+        tstart = 20
+        for i in range(5):
+            fn = str(path / ("%05d.jpg" % (i+tstart)))
+            img = cv2.imread(fn,-1)
+            img = cv2.cvtColor(img,cv2.COLOR_BGR2RGB)
+            print("img.shape: ",img.shape)
+            img = torch.FloatTensor(img)
+            burst.append(img)
+        burst = torch.stack(burst)
+        burst = burst.numpy()
+        burst = rearrange(burst,'t h w c -> t c h w')
+        print("burst.shape: ",burst.shape)
+        return burst
 
     def do_load_rand_data(self,t,c,h,w):
 
@@ -118,11 +157,27 @@ class TestProcNlb(unittest.TestCase):
         # hwSliceY = slice(600,600+64)
         # hwSliceX = slice(264,264+256)
         # hwSliceY = slice(664,664+256)
-        hwSliceX = slice(264+64,264+64+64)
-        hwSliceY = slice(664+64,664+64+64)
+        # hwSliceX = slice(264+64,264+64+64)
+        # hwSliceY = slice(664+64,664+64+64)
 
-        # hwSliceX = slice(200,200+256)
-        # hwSliceY = slice(600,600+256)
+        # hwSliceX = slice(100,100+256)
+        # hwSliceY = slice(400,400+256)
+
+        # hwSliceX = slice(100,100+256)
+        # hwSliceY = slice(500,500+256)
+
+        hwSliceX = slice(100,100+128)
+        hwSliceY = slice(500,500+128)
+
+        # hwSliceX = slice(200+96,200+256-64)
+        # hwSliceY = slice(100+96,100+256-64)
+
+        # hwSliceX = slice(200+96,200+256-64)
+        # hwSliceY = slice(500+96,500+256-64)
+
+
+        # hwSliceX = slice(0,128)
+        # hwSliceY = slice(0,128)
 
         # hwSliceX = slice(264,264+128)
         # hwSliceY = slice(664,664+128)
@@ -270,9 +325,11 @@ class TestProcNlb(unittest.TestCase):
         # -- no args --
         pyargs = {}
         # vnlb_dataset = "davis_64x64"
-        vnlb_dataset = "davis"
-        tensors,sigma = self.do_load_data(vnlb_dataset)
+        # vnlb_dataset = "davis"
+        # tensors,sigma = self.do_load_data(vnlb_dataset)
         sigma = 50.
+        tensors,sigma = self.do_load_davis_burst("salsa",sigma)
+        # tensors,sigma = self.do_load_davis_burst("aerobatics",sigma)
         shape = list(tensors.clean.shape)
         tensors.noisy = tensors.clean + sigma * np.random.normal(size=shape)
         # self.do_run_proc_nlb(tensors,sigma,pyargs)

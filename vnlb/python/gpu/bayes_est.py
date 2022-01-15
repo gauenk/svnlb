@@ -1,4 +1,5 @@
 
+# -- python --
 import torch,math
 import scipy
 from scipy import linalg as scipy_linalg
@@ -9,7 +10,8 @@ import vnlb
 # from .cov_mat import computeCovMat
 from vnlb.utils import groups2patches,patches2groups
 from vnlb.utils.gpu_utils import apply_yuv2rgb
-from vnlb.gpu.patch_subset import exec_patch_subset
+# from vnlb.gpu.patch_subset import exec_patch_subset
+from vnlb.gpu.patch_utils import yuv2rgb_patches,patches_psnrs
 
 
 def check_steps(step1,step):
@@ -380,7 +382,7 @@ def cov_to_psnrs(covMat,pClean,pNoisy,sigma2,rank,thresh,is_yuv=True,verbose=Fal
         print(eigVals[0,:])
         print(eigVals)
 
-    thresh = 2.7
+    # thresh = 2.7
     bayes_filter_coeff(eigVals,sigma2,thresh)
     if verbose:
         print(torch.sum(eigVals > 0,1))
@@ -431,61 +433,6 @@ def cov_to_psnrs(covMat,pClean,pNoisy,sigma2,rank,thresh,is_yuv=True,verbose=Fal
 
     return ave_psnr
 
-def yuv2rgb_patches(patches):
-
-    # -- reshape --
-    if patches.dim() > 3:
-        shape_str = 'b n pt c ph pw -> (b c) n (pt ph pw)'
-        patches = rearrange(patches,shape_str)
-
-    # -- shapes --
-    bc,n,pdim = patches.shape
-    c,pt = 3,2
-    ps = int(np.sqrt(pdim//pt))
-    b = bc//c
-
-    # -- reshape --
-    shape_str = '(b c) n (pt ph pw) -> (b n pt) c ph pw'
-    patches = rearrange(patches,shape_str,b=b,pt=pt,ph=ps)
-
-    # -- convert --
-    apply_yuv2rgb(patches)
-
-    # -- reshape --
-    shape_str = '(b n pt) c ph pw -> (b c) n (pt ph pw)'
-    patches = rearrange(patches,shape_str,b=b,pt=pt,ph=ps)
-
-    return patches
-
-def patches_psnrs(pDeno,pClean,imax=1.,snum=5):
-
-    # -- reshape if needed --
-    if pDeno.dim() > 3:
-        pDeno = rearrange(pDeno,'b n pt c ph pw -> b n (pt c ph pw)')
-        pClean = rearrange(pClean,'b n pt c ph pw -> b n (pt c ph pw)')
-
-    # -- shape & init --
-    eps = 1e-8
-    bsize,num,pdim = pDeno.shape
-
-    # -- only 0th index --
-    delta = (pDeno[:,:snum,:]/imax - pClean[:,:snum,:]/imax)**2
-    delta = rearrange(delta,'b n p -> (b n) p')
-    delta = delta.cpu().numpy()
-    delta = np.mean(delta,axis=1) + eps
-    log_mse = np.ma.log10(1./delta).filled(-np.infty)
-    psnrs = 10 * log_mse
-    psnrs = rearrange(psnrs,'(b n) -> b n',b=bsize)
-
-    # -- ave psnr over all --
-    # delta = (pDeno/imax - pClean/imax)**2
-    # delta = delta.cpu().numpy()
-    # delta = np.mean(delta,axis=2) + eps
-    # log_mse = np.ma.log10(1./delta).filled(-np.infty)
-    # psnrs = 10 * log_mse
-    # psnrs = np.mean(psnrs,axis=1)
-
-    return psnrs
 
 # ----------------------------------
 #
@@ -534,9 +481,9 @@ def bayes_estimate_batch(in_patchesNoisy,patchesBasic,patchesClean,
         shape_str = "b c n pdim -> (b c) n pdim"
         rInput = rearrange(patchesNoisy,shape_str)[:,:nref]
         pInput = rearrange(pInput,shape_str).clone()
-        pInputSorted,_,wGradSort,_ = exec_patch_subset(pInput,sigma,
-                                                       ref_patches=rInput,
-                                                       nkeep = nkeep,inds=inds)
+        # pInputSorted,_,wGradSort,_ = exec_patch_subset(pInput,sigma,
+        #                                                ref_patches=rInput,
+        #                                                nkeep = nkeep,inds=inds)
         # pInputSorted = pInput
         # print("pInputSorted.shape: ",pInputSorted.shape)
         pInputSortedRs = rearrange(pInputSorted,'(b c) n pdim -> b c n pdim',c=3)
@@ -603,7 +550,7 @@ def bayes_estimate_batch(in_patchesNoisy,patchesBasic,patchesClean,
         eigVals,eigVecs = torch.linalg.eigh(covMat)
         eigVals = torch.flip(eigVals,dims=(1,))
         eigVecs = torch.flip(eigVecs,dims=(2,))[...,:rank]
-        print("a: ",covMat.shape,eigVals.shape,eigVecs.shape)
+        # print("a: ",covMat.shape,eigVals.shape,eigVecs.shape)
 
     else:
         # -- compute eig stuff --
@@ -615,7 +562,7 @@ def bayes_estimate_batch(in_patchesNoisy,patchesBasic,patchesClean,
         covMat,eigVals,eigVecs = compute_cov_mat(patchesInput,rank)
         # # end = time.perf_counter() - start
         # # print("Eig Time: ",end)
-        print("b: ",covMat.shape,eigVals.shape,eigVecs.shape)
+        # print("b: ",covMat.shape,eigVals.shape,eigVecs.shape)
 
     # -- modify eigenvals --
     # start = time.perf_counter()
@@ -638,6 +585,7 @@ def bayes_estimate_batch(in_patchesNoisy,patchesBasic,patchesClean,
     # kwargs = {"pt":ps_t,"px":ps,"bh":h_bsize,"bw":w_bsize}
     shape_str = '(b c) n (pt ph pw) -> b n pt c ph pw'
     kwargs = {"pt":ps_t,"ph":ps,"pw":ps,"b":bsize}
+    # print("patchesNoisy.shape: ",patchesNoisy.shape)
     patchesNoisy = rearrange(patchesNoisy,shape_str,**kwargs)
     if step2:
         patchesBasic = rearrange(patchesBasic,shape_str,**kwargs)

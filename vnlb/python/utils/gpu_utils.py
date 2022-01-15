@@ -29,7 +29,7 @@ def apply_yuv2rgb(burst):
     u = burst[:,1].clone()
     v = burst[:,2].clone()
 
-    # -- rgb -> yuv --
+    # -- yuv -> rgb --
     burst[:,0,...] = w[0] * y + w[1] * u + w[2] * 0.5 * v
     burst[:,1,...] = w[0] * y - w[2] * v
     burst[:,2,...] = w[0] * y - w[1] * u + w[2] * 0.5 * v

@@ -8,7 +8,9 @@ from einops import rearrange,repeat
 from easydict import EasyDict as edict
 
 # -- package --
+import hids
 import vnlb
+from vnlb.testing.file_io import save_images
 
 # -- local imports --
 from .init_mask import initMask,mask2inds,update_mask,update_mask_inds
@@ -151,6 +153,7 @@ def exec_step(noisy,basic,clean,deno,mask,fflow,bflow,sigma2,sigmab2,rank,
     shape = noisy.shape
     nframes,chnls,height,width = noisy.shape
     sigma = math.sqrt(sigma2)
+    sigmab = math.sqrt(sigmab2)
 
     # -- using the "patch subset" weighted values --
     # if nkeep != -1: use_weights = True
@@ -176,6 +179,7 @@ def exec_step(noisy,basic,clean,deno,mask,fflow,bflow,sigma2,sigmab2,rank,
     nsearch = w_s * w_s * w_t
 
     # -- batching height and width --
+    nstreams = 1
     tsize = bsize*nstreams
     nelems = torch.sum(mask).item()
     nbatches = divUp(divUp(nelems,nstreams),tsize)
@@ -240,7 +244,7 @@ def exec_step(noisy,basic,clean,deno,mask,fflow,bflow,sigma2,sigmab2,rank,
 
             # -- sim_search_block --
             inds_s[...] = -1
-            sim_search_batch(noisy_yuv,basic_yuv,clean_yuv,sigma,
+            sim_search_batch(noisy_yuv,basic_yuv,clean_yuv,sigma,sigmab,
                              patchesNoisy_s,patchesBasic_s,patchesClean_s,
                              access,vals_s,inds_s,fflow,bflow,step_s,bsize,
                              ps,ps_t,w_s,nWt_f,nWt_b,step==0,offset,cs,cs_ptr,
@@ -266,7 +270,7 @@ def exec_step(noisy,basic,clean,deno,mask,fflow,bflow,sigma2,sigmab2,rank,
         pGroups = [patchesNoisy,patchesBasic]
         # trim_sims(inds,mask,pGroups,trim_breaks,bsize)
         trim_breaks = [False,]*nstreams
-        print("access_breaks: ",access_breaks)
+        # print("access_breaks: ",access_breaks)
 
         # -- update access_breaks --
         # for bidx in range(nstreams):
@@ -308,11 +312,19 @@ def exec_step(noisy,basic,clean,deno,mask,fflow,bflow,sigma2,sigmab2,rank,
         # delta = torch.sum(delta).item()
         # print("delta: %2.3f" % delta)
         inds_i = inds_v if use_weights else None
-        patchesNoisy_v_og = patchesNoisy_v.clone()
+        # patchesNoisy_v_og = patchesNoisy_v.clone()
+
+        # patchesNoisy[...] = hids.coreset_growth.denoise_subset(patchesNoisy,sigma)
+        # rank_var = 10.
+        # patchesNoisy_v = patchesNoisy
+        # patchesClean_v = patchesClean
+        # print("Hi")
+
         rank_var = bayes_estimate_batch(patchesNoisy_v,patchesBasic_v,None,
                                         sigma2,sigmab2,rank,group_chnls,thresh,
                                         step==1,flat_patches_v,cs,cs_ptr,
                                         use_weights=use_weights,inds=inds_i)
+
         # rank_var = qr_estimate_batch(patchesNoisy_s,patchesBasic_s,sigma2,
         #                              sigmab2,rank,group_chnls,thresh,
         #                              step==1,flat_patch_rs,cs,cs_ptr)
@@ -324,15 +336,50 @@ def exec_step(noisy,basic,clean,deno,mask,fflow,bflow,sigma2,sigmab2,rank,
             # print(patchesClean_v[0])
             pNoiseRgb = yuv2rgb_patches(patchesNoisy_v)
             pCleanRgb = yuv2rgb_patches(patchesClean_v)
-            psnrs = patches_psnrs(pNoiseRgb,pCleanRgb,255.,4)
+            psnrs = patches_psnrs(pNoiseRgb,pCleanRgb,255.)
+            psnrs = np.sort(psnrs,1)[:,:4]
+
             # print(" -- psnrs --")
             # print(psnrs[:10])
             # ave_psnrs = np.mean(psnrs,0)
             # std_psnrs = np.std(psnrs,0)
             # print(ave_psnrs)
             # print(std_psnrs)
-            # # explore_gp(patchesNoisy_v,patchesNoisy_v_og,patchesClean_v)
-            # # exit()
+
+            # # -- exec different way --
+            # # pn = patchesNoisy_v
+            # # pc = patchesClean_v
+            # pn,pc = pNoiseRgb,pCleanRgb
+            # print("pn.shape: ",pNoiseRgb.shape)
+            # psnrs = hids.patch_utils.patch_psnrs(pn,pc,to_rgb=False,prefix="proc")
+            # # psnrs = psnrs[:,:4]
+            # print(psnrs.shape)
+
+            # print(" -- [b] psnrs --")
+            # psnrs = np.sort(psnrs,1)[:,:4]
+            # print(psnrs[:10])
+            # ave_psnrs = np.mean(psnrs,0)
+            # std_psnrs = np.std(psnrs,0)
+            # print(ave_psnrs)
+            # print(std_psnrs)
+
+            # # -- see top few patches --
+            # print("patchesNoisy.shape: ",patchesNoisy.shape)
+            # b = patchesNoisy.shape[0]
+            # t = 2
+            # w = patchesNoisy.shape[-1]
+            # shape_str = '(b c) n (t h w) -> b n t c h w'
+            # pNoiseRgb = rearrange(pNoiseRgb,shape_str,b=b,t=t,w=w)
+            # print("pNoiseRgb.shape: ",pNoiseRgb.shape)
+            # for i in range(5):
+            #     fn = f"output/patches_{i}.png"
+            #     pnoisy = pNoiseRgb[i,:5,0]
+            #     print("pnoisy.shape: ",pnoisy.shape)
+            #     pnoisy = pnoisy.cpu().numpy()
+            #     save_images(fn,pnoisy)
+            # exit()
+            # explore_gp(patchesNoisy_v,patchesNoisy_v_og,patchesClean_v)
+
 
 
         # -- aggregate results --

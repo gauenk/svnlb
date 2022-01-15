@@ -92,6 +92,8 @@ def agg_boost(inds,t,c,h,w,cs_ptr):
     agg = -torch.ones(B,aggMult,3,dtype=torch.int64).to(inds.device)
 
     # -- launch --
+    print("agg.shape: ",agg.shape)
+    print("inds.shape: ",inds.shape,t,c,h,w)
     agg_boost_launcher(agg,inds,deltas,t,c,h,w,cs_ptr)
 
     # -- remove "-1" --
@@ -131,6 +133,7 @@ def agg_boost_cuda(agg,inds,deltas,wpt,t,c,h,w):
     start_idx = tIdx*wpt + bIdx*bdimX*wpt
     for work_idx in range(wpt):
         idx = start_idx + work_idx
+        if idx > inds.shape[0]: continue
 
         ti = inds[idx,0]
         hi = inds[idx,1]

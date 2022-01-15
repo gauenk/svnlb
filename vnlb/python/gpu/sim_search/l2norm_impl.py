@@ -356,8 +356,10 @@ def compute_l2norm_kernel(dists,inds,fflow,bflow,access,bufs,noisy,tranges,
                                         dist += (v_pix - n_pix)**2
 
                     # -- dists --
+                    is_zero = dist < 1e-8
                     dist = dist-offset if dist < np.infty else dist
-                    dist = dist if dist > 0 else 0.
+                    dist = abs(dist)# if dist > 0 else 0.
+                    dist = 0. if is_zero else dist
                     dists[bidx,tidZ,tidX,tidY] = dist/Z
 
                     # -- inds --
