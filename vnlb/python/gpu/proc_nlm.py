@@ -1,27 +1,22 @@
 
 # -- python deps --
-import copy,math
-import torch
+import copy,torch
 import torch as th
-import numpy as np
 from einops import rearrange,repeat
 from easydict import EasyDict as edict
 
 # -- package --
-import hids
 import vnlb
-from vnlb.testing.file_io import save_images
 
 # -- local imports --
 from .init_mask import initMask,mask2inds,update_mask,update_mask_inds
 from .flat_areas import run_flat_areas
-from .search import sim_search_batch
-from .bayes_est import bayes_estimate_batch,patches_psnrs,yuv2rgb_patches
+from .sim_search import sim_search_batch
+from .bayes_est import bayes_estimate_batch
 from .comp_agg import compute_agg_batch
 from .qr_est import qr_estimate_batch
 from .trim_sims import trim_sims
 from .means_impl import means_estimate_batch
-from .explore_gp import explore_gp
 
 # -- wrapped functions --
 from .wrapped import weightedAggregation,computeAgg
@@ -38,15 +33,11 @@ from vnlb.utils import groups2patches,patches2groups,optional,divUp
 from vnlb.testing import save_images
 
 # -- streams
-from vnlb.gpu.streams import init_streams,wait_streams,get_hw_batches
-from vnlb.gpu.streams import view_batch,vprint,get_nbatches
+from vnlb.gpu.sim_search.streams import init_streams,wait_streams,get_hw_batches
+from vnlb.gpu.sim_search.streams import view_batch,vprint,get_nbatches
 
-def view_batch(tensor,bsize,bidx):
-    index = slice(bsize*bidx,bsize*(bidx+1))
-    view = tensor[index]
-    return view
 
-def processNLBayes(noisy,basic,sigma,step,flows,params,gpuid=0,clean=None):
+def processNLMeans(noisy,basic,sigma,step,flows,params,gpuid=0,clean=None):
     """
 
     A Python implementation for one step of the NLBayes code
@@ -60,8 +51,6 @@ def processNLBayes(noisy,basic,sigma,step,flows,params,gpuid=0,clean=None):
         zero_basic = th.zeros_like(noisy)
         basic = optional(basic,'basic',zero_basic)
         basic = basic.to(device)
-    if not(clean is None):
-        clean = th.FloatTensor(clean).to(device)
 
     # -- init outputs --
     shape = noisy.shape
@@ -75,6 +64,11 @@ def processNLBayes(noisy,basic,sigma,step,flows,params,gpuid=0,clean=None):
     zflow = torch.zeros((t,2,h,w)).to(device)
     fflow = optional(flows,'fflow',zflow)
     bflow = optional(flows,'bflow',zflow)
+
+    # -- move clean to cuda --
+    if not(clean is None):
+        if not(torch.is_tensor(clean)):
+            clean = torch.FloatTensor(clean).to(device)
 
     # -- unpack --
     ps = params['sizePatch'][step]
@@ -100,28 +94,22 @@ def processNLBayes(noisy,basic,sigma,step,flows,params,gpuid=0,clean=None):
     group_chnls = 1 if couple_ch else c
     step_s = 1
     # print("step_s: ",step_s)
-    nkeep = int(optional(params,'simPatchRefineKeep',[-1,-1])[step])
-    use_weights = int(optional(params,'useWeights',[False,False])[step])
-    clean_srch = int(optional(params,'cleanSearch',[False,False])[step])
-    offset = float(optional(params,'offset',[2*(sigma/255.)**2,0.])[step])
-    # offset = float(optional(params,'offset',[0.,0.])[step])
-    # bsize = int(optional(params,'bsize_s',[256,256])[step])
-    bsize = int(optional(params,'bsize_s',[128,128])[step])
-    nfilter = int(optional(params,'nfilter',[-1,-1])[step])
+    offset = 2*(sigma/255.)**2
+    # offset = 0.
 
-    # -- ints to bool --
-    use_weights = True if use_weights == 1 else False
-    clean_srch = True if clean_srch == 1 else False
+    # -- new args --
+    clean_srch = int(optional(params,'cleanSearch',[False,False])[step])
+    nfilter = int(optional(params,'nfilter',[-1,-1])[step])
 
     # -- create mask --
     mask = initMask(noisy.shape,params,step)['mask']
     mask = torch.ByteTensor(mask).to(device)
 
     # -- run the step --
-    exec_step(noisy,basic,clean,deno,mask,fflow,bflow,sigma2,sigmab2,rank,ps,
+    npatches = 20
+    exec_step(noisy,basic,deno,mask,fflow,bflow,sigma2,sigmab2,rank,ps,
               ps_t,npatches,step_s,w_s,nWt_f,nWt_b,group_chnls,couple_ch,
-              thresh,flat_areas,gamma,offset,step,bsize,nstreams,nkeep,
-              use_weights,clean_srch,nfilter)
+              thresh,flat_areas,gamma,offset,step,nstreams,clean,clean_srch,nfilter)
 
     # -- format outputs --
     results = edict()
@@ -131,13 +119,12 @@ def processNLBayes(noisy,basic,sigma,step,flows,params,gpuid=0,clean=None):
 
     return results
 
-def exec_step(noisy,basic,clean,deno,mask,fflow,bflow,sigma2,sigmab2,rank,
-              ps,ps_t,npatches,step_s,w_s,nWt_f,nWt_b,group_chnls,couple_ch,
-              thresh,flat_areas,gamma,offset,step,bsize,nstreams,nkeep,
-              use_weights,clean_srch,nfilter):
+def exec_step(noisy,basic,deno,mask,fflow,bflow,sigma2,sigmab2,rank,ps,ps_t,npatches,
+              step_s,w_s,nWt_f,nWt_b,group_chnls,couple_ch,thresh,flat_areas,gamma,
+              offset,step,nstreams,clean,clean_srch,nfilter):
 
     """
-    ** Our "simsearch" is not the same as "vnlb" **
+    ** Our "simsearch" is not the same as "vnlm" **
 
     1. the concurrency of using multiple cuda-streams creates io issues
        for using the mask
@@ -152,18 +139,9 @@ def exec_step(noisy,basic,clean,deno,mask,fflow,bflow,sigma2,sigmab2,rank,
     device = noisy.device
     shape = noisy.shape
     nframes,chnls,height,width = noisy.shape
-    sigma = math.sqrt(sigma2)
-    sigmab = math.sqrt(sigmab2)
-
-    # -- using the "patch subset" weighted values --
-    # if nkeep != -1: use_weights = True
-    # else: use_weights = False
-    # print("noisy.shape: ",noisy.shape)
 
     # -- init tensors --
-    if step == 0:
-        deno = basic
-        deno[...] = 0
+    deno = basic if step == 0 else deno
     # weights = th.zeros((nframes,height,width),dtype=th.float32)
 
     # -- color xform --
@@ -171,19 +149,19 @@ def exec_step(noisy,basic,clean,deno,mask,fflow,bflow,sigma2,sigmab2,rank,
     basic_yuv = apply_color_xform_cpp(basic)
     if not(clean is None):
         clean_yuv = apply_color_xform_cpp(clean)
-    else: clean_yuv = None
-    # print("clean is None: ",clean is None)
+    else:
+        clean_yuv = None
 
     # -- search region aliases --
     w_t = min(nWt_f + nWt_b + 1,nframes-1)
     nsearch = w_s * w_s * w_t
 
     # -- batching height and width --
-    nstreams = 1
-    tsize = bsize*nstreams
+    bsize,ssize = 256*nstreams,1
     nelems = torch.sum(mask).item()
-    nbatches = divUp(divUp(nelems,nstreams),tsize)
+    nbatches = divUp(divUp(nelems,nstreams),bsize)
     nmasked = 0
+    valid_clean = not(clean is None)
 
     # -- synch before start --
     curr_stream = 0
@@ -191,24 +169,31 @@ def exec_step(noisy,basic,clean,deno,mask,fflow,bflow,sigma2,sigmab2,rank,
     bufs,streams = init_streams(curr_stream,nstreams,device)
 
     # -- create shell --
-    # print("npatches: ",npatches)
-    ns,npa,t,c = nstreams,npatches,nframes,chnls
+    ns,np,t,c = nstreams,npatches,nframes,chnls
     tf32,ti32 = torch.float32,torch.int32
-    patchesNoisy = torch.zeros(tsize,npa,ps_t,c,ps,ps).type(tf32).to(device)
-    patchesBasic = torch.zeros(tsize,npa,ps_t,c,ps,ps).type(tf32).to(device)
-    patchesClean = torch.zeros(tsize,npa,ps_t,c,ps,ps).type(tf32).to(device)
-    inds = -torch.ones(tsize,npa).type(torch.int32).to(device)
-    vals = torch.zeros(tsize,npa).type(tf32).to(device)
+    patchesNoisy = torch.zeros(nstreams,bsize,np,ps_t,c,ps,ps).type(tf32).to(device)
+    patchesBasic = torch.zeros(nstreams,bsize,np,ps_t,c,ps,ps).type(tf32).to(device)
+    patchesClean = torch.zeros(nstreams,bsize,np,ps_t,c,ps,ps).type(tf32).to(device)
+    inds = -torch.ones(nstreams,bsize,np).type(torch.int32).to(device)
+    vals = torch.zeros(nstreams,bsize,np).type(tf32).to(device)
     weights = torch.zeros(nframes,height,width).type(tf32).to(device)
-    flat_patches = torch.zeros(tsize).type(ti32).to(device)
+    flat_patches = torch.zeros(nstreams,bsize).type(ti32).to(device)
+
+    # -- print statements --
+    # mins = noisy.min(0).values.min(1).values.min(1).values
+    # maxs = noisy.max(0).values.max(1).values.max(1).values
+    # print("noisy: ",mins,maxs)
+    # mins = noisy_yuv.min(0).values.min(1).values.min(1).values
+    # maxs = noisy_yuv.max(0).values.max(1).values.max(1).values
+    # print("noisy_yuv: ",mins,maxs)
     access_breaks = [False,]*nstreams
-    print("[proc] sigma: ",sigma)
 
     # -- over batches --
     for batch in range(nbatches):
 
         # -- break if complete --
         if any(access_breaks): break
+
 
         # ----------------------------------------------
         #
@@ -218,6 +203,7 @@ def exec_step(noisy,basic,clean,deno,mask,fflow,bflow,sigma2,sigmab2,rank,
         # print("batch: [%d/%d]" % (batch+1,nbatches))
 
         # -- reset --
+        inds[...] = -1
         flat_patches[...] = 0
 
         # -- exec search --
@@ -231,33 +217,39 @@ def exec_step(noisy,basic,clean,deno,mask,fflow,bflow,sigma2,sigmab2,rank,
 
             # -- get indies from mask --
             access = mask2inds(mask,bsize)
-            # print("access.shape: ",access.shape)
             if access.shape[0] == 0:
                 access_breaks[cs] = True
                 continue
 
             # -- select data for stream --
-            patchesNoisy_s = view_batch(patchesNoisy,bsize,cs)
-            patchesBasic_s = view_batch(patchesBasic,bsize,cs)
-            patchesClean_s = view_batch(patchesClean,bsize,cs)
-            vals_s = view_batch(vals,bsize,cs)
-            inds_s = view_batch(inds,bsize,cs)
+            patchesNoisy_s = patchesNoisy[cs]
+            patchesBasic_s = patchesBasic[cs]
+            patchesClean_s = patchesClean[cs]
+            vals_s = vals[cs]
+            inds_s = inds[cs]
 
+            # import time
+            # start = time.perf_counter()
             # -- sim_search_block --
-            inds_s[...] = -1
-            sim_search_batch(noisy_yuv,basic_yuv,clean_yuv,sigma,sigmab,
-                             patchesNoisy_s,patchesBasic_s,patchesClean_s,
-                             access,vals_s,inds_s,fflow,bflow,step_s,bsize,
-                             ps,ps_t,w_s,nWt_f,nWt_b,step==0,offset,cs,cs_ptr,
+            sim_search_batch(noisy_yuv,basic_yuv,clean_yuv,patchesNoisy_s,
+                             patchesBasic_s,patchesClean_s,access,
+                             vals_s,inds_s,fflow,bflow,step_s,bsize,ps,
+                             ps_t,w_s,nWt_f,nWt_b,step==0,offset,cs,cs_ptr,
                              clean_srch=clean_srch,nfilter=nfilter)
+            # nzeros = torch.sum(patchesNoisy_s==0).item()
+            # end = time.perf_counter() - start
+            # print("simsearch: ",end)
 
             # -- update mask --
+            # inds_rs = rearrange(inds,'s b n -> (s b) n')
+            # print("cs_ptr: ",cs_ptr)
             prev_masked = mask.sum().item()
-            update_mask_inds(mask,inds_s,chnls,cs_ptr,nkeep=nkeep)
+            inds_s = inds_s[:,:1]
+            update_mask_inds(mask,inds_s,chnls,cs_ptr,boost=False)
             curr_masked = mask.sum().item()
             delta = prev_masked - curr_masked
             nmasked += prev_masked - curr_masked
-            print("[%d/%d]: %d" % (nmasked,nelems,delta))
+            # print("[%d/%d]: %d" % (nmasked,nelems,delta))
 
         # ----------------------------------------------
         #
@@ -268,8 +260,7 @@ def exec_step(noisy,basic,clean,deno,mask,fflow,bflow,sigma2,sigmab2,rank,
         # -- synch --
         torch.cuda.synchronize()
         trim_breaks = [False,]*nstreams
-        pGroups = [patchesNoisy,patchesBasic]
-        # trim_sims(inds,mask,pGroups,trim_breaks,bsize)
+        # trim_sims(inds,mask,patchesNoisy,patchesBasic,trim_breaks)
         trim_breaks = [False,]*nstreams
         # print("access_breaks: ",access_breaks)
 
@@ -288,129 +279,95 @@ def exec_step(noisy,basic,clean,deno,mask,fflow,bflow,sigma2,sigmab2,rank,
         #
         # ----------------------------------
 
+        # -- shape entire batch --
+        vals_rs = rearrange(vals,'s b n -> (s b) n')
+        inds_rs = rearrange(inds,'s b n -> (s b) n')
+        shape_str = 's b n pt c ph pw -> (s b) n pt c ph pw'
+        patchesNoisy_rs = rearrange(patchesNoisy,shape_str)
+        patchesBasic_rs = rearrange(patchesBasic,shape_str)
+        patchesClean_rs = rearrange(patchesClean,shape_str)
+        flat_patch_rs = rearrange(flat_patches,'s b -> (s b)')
+
         # -- compute valid bool --
-        ivalid = torch.where(torch.all(inds!=-1,1))[0]
-        print("ivalid.shape: ",ivalid.shape)
-        vals_v = vals[ivalid]
-        inds_v = inds[ivalid]
-        patchesNoisy_v = patchesNoisy[ivalid]
-        patchesBasic_v = patchesBasic[ivalid]
-        patchesClean_v = patchesClean[ivalid]
-        if inds_v.shape[0] == 0:
+        ivalid = torch.where(torch.all(inds_rs!=-1,1))[0]
+        vals_rs = vals_rs[ivalid]
+        inds_rs = inds_rs[ivalid]
+        patchesNoisy_rs = patchesNoisy_rs[ivalid]
+        patchesBasic_rs = patchesBasic_rs[ivalid]
+        patchesClean_rs = patchesClean_rs[ivalid]
+        if inds_rs.shape[0] == 0:
             break
+        # print("[proc_nlb] nvalid: ",inds_rs.shape)
+        # print("patchesNoisy_rs.shape: ",patchesNoisy_rs.shape)
+        # print("patchesBasic_rs.shape: ",patchesBasic_rs.shape)
 
         # -- optional flat patch --
         # if flat_areas:
-        #     run_flat_areas(flat_patches,patchesNoisy,gamma,sigma2)
-
-        # -- TODO: remove me!! [only use if clean case] --
-        flat_patches_v = flat_patches[ivalid]
-        # flat_patches_v[...] = 1
+        #     run_flat_areas(flat_patch_rs,patchesNoisy_s,gamma,sigma2)
 
         # -- bayes denoising --
-        # delta = patchesNoisy_v - patchesBasic_v
-        # delta = torch.abs(delta)
-        # delta = torch.sum(delta).item()
-        # print("delta: %2.3f" % delta)
-        inds_i = inds_v if use_weights else None
-        # patchesNoisy_v_og = patchesNoisy_v.clone()
-
-        # patchesNoisy[...] = hids.coreset_growth.denoise_subset(patchesNoisy,sigma)
-        # rank_var = 10.
-        # patchesNoisy_v = patchesNoisy
-        # patchesClean_v = patchesClean
-        # print("Hi")
-
-        rank_var = bayes_estimate_batch(patchesNoisy_v,patchesBasic_v,None,
+        rank_var = means_estimate_batch(patchesNoisy_rs,patchesBasic_rs,
+                                        patchesClean_rs,vals_rs,
                                         sigma2,sigmab2,rank,group_chnls,thresh,
-                                        step==1,flat_patches_v,cs,cs_ptr,
-                                        use_weights=use_weights,inds=inds_i)
-
-        # rank_var = qr_estimate_batch(patchesNoisy_s,patchesBasic_s,sigma2,
-        #                              sigmab2,rank,group_chnls,thresh,
-        #                              step==1,flat_patch_rs,cs,cs_ptr)
-
-
-        # -- compute psnr --
-        if not(clean is None):
-            # print(patchesNoisy_v[0])
-            # print(patchesClean_v[0])
-            pNoiseRgb = yuv2rgb_patches(patchesNoisy_v)
-            pCleanRgb = yuv2rgb_patches(patchesClean_v)
-            psnrs = patches_psnrs(pNoiseRgb,pCleanRgb,255.)
-            psnrs = np.sort(psnrs,1)[:,:4]
-
-            # print(" -- psnrs --")
-            # print(psnrs[:10])
-            # ave_psnrs = np.mean(psnrs,0)
-            # std_psnrs = np.std(psnrs,0)
-            # print(ave_psnrs)
-            # print(std_psnrs)
-
-            # # -- exec different way --
-            # # pn = patchesNoisy_v
-            # # pc = patchesClean_v
-            # pn,pc = pNoiseRgb,pCleanRgb
-            # print("pn.shape: ",pNoiseRgb.shape)
-            # psnrs = hids.patch_utils.patch_psnrs(pn,pc,to_rgb=False,prefix="proc")
-            # # psnrs = psnrs[:,:4]
-            # print(psnrs.shape)
-
-            # print(" -- [b] psnrs --")
-            # psnrs = np.sort(psnrs,1)[:,:4]
-            # print(psnrs[:10])
-            # ave_psnrs = np.mean(psnrs,0)
-            # std_psnrs = np.std(psnrs,0)
-            # print(ave_psnrs)
-            # print(std_psnrs)
-
-            # # -- see top few patches --
-            # print("patchesNoisy.shape: ",patchesNoisy.shape)
-            # b = patchesNoisy.shape[0]
-            # t = 2
-            # w = patchesNoisy.shape[-1]
-            # shape_str = '(b c) n (t h w) -> b n t c h w'
-            # pNoiseRgb = rearrange(pNoiseRgb,shape_str,b=b,t=t,w=w)
-            # print("pNoiseRgb.shape: ",pNoiseRgb.shape)
-            # for i in range(5):
-            #     fn = f"output/patches_{i}.png"
-            #     pnoisy = pNoiseRgb[i,:5,0]
-            #     print("pnoisy.shape: ",pnoisy.shape)
-            #     pnoisy = pnoisy.cpu().numpy()
-            #     save_images(fn,pnoisy)
-            # exit()
-            # explore_gp(patchesNoisy_v,patchesNoisy_v_og,patchesClean_v)
-
-
+                                        step==1,valid_clean,flat_patch_rs,cs,cs_ptr)
 
         # -- aggregate results --
-        compute_agg_batch(deno,patchesNoisy_v,inds_v,weights,ps,ps_t,cs_ptr)
+        inds_rs = inds_rs[:,:1]
+        patchesNoisy_rs = patchesNoisy_rs[:,:1]
+        compute_agg_batch(deno,patchesNoisy_rs,inds_rs,weights,ps,ps_t,cs_ptr)
 
         # ----------------------------------
         #            MISC
         # ----------------------------------
+
+        # -- aggregate results --
+        # shape_str = 's b n pt c ph pw -> (s b) n pt c ph pw'
+        # patchesNoisy_rs = rearrange(patchesNoisy,shape_str)
+        # shape_str = 's b n -> (s b) n '
+        # inds_rs = rearrange(inds,shape_str)
+        # compute_agg_batch(deno,patchesNoisy_rs,inds_rs,weights,ps,ps_t,cs_ptr)
 
         # -- wait for all streams --
         torch.cuda.synchronize()
 
         # -- break if complete --
         if any(access_breaks): break
-        # if (nelems - nmasked) < 50:
-        #     print("breaking early: the last 50 pixels don't matter. :P")
-        #     break
+
+        # -- aggregate across streams --
+        # inds_rs = rearrange(inds,'s b n -> (s b) n')
+        # prev_masked = mask.sum().item()
+        # update_mask_inds(mask,inds_rs,nframes,chnls,height,width)
+        # curr_masked = mask.sum().item()
+        # delta = prev_masked - curr_masked
+        # nmasked += prev_masked - curr_masked
+        # print("[%d/%d]: %d" % (nmasked,nelems,delta))
+        # if delta < bsize:
+        #     print(mask2inds(mask,bsize))
+
+
+    # -- reweight --
+    # print("noisy: ",noisy.min(),noisy.max(),noisy.shape)
+    # print("noisy_yuv: ",noisy_yuv.min(),noisy_yuv.max(),noisy_yuv.shape)
+    # print("all: ",torch.all(weights>0))
+    # print("weights: ",weights.min(),weights.max(),weights.shape)
+    # print("deno: ",deno.min(),deno.max(),deno.shape)
+    # wmax = weights.max().item()
+    # save_images("gpu_weights.png",weights.cpu().numpy()[:,None],imax=wmax)
+    # wmax = weights.max().item()
+    # weights = repeat(weights,'t h w -> t c h w',c=chnls)
+    # print(weights[0,0,:3,:3])
+    # print(weights[0,0,8:10,8:10])
+    # print("wmax: ",wmax)
 
     # -- reweight --
     weights = repeat(weights,'t h w -> t c h w',c=chnls)
     index = torch.nonzero(weights,as_tuple=True)
     deno[index] /= weights[index]
 
-    # -- inspect --
-    # weights = weights.ravel().cpu()
-    # print(torch.histogram(weights,50))
-
     # -- yuv 2 rgb --
     if not(use_imread):
         yuv2rgb_cpp(deno)
+    # print("[post-2] deno: ",deno.min(),deno.max())
     torch.cuda.synchronize()
 
 

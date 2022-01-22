@@ -11,12 +11,17 @@ from vnlb.utils.gpu_utils import apply_color_xform_cpp
 from vnlb.testing import save_images
 from vnlb.gpu.patch_subset import exec_patch_subset_filter
 
+# -- import hids subsetting --
+import hids
+from sim_search import compute_l2norm_cuda,fill_patches,fill_patches_img
+
 # -- local imports --
-from ..init_mask import initMask,mask2inds,update_mask
+from .init_mask import initMask,mask2inds,update_mask
 from .streams import init_streams,wait_streams,get_hw_batches,view_batch,vprint
-from .subave_impl import compute_subset_ave
-from .l2norm_impl import compute_l2norm_cuda
-from .fill_patches import fill_patches,fill_patches_img
+# from .subave_impl import compute_subset_ave
+# from .l2norm_impl import compute_l2norm_cuda
+# from .fill_patches import fill_patches,fill_patches_img
+from vnlb.gpu.patch_utils import yuv2rgb_patches,save_patches
 
 #
 # -- exec across concurrent streams --
@@ -213,7 +218,6 @@ def sim_search_batch(noisy,basic,clean,sigma,sigmab,patchesNoisy,patchesBasic,
     if not(clean is None) and (clean_srch is True):
         srch_img_str = "clean"
         srch_img = clean
-    # print(f"search image [{srch_img_str}]")
     # print(access)
     # print("noisy.shape: ",noisy.shape)
     # print("basic.shape: ",basic.shape)
@@ -239,6 +243,10 @@ def sim_search_batch(noisy,basic,clean,sigma,sigmab,patchesNoisy,patchesBasic,
 
     # -- filter down if we have a positive search num --
     if nfilter > 0:
+
+        # -- testing --
+        l2_inds_c = l2_inds.clone() # clone for comparison
+
         # -- filter --
         # nave = 2 if step1 else 3
         nave = 5 if step1 else 3
@@ -247,7 +255,7 @@ def sim_search_batch(noisy,basic,clean,sigma,sigmab,patchesNoisy,patchesBasic,
         step = 0 if step1 else 1
         img = noisy if step1 else basic
         shape = patchesNoisy.shape
-        fsigma = sigma if step1 else sigmab
+        fsigma = sigma if step1 else 0.#sigmab
         kwargs = {'nave':nave,'thresh':thresh,'step':step,
                   'clean':clean,'pshape':shape[2:]}
         out = filter_patches(inds,l2_vals,l2_inds,img,
@@ -259,6 +267,12 @@ def sim_search_batch(noisy,basic,clean,sigma,sigmab,patchesNoisy,patchesBasic,
         get_topk(l2_vals,l2_inds,vals,inds)
         rpatches = None
 
+
+    # -- compare --
+    # ivalid = torch.where(torch.all(inds!=-1,1))[0]
+    # if nfilter > 0 and len(ivalid) == 128 and not(clean is None):
+    #     misc = [fflow,bflow,access,step_s,ps,ps_t,w_s,nWt_f,nWt_b,step1,offset,cs_ptr]
+    #     compute_clean_inds_error(clean,l2_vals,l2_inds,inds,misc)
 
     # -- fill noisy patches --
     fill_patches(patchesNoisy,noisy,inds,cs_ptr)
@@ -297,6 +311,44 @@ def sim_search_batch(noisy,basic,clean,sigma,sigmab,patchesNoisy,patchesBasic,
     #         print(inds_v[args,0])
     #     assert delta < 1.
 
+def compute_clean_inds_error(clean,l2_vals,l2_inds,h_inds,misc):
+
+    # -- clean search --
+    nkeep = h_inds.shape[1]
+    fflow,bflow,access,step_s,ps,ps_t,w_s,nWt_f,nWt_b,step1,offset,cs_ptr = misc
+    gt_vals,gt_inds = compute_l2norm_cuda(clean,fflow,bflow,access,step_s,ps,
+                                          ps_t,w_s,nWt_f,nWt_b,step1,0.,cs_ptr)
+
+    # -- compute top k --
+    print("nkeep: ",nkeep)
+    gt_vals,gt_inds = get_topk_pair(gt_vals,gt_inds,nkeep)
+    _,l2_inds = get_topk_pair(l2_vals,l2_inds,nkeep)
+    print("gt_inds.shape: ",gt_inds.shape)
+    print("l2_inds.shape: ",l2_inds.shape)
+
+    # -- inspect vals --
+    print("top: ",gt_vals[0])
+    print("gt_inds[0]: ",th.sort(gt_inds[0]).values)
+    print("l2_inds[0]: ",th.sort(l2_inds[0]).values)
+    print("h_inds[0]: ",th.sort(h_inds[0]).values)
+
+    # -- compare results --
+    B = gt_inds.shape[0]
+    for b in range(B):
+        l2_cmp = hids.compare_inds(gt_inds[[b]],l2_inds[[b]])
+        hids_cmp = hids.compare_inds(gt_inds[[b]],h_inds[[b]])
+        print("l2_cmp: %2.2f" % l2_cmp)
+        print("hids_cmp: %2.2f" % hids_cmp)
+    # h_inds[...] = gt_inds[...]
+    exit(0)
+
+def get_topk_pair(vals_srch,inds_srch,k):
+    device,b = vals_srch.device,vals_srch.shape[0]
+    vals = torch.FloatTensor(b,k).to(device)
+    inds = torch.IntTensor(b,k).to(device)
+    get_topk(vals_srch,inds_srch,vals,inds)
+    return vals,inds
+
 def filter_patches(inds,l2_vals,l2_inds,img,nfilter,shape,sigma,cs_ptr,**kwargs):
 
     # -- get top-nsearch inds --
@@ -311,16 +363,27 @@ def filter_patches(inds,l2_vals,l2_inds,img,nfilter,shape,sigma,cs_ptr,**kwargs)
     _,np,pt,c,ph,pw = shape
     patches_srch = torch.zeros(b,nf,pt,c,ph,pw,device=device)
     fill_patches(patches_srch,img,inds_srch,cs_ptr)
+    patches_clean = None
     if 'clean' in kwargs and not(kwargs['clean'] is None):
         patches_clean = torch.zeros(b,nf,pt,c,ph,pw,device=device)
         fill_patches(patches_clean,kwargs['clean'],inds_srch,cs_ptr)
         patches_clean = rearrange(patches_clean,'b n t c h w -> b n (t c h w)')
         kwargs['clean'] = patches_clean
 
+    # -- save patches --
+    save_patches_bool = True
+    if save_patches_bool:
+        print("patches_srch.shape: ",patches_srch.shape)
+        print("patches_clean.shape: ",patches_clean.shape)
+        save_patches(patches_srch,"noisy",tindex=0,bindex=1)
+        if not(patches_clean is None):
+            save_patches(patches_clean,"clean",tindex=0,bindex=1)
+
     # -- run filtered search --
     _,inds_k,cpatches,rpatches = exec_patch_subset_filter(patches_srch,inds_srch,
                                                           sigma,np,cs_ptr,**kwargs)
-    inds[:b,:] = inds_k
+    nkeep = inds.shape[1]
+    inds[:b,:] = inds_k[:b,:nkeep]
     return inds,cpatches,rpatches
 
 def get_topk(l2_vals,l2_inds,vals,inds):

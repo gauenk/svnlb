@@ -1,4 +1,4 @@
-from .sim_search import runSimSearch
+from .search import runSimSearch
 from .bayes_est import runBayesEstimate
 from .comp_agg import computeAggregation,compute_agg_batch
 from .vnlb import runPythonVnlb

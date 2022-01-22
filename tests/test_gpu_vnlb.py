@@ -163,11 +163,17 @@ class TestProcNlb(unittest.TestCase):
         # hwSliceX = slice(100,100+256)
         # hwSliceY = slice(400,400+256)
 
+        hwSliceX = slice(100,100+96)
+        hwSliceY = slice(500,500+96)
+
         # hwSliceX = slice(100,100+256)
         # hwSliceY = slice(500,500+256)
 
-        hwSliceX = slice(100,100+128)
-        hwSliceY = slice(500,500+128)
+        # hwSliceX = slice(300,300+128)
+        # hwSliceY = slice(100,100+128)
+
+        # hwSliceX = slice(100,100+128)
+        # hwSliceY = slice(500,500+128)
 
         # hwSliceX = slice(200+96,200+256-64)
         # hwSliceY = slice(100+96,100+256-64)
@@ -327,7 +333,7 @@ class TestProcNlb(unittest.TestCase):
         # vnlb_dataset = "davis_64x64"
         # vnlb_dataset = "davis"
         # tensors,sigma = self.do_load_data(vnlb_dataset)
-        sigma = 50.
+        sigma = 30.#50.
         tensors,sigma = self.do_load_davis_burst("salsa",sigma)
         # tensors,sigma = self.do_load_davis_burst("aerobatics",sigma)
         shape = list(tensors.clean.shape)

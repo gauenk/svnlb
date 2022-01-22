@@ -61,6 +61,9 @@ def runPythonVnlb_2step(noisy,sigma,flows,params,gpuid=0,clean=None):
 
     # -- step 1 --
     # nfilter = 250 or 200 gives 29.00!
+    print("sigma: ",sigma)
+    print("sizeSearchWindow: ",params['sizeSearchWindow'])
+    # params['sizeSearchWindow'][0] = 15
     params['nSimilarPatches'][0] = 100
     params['useWeights'] = [False,False]
     # params['simPatchRefineKeep'] = [100,100]
@@ -69,10 +72,12 @@ def runPythonVnlb_2step(noisy,sigma,flows,params,gpuid=0,clean=None):
     # params['variThres'] = [0.,0.]
     params['useWeights'] = [False,False]
     # params['nfilter'] = [-1,-1]
-    # params['nfilter'] = [200,200]
-    params['nfilter'] = [400,-1]
+    params['nfilter'] = [300,-1]
+    # params['nfilter'] = [400,-1]
+    # params['simPatchRefineKeep'] = [40,60]
     params['simPatchRefineKeep'] = [100,60]
     params['offset'] = [2*(sigma/255.)**2.,0.]
+    params['variThres'] = [2.7,.2]
     step_results = processNLBayes(noisy,basic,sigma,0,flows,params,clean=clean)
     # params['nSimilarPatches'][0] = 500
     # params['simPatchRefineKeep'] = [-1,-1]
@@ -103,7 +108,7 @@ def runPythonVnlb_2step(noisy,sigma,flows,params,gpuid=0,clean=None):
     # params['nSimilarPatches'][1] = 250
     # params['simPatchRefineKeep'] = [25,25]
 
-    params['nfilter'][1] = 100
+    # params['nfilter'][1] = 200
     params['cleanSearch'][1] = False
     params['nSimilarPatches'][1] = 60
     params['variThres'][1] = .2
