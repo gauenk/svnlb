@@ -1,6 +1,6 @@
-PyVNLB 
+Swig-Python VNLB 
 =========================================
-A Python API for Video Non-Local Bayesian Denoising ([C++ code originally from Pablo Arias](https://github.com/pariasm/vnlb))
+A Swig-Python API for Video Non-Local Bayesian Denoising ([C++ code originally from Pablo Arias](https://github.com/pariasm/vnlb))
 
 
 Install
