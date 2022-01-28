@@ -166,6 +166,9 @@ class TestProcNlb(unittest.TestCase):
         hwSliceX = slice(100,100+96)
         hwSliceY = slice(500,500+96)
 
+        # hwSliceX = slice(100,100+128)
+        # hwSliceY = slice(500,500+128)
+
         # hwSliceX = slice(100,100+256)
         # hwSliceY = slice(500,500+256)
 

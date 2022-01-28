@@ -260,8 +260,8 @@ def sim_search_batch(noisy,basic,clean,sigma,sigmab,patchesNoisy,patchesBasic,
                   'clean':clean,'pshape':shape[2:]}
         out = filter_patches(inds,l2_vals,l2_inds,img,
                              nfilter,shape,fsigma,cs_ptr,**kwargs)
-        cpatches = out[-2]
-        rpatches = out[-1]
+        # cpatches = out[-2]
+        # rpatches = out[-1]
     else:
         # -- compute topk --
         get_topk(l2_vals,l2_inds,vals,inds)

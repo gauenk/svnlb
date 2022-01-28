@@ -58,7 +58,7 @@ def processNLBayes(noisy,basic,sigma,step,flows,params,gpuid=0,clean=None):
     if not(th.is_tensor(noisy)):
         noisy = th.FloatTensor(noisy).to(device)
         zero_basic = th.zeros_like(noisy)
-        basic = optional(basic,'basic',zero_basic)
+        basic = zero_basic if basic is None else basic
         basic = basic.to(device)
     if not(clean is None):
         clean = th.FloatTensor(clean).to(device)
@@ -68,7 +68,7 @@ def processNLBayes(noisy,basic,sigma,step,flows,params,gpuid=0,clean=None):
     t,c,h,w = noisy.shape
     deno = th.zeros_like(noisy)
     nstreams = int(optional(params,'nstreams',[1,1])[step])
-    flows = edict({k:th.FloatTensor(v).to(device) for k,v in flows.items()})
+    # flows = edict({k:th.FloatTensor(v).to(device) for k,v in flows.items()})
 
     # -- to device flow --
     flows = edict({k:th.FloatTensor(v).to(device) for k,v in flows.items()})
@@ -245,6 +245,8 @@ def exec_step(noisy,basic,clean,deno,mask,fflow,bflow,sigma2,sigmab2,rank,
 
             # -- sim_search_block --
             inds_s[...] = -1
+            # exec_patch_search(noisy_yuv,sigma,access,npatches,ps,
+            #                   patches=patchesNoisy_s)
             sim_search_batch(noisy_yuv,basic_yuv,clean_yuv,sigma,sigmab,
                              patchesNoisy_s,patchesBasic_s,patchesClean_s,
                              access,vals_s,inds_s,fflow,bflow,step_s,bsize,
@@ -380,7 +382,6 @@ def exec_step(noisy,basic,clean,deno,mask,fflow,bflow,sigma2,sigmab2,rank,
             #     save_images(fn,pnoisy)
             # exit()
             # explore_gp(patchesNoisy_v,patchesNoisy_v_og,patchesClean_v)
-
 
 
         # -- aggregate results --

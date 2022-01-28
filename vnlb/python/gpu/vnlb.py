@@ -4,6 +4,8 @@ import copy
 import numpy as np
 import torch
 import torch as th
+from PIL import Image
+from einops import rearrange
 from easydict import EasyDict as edict
 
 # -- local imports --
@@ -23,6 +25,26 @@ def runPythonVnlb(noisy,sigma,flows,params,gpuid=0,clean=None):
     #     return runPythonVnlb_2step(noisy,sigma,flows,params,gpuid)
     # else:
     #     return runPythonVnlb_clean(noisy,clean,sigma,flows,params,gpuid)
+
+def load_denoise_burst():
+
+    # -- load paths --
+    fns = []
+    for i in range(5):
+        fns.append(f"./data/dcrop_fdvd/n30_FastDVDnet_{i}.png")
+
+    # -- load images --
+    burst = []
+    for fn in fns:
+        img = Image.open(fn).convert('RGB')
+        img = th.FloatTensor(np.array(img))
+        img = rearrange(img,'h w c -> c h w')
+        burst.append(img)
+    burst = th.stack(burst)
+    print("burst.shape: ",burst.shape)
+    burst = burst.to("cuda:0")
+
+    return burst
 
 def runPythonVnlb_2step(noisy,sigma,flows,params,gpuid=0,clean=None):
     """
@@ -71,8 +93,8 @@ def runPythonVnlb_2step(noisy,sigma,flows,params,gpuid=0,clean=None):
     params['cleanSearch'] = [False,False]
     # params['variThres'] = [0.,0.]
     params['useWeights'] = [False,False]
-    # params['nfilter'] = [-1,-1]
-    params['nfilter'] = [300,-1]
+    params['nfilter'] = [-1,-1]
+    # params['nfilter'] = [300,-1]
     # params['nfilter'] = [400,-1]
     # params['simPatchRefineKeep'] = [40,60]
     params['simPatchRefineKeep'] = [100,60]
@@ -88,6 +110,12 @@ def runPythonVnlb_2step(noisy,sigma,flows,params,gpuid=0,clean=None):
     py_psnr = compute_psnrs(basic.cpu().numpy(),clean)
     print(f"[basic] psnrs: ", py_psnr,np.mean(py_psnr))
     tmp = basic
+
+    # -- proccess using NN --
+    basic = load_denoise_burst()#noisy,sigma)
+    print("basic.shape: ",basic.shape)
+    py_psnr = compute_psnrs(basic.cpu().numpy(),clean)
+    print(f"[basic:2] psnrs: ", py_psnr,np.mean(py_psnr))
 
     # params['nfilter'] = [-1,-1]
     # params['cleanSearch'] = [True,True]
@@ -115,7 +143,7 @@ def runPythonVnlb_2step(noisy,sigma,flows,params,gpuid=0,clean=None):
     params['simPatchRefineKeep'][1] = 60
     alpha = 1.0
     in_basic = alpha * basic + (1 - alpha) * noisy
-    step_results = processNLBayes(noisy,in_basic,sigma,1,flows,params,clean=clean)
+    step_results = processNLBayes(noisy,in_basic,sigma,1,flows,params)#,clean=clean)
     tmp = step_results.denoised.clone()
     py_psnr = compute_psnrs(tmp.cpu().numpy(),clean)
     print("[step 1]: ",py_psnr,np.mean(py_psnr))
