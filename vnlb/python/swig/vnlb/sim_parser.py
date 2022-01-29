@@ -12,12 +12,12 @@ from easydict import EasyDict as edict
 from collections.abc import Iterable
 
 # -- package --
-import vnlb
+import svnlb
 
 # from .ptr_utils import py2swig
-from vnlb.utils.image_utils import est_sigma
-from vnlb.utils.utils import optional,optional_pair,optional_swig_ptr,ndarray_ctg_dtype
-from vnlb.utils.utils import check_flows,check_none,assign_swig_args,check_and_expand_flows
+from svnlb.utils.image_utils import est_sigma
+from svnlb.utils.utils import optional,optional_pair,optional_swig_ptr,ndarray_ctg_dtype
+from svnlb.utils.utils import check_flows,check_none,assign_swig_args,check_and_expand_flows
 # from ..utils import optional,optional_swig_ptr,ndarray_ctg_dtype
 # from ..utils import check_flows,check_none,assign_swig_args,check_and_expand_flows
 

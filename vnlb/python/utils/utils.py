@@ -1,9 +1,9 @@
 import os,sys
 import cv2
-import vnlb
 import torch
 import numpy as np
 from einops import rearrange
+import svnlb
 
 
 def divUp(a,b): return (a-1)//b+1
@@ -134,7 +134,7 @@ def optional_swig_ptr(elem):
     if not swig_xfer:
         return elem
     # elem = np.ascontiguousarray(elem)
-    return vnlb.swig_ptr(elem)
+    return svnlb.swig_ptr(elem)
 
 def check_flows(pyargs):
     fflow = optional(pyargs,'fflow',None)

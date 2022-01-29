@@ -5,9 +5,9 @@ from einops import rearrange
 from easydict import EasyDict as edict
 from collections.abc import Iterable
 
-import vnlb
+import svnlb
 
-from vnlb.utils import optional,optional_swig_ptr,assign_swig_args
+from svnlb.utils import optional,optional_swig_ptr,assign_swig_args
 
 
 def verify_video_paths(video_paths,fstart,fstep,nframes):
@@ -44,9 +44,9 @@ def parse_args(shape,video_paths,pyargs):
     tensors.noisy = np.zeros(shape,dtype=np.float32)
 
     # -- copy to swig --
-    sargs = vnlb.ReadVideoParams()
+    sargs = svnlb.ReadVideoParams()
     assign_swig_args(args,sargs)
-    targs = vnlb.VnlbTensors()
+    targs = svnlb.VnlbTensors()
     assign_swig_args(tensors,targs)
 
     return args, sargs, tensors, targs

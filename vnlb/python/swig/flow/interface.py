@@ -3,11 +3,11 @@
 import numpy
 from einops import rearrange
 
-# -- vnlb imports --
-import vnlb
+# -- swig-vnlb imports --
+import svnlb
 
 # -- local imports --
-from vnlb.utils import optional
+from svnlb.utils import optional
 from .parser import parse_args
 
 # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -28,10 +28,10 @@ def runPyFlowFB(noisy,sigma,pyargs=None):
 
     # -- exec using numpy --
     swig_args.direction = 0
-    vnlb.runTV1Flow(swig_args,swig_tensors)
+    svnlb.runTV1Flow(swig_args,swig_tensors)
     fflow = tensors.fflow
     swig_args.direction = 1
-    vnlb.runTV1Flow(swig_args,swig_tensors)
+    svnlb.runTV1Flow(swig_args,swig_tensors)
     bflow = tensors.bflow
 
     return fflow,bflow
@@ -48,7 +48,7 @@ def runPyTvL1Flow_np(noisy,sigma,pyargs=None):
     args,swig_args,tensors,swig_tensors = parse_args(noisy,sigma,pyargs)
 
     # -- exec using numpy --
-    vnlb.runTV1Flow(swig_args,swig_tensors)
+    svnlb.runTV1Flow(swig_args,swig_tensors)
 
     # -- format & create results --
     res = {}

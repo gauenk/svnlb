@@ -1,8 +1,8 @@
 
-import vnlb
+import svnlb
 import numpy
 from easydict import EasyDict as edict
-from vnlb.utils import assign_swig_args,get_patch_shapes_from_params
+from svnlb.utils import assign_swig_args,get_patch_shapes_from_params
 
 def parse_agg_params(deno,group,indices,weights,mask,nSimP,params):
 

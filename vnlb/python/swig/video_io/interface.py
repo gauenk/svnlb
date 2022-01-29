@@ -3,11 +3,11 @@
 import numpy
 from einops import rearrange
 
-# -- vnlb imports --
-import vnlb
+# -- svnlb imports --
+import svnlb
 
 # -- local imports --
-from vnlb.utils import optional
+from svnlb.utils import optional
 from .parser import parse_args
 
 # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -28,7 +28,7 @@ def readVideoForVnlb(shape,video_paths,pyargs=None):
     args,swig_args,tensors,swig_tensors = parse_args(shape,video_paths,pyargs)
 
     # -- exec function --
-    vnlb.readVideoForVnlbCpp(swig_args,swig_tensors)
+    svnlb.readVideoForVnlbCpp(swig_args,swig_tensors)
 
     return tensors.noisy
 
@@ -46,6 +46,6 @@ def readVideoForFlow(shape,video_paths,pyargs=None):
     args,swig_args,tensors,swig_tensors = parse_args(shape,video_paths,pyargs)
 
     # -- exec function --
-    vnlb.readVideoForFlowCpp(swig_args,swig_tensors)
+    svnlb.readVideoForFlowCpp(swig_args,swig_tensors)
 
     return tensors.noisy

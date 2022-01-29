@@ -17,13 +17,13 @@ from vnlb.testing.file_io import save_images,save_hist
 from vnlb.utils import groups2patches,patches2groups,patches_at_indices
 from vnlb.utils import check_omp_num_threads
 
-# -- python impl --
+# -- swig impl --
 from vnlb.cpu import runPythonVnlb
 SAVE_DIR = Path("./output/tests/")
 
 
 @pytest.mark.order(2)
-class TestPythonVnlbDenoiser(unittest.TestCase):
+class TestSwigVnlbDenoiser(unittest.TestCase):
 
     #
     # -- Load Data --
@@ -66,7 +66,7 @@ class TestPythonVnlbDenoiser(unittest.TestCase):
         return data,sigma
 
     #
-    # -- Define C++ & Python calls --
+    # -- Define C++ & Swig calls --
     #
 
     def do_run_cpp(self,tensors,sigma,params):
@@ -91,8 +91,8 @@ class TestPythonVnlbDenoiser(unittest.TestCase):
     def do_run_comparison(self,tensors,sigma,pyargs):
 
         # -- parse parameters --
-        # noisy = tensors.noisy[:3,:,:36,:36].copy()
-        noisy = tensors.noisy
+        noisy = tensors.noisy[:3,:,:36,:36].copy()
+        # noisy = tensors.noisy
         tensors.noisy = noisy
         params = vnlb.swig.setVnlbParams(noisy.shape,sigma,params=pyargs)
 

@@ -8,7 +8,7 @@ from easydict import EasyDict as edict
 from numba import njit,prange
 
 # -- parser for cpp --
-from vnlb.swig.vnlb.mask_parser import mask_parser
+from svnlb.swig.vnlb.mask_parser import mask_parser
 
 def initMask(shape,vnlb_params,step=0,info=None):
 

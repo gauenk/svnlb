@@ -15,16 +15,17 @@ import glob
 
 # -- file paths --
 print("CWD",os.getcwd())
-shutil.rmtree("vnlb", ignore_errors=True)
-os.mkdir("vnlb")
-shutil.copytree("swig", "vnlb/swig")
-shutil.copytree("testing", "vnlb/testing")
-shutil.copytree("utils", "vnlb/utils")
-shutil.copytree("cpu", "vnlb/cpu")
-shutil.copytree("gpu", "vnlb/gpu")
-shutil.copytree("exps", "vnlb/exps")
-shutil.copyfile("__init__.py", "vnlb/__init__.py")
-shutil.copyfile("loader.py", "vnlb/loader.py")
+# shutil.rmtree("vnlb", ignore_errors=True)
+shutil.rmtree("svnlb", ignore_errors=True)
+os.mkdir("svnlb")
+shutil.copytree("swig", "svnlb/swig")
+shutil.copytree("testing", "svnlb/testing")
+shutil.copytree("utils", "svnlb/utils")
+shutil.copytree("cpu", "svnlb/cpu")
+shutil.copytree("gpu", "svnlb/gpu")
+shutil.copytree("exps", "svnlb/exps")
+shutil.copyfile("__init__.py", "svnlb/__init__.py")
+shutil.copyfile("loader.py", "svnlb/loader.py")
 
 ext = ".pyd" if platform.system() == 'Windows' else ".so"
 prefix = "Release/" * (platform.system() == 'Windows')
@@ -41,36 +42,36 @@ assert (found_swigvnlb_generic or found_swigvnlb_avx2), \
 
 if found_swigvnlb_generic:
     print(f"Copying {swigvnlb_generic_lib}")
-    shutil.copyfile("swigvnlb.py", "vnlb/swigvnlb.py")
-    shutil.copyfile(swigvnlb_generic_lib, f"vnlb/_swigvnlb{ext}")
+    shutil.copyfile("swigvnlb.py", "svnlb/swigvnlb.py")
+    shutil.copyfile(swigvnlb_generic_lib, f"svnlb/_swigvnlb{ext}")
 
 if found_swigvnlb_avx2:
     print(f"Copying {swigvnlb_avx2_lib}")
-    shutil.copyfile("swigvnlb_avx2.py", "vnlb/swigvnlb_avx2.py")
-    shutil.copyfile(swigvnlb_avx2_lib, f"vnlb/_swigvnlb_avx2{ext}")
+    shutil.copyfile("swigvnlb_avx2.py", "svnlb/swigvnlb_avx2.py")
+    shutil.copyfile(swigvnlb_avx2_lib, f"svnlb/_swigvnlb_avx2{ext}")
 
-long_description="""Vnlb is a library for video denising."""
+long_description="""SVNLB (Python-Swig Vnlb) is a library for video denising."""
 setup(
-    name='vnlb',
+    name='svnlb',
     version='1.0.0',
     description='A library for video image denoising.',
     long_description=long_description,
-    url='https://github.com/gauenk/pyvnlb',
+    url='https://github.com/gauenk/svnlb',
     author='Kent Gauen',
     author_email='gauenk@purdue.edu',
     license='MIT',
     keywords='video non-local bayes',
     install_requires=['numpy'],
-    packages=find_packages(include=['vnlb',
-                                    'vnlb.swig*',
-                                    'vnlb.cpu*',
-                                    'vnlb.gpu*',
-                                    'vnlb.utils*',
-                                    'vnlb.testing*',
-                                    'vnlb.exps*'
+    packages=find_packages(include=['svnlb',
+                                    'svnlb.swig*',
+                                    'svnlb.cpu*',
+                                    'svnlb.gpu*',
+                                    'svnlb.utils*',
+                                    'svnlb.testing*',
+                                    'svnlb.exps*'
     ]),
     package_data={
-        'vnlb': ['*.so', '*.pyd'],
+        'svnlb': ['*.so', '*.pyd'],
     },
 
 )

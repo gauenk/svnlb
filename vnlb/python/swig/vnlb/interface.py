@@ -6,11 +6,11 @@ from einops import rearrange
 from easydict import EasyDict as edict
 
 # -- vnlb imports --
-import vnlb
-from vnlb.utils import groups2patches
+import svnlb
+from svnlb.utils import groups2patches
 
 # -- local imports --
-from vnlb.utils import optional,optional_swig_ptr,assign_swig_args
+from svnlb.utils import optional,optional_swig_ptr,assign_swig_args
 from .parser import parse_args,parse_params
 from .sim_parser import sim_parser
 from .mask_parser import mask_parser
@@ -38,7 +38,7 @@ def runVnlb_np(noisy,sigma,tensors=None,params=None):
     args,swig_args,tensors,swig_tensors = parse_args(noisy,sigma,tensors,params)
 
     # -- exec using numpy --
-    vnlb.runVnlb(swig_args[0],swig_args[1],swig_tensors)
+    svnlb.runVnlb(swig_args[0],swig_args[1],swig_tensors)
 
     # -- format & create results --
     res = {}
@@ -57,7 +57,7 @@ def runPyVnlbTimed(noisy,sigma,tensors=None,params=None):
     args,swig_args,tensors,swig_tensors = parse_args(noisy,sigma,params)
 
     # -- exec using numpy --
-    vnlb.runVnlbTimed(swig_args[0],swig_args[1],swig_tensors)
+    svnlb.runVnlbTimed(swig_args[0],swig_args[1],swig_tensors)
 
     # -- format & create results --
     res = {}
@@ -94,12 +94,12 @@ def simPatchSearch(noisy,sigma,pidx,tensors=None,params=None,step=0):
     else: all_pix = False
 
     # -- exec search --
-    simParams = vnlb.PySimSearchParams()
+    simParams = svnlb.PySimSearchParams()
     simParams.nParts = nParts
     simParams.nSimP = 0
     simParams.pidx = pidx
     simParams.all_pix = all_pix
-    vnlb.runSimSearch(swig_params[step], swig_tensors, simParams)
+    svnlb.runSimSearch(swig_params[step], swig_tensors, simParams)
 
     # -- fix-up groups --
     psX = swig_params[step].sizePatch
@@ -138,7 +138,7 @@ def computeBayesEstimate(groupNoisy,groupBasic,rank_var,nSimP,shape,params=None,
     # -- exec search --
     bayesParams,swig_bayesParams = parse_bayes_params(groupNoisy,groupBasic,nSimP,
                                                       rank_var,shape,params)
-    vnlb.runBayesEstimate(swig_params[step], swig_bayesParams)
+    svnlb.runBayesEstimate(swig_params[step], swig_bayesParams)
 
     # -- pack results --
     results = {}
@@ -166,7 +166,7 @@ def computeAggregation(deno,group,indices,weights,mask,nSimP,params=None,step=0)
     aggParams,swig_aggParams = parse_agg_params(deno,group,indices,weights,
                                                 mask,nSimP,params)
     nmasked = 0
-    nmasked = vnlb.runAggregation(swig_params[step], swig_aggParams, nmasked)
+    nmasked = svnlb.runAggregation(swig_params[step], swig_aggParams, nmasked)
 
     # -- pack results --
     results = {}
@@ -193,7 +193,7 @@ def processNLBayes(noisy,sigma,step,tensors=None,params=None):
 
     # -- exec using numpy --
     ngroups = 0
-    ngroups = vnlb.processNLBayesCpp(swig_args[step],swig_tensors,
+    ngroups = svnlb.processNLBayesCpp(swig_args[step],swig_tensors,
                                        ngroups,border)
 
     # -- format & create results --
@@ -218,7 +218,7 @@ def computeCovMat(groups,rank):
     params,covMat,covEigVals,covEigVecs = cinfo
 
     # -- exec --
-    vnlb.computeCovMatCpp(params)
+    svnlb.computeCovMatCpp(params)
 
     # -- format output --
     results = edict()
@@ -239,7 +239,7 @@ def init_mask(shape,vnlb_params,step=0,info=None):
 
     # -- exec using numpy --
     ngroups = 0
-    ngroups = vnlb.init_mask_cpp(params,ngroups)
+    ngroups = svnlb.init_mask_cpp(params,ngroups)
 
     # -- format & create results --
     results = edict()
@@ -256,7 +256,7 @@ def runFlatAreas(groupNoisy,groupBasic,nSimP,c,params):
     flat_params = flat_areas_parser(groupNoisy,groupBasic,flatAreas,nSimP,c)
 
     # -- exec --
-    vnlb.runFlatAreasCpp(flat_params,params)
+    svnlb.runFlatAreasCpp(flat_params,params)
 
     # --> [no output] --> [in-place fxn]
 

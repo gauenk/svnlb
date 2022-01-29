@@ -3,7 +3,7 @@
 cmake -B build
 make -C build -j swigvnlb
 cd ./build/vnlb/swig
-python setup.py clean --all 
+python setup.py clean --all
 python -m pip install . --user
 cd ../../../
 export OMP_NUM_THREADS=4

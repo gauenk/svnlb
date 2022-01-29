@@ -1,5 +1,5 @@
 
-import vnlb
+import svnlb
 
 def flat_areas_parser(groupNoisy,groupBasic,flatAreas,nSimP,c):
     # -- create swig --

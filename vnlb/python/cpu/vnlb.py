@@ -4,7 +4,7 @@ import numpy as np
 from easydict import EasyDict as edict
 
 # -- package imports --
-import vnlb
+import svnlb
 
 # -- local imports --
 from .sim_search import runSimSearch
@@ -14,7 +14,7 @@ from .proc_nlb import processNLBayes
 
 
 # -- project imports --
-from vnlb.utils import groups2patches,patches2groups
+from svnlb.utils import groups2patches,patches2groups
 
 def runPythonVnlb(noisy,sigma,flows,params=None,clean=None):
     """

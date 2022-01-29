@@ -6,9 +6,9 @@ from numba import njit,jit,prange
 from easydict import EasyDict as edict
 
 # from .utils import apply_color_xform_cpp
-from vnlb.utils import get_patch_shapes_from_params,optional,groups2patches,check_flows,check_and_expand_flows,apply_color_xform_cpp,patches2groups
+from svnlb.utils import get_patch_shapes_from_params,optional,groups2patches,check_flows,check_and_expand_flows,apply_color_xform_cpp,patches2groups
 
-from vnlb.testing import save_images
+from svnlb.testing import save_images
 
 def runSimSearch(noisy,sigma,pidx,tensors,params,step=0,clean=None):
 

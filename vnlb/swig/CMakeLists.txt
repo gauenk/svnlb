@@ -123,5 +123,6 @@ configure_file(__init__.py __init__.py COPYONLY)
 configure_file(loader.py loader.py COPYONLY)
 
 message(STATUS "The project soure dir " ${PROJECT_SOURCE_DIR} " is where to look")
+message(STATUS "Destination is ${DESTINATION}")
 file(GLOB files "${PROJECT_SOURCE_DIR}/../../vnlb/python/*")
 file(COPY ${files} DESTINATION .)

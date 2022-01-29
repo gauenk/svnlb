@@ -1,4 +1,4 @@
-import vnlb
+import svnlb
 import numpy as np
 
 def covmat_parser(groups,pdim,nSimP,chnls,rank):

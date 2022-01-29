@@ -4,12 +4,12 @@ from einops import rearrange
 from easydict import EasyDict as edict
 from collections.abc import Iterable
 
-import vnlb
+import svnlb
 
 # from .ptr_utils import py2swig
-from vnlb.utils.image_utils import est_sigma
-from vnlb.utils.utils import optional,optional_pair,optional_swig_ptr,ndarray_ctg_dtype
-from vnlb.utils.utils import check_flows,check_none,assign_swig_args,check_and_expand_flows
+from svnlb.utils.image_utils import est_sigma
+from svnlb.utils.utils import optional,optional_pair,optional_swig_ptr,ndarray_ctg_dtype
+from svnlb.utils.utils import check_flows,check_none,assign_swig_args,check_and_expand_flows
 
 #
 # --Vnlb Parameters --
@@ -150,7 +150,7 @@ def get_defaults():
     defaults.procStep = [-1,-1]
     defaults.aggreBoost = [True,True]
     defaults.onlyFrame = [-1,-1]
-    defaults.var_mode = [vnlb.CLIPPED,vnlb.CLIPPED]
+    defaults.var_mode = [svnlb.CLIPPED,svnlb.CLIPPED]
     defaults.verbose = [False,False]
     defaults.testing = [False,False]
     defaults.nThreads = [0,0]
@@ -205,7 +205,7 @@ def get_param_fields():
 
 def dict2params(pydict):
     fields = get_param_fields()
-    params = vnlb.nlbParams()
+    params = svnlb.nlbParams()
     for field in fields:
         setattr(params,field,pydict[field])
     return params
@@ -372,12 +372,12 @@ def parse_params(shape,sigma,pyargs=None):
     # -- create tensors --
     py_targs = edict()
     py_targs.t,py_targs.c,py_targs.h,py_targs.w = shape
-    swig_tensors = vnlb.VnlbTensors()
+    swig_tensors = svnlb.VnlbTensors()
     assign_swig_args(py_targs,swig_tensors)
 
     # -- set params --
-    vnlb.setVnlbParamsCpp(swig_params_1,swig_tensors,1)
-    vnlb.setVnlbParamsCpp(swig_params_2,swig_tensors,2)
+    svnlb.setVnlbParamsCpp(swig_params_1,swig_tensors,1)
+    svnlb.setVnlbParamsCpp(swig_params_2,swig_tensors,2)
 
     # -- nlbParams -> dict --
     params_1 = params2dict(swig_params_1,0)
@@ -427,7 +427,7 @@ def parse_tensors(noisy,py_tensors,verbose=False):
     set_tensors(tensors,py_tensors,ztensors)
 
     # -- copy to swig --
-    swig_tensors = vnlb.VnlbTensors()
+    swig_tensors = svnlb.VnlbTensors()
     assign_swig_args(tensors,swig_tensors)
 
     return tensors, swig_tensors

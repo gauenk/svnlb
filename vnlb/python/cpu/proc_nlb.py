@@ -3,7 +3,7 @@
 import copy
 import numpy as np
 from easydict import EasyDict as edict
-import vnlb
+import svnlb
 
 # -- local imports --
 from .sim_search import runSimSearch
@@ -11,12 +11,12 @@ from .bayes_est import runBayesEstimate
 from .comp_agg import computeAggregation
 from .init_mask import initMask
 from .flat_areas import runFlatAreas
-from vnlb.utils import idx2coords,coords2idx,patches2groups,groups2patches
-from vnlb.utils import apply_color_xform_cpp,numpy_div0,yuv2rgb_cpp
-from vnlb.testing import save_images
+from svnlb.utils import idx2coords,coords2idx,patches2groups,groups2patches
+from svnlb.utils import apply_color_xform_cpp,numpy_div0,yuv2rgb_cpp
+from svnlb.testing import save_images
 
 # -- project imports --
-from vnlb.utils import groups2patches,patches2groups
+from svnlb.utils import groups2patches,patches2groups
 
 def optional(pydict,key,default):
     if pydict is None: return default

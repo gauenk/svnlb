@@ -10,10 +10,10 @@ import pandas as pd
 from collections import defaultdict
 
 # -- this package --
-import vnlb
+import svnlb
 
 # -- local imports --
-from vnlb.testing.data_loader import load_dataset
+from svnlb.testing.data_loader import load_dataset
 
 
 #
@@ -52,7 +52,7 @@ def run_method(vnlb_dataset,ioForFlow):
     #  ---------------- Setup Parameters ----------------
     #
 
-    vnlb.check_omp_num_threads()
+    svnlb.check_omp_num_threads()
     flow_params = {"nproc":0,"tau":0.25,"lambda":0.2,"theta":0.3,"nscales":100,
                    "fscale":1,"zfactor":0.5,"nwarps":5,"epsilon":0.01,
                    "verbose":False,"testing":False,'bw':False}
@@ -63,10 +63,10 @@ def run_method(vnlb_dataset,ioForFlow):
 
     res_vnlb,paths,fmts = load_dataset(vnlb_dataset)
     clean,noisy,std = res_vnlb.clean,res_vnlb.noisy,res_vnlb.std
-    noisyForFlow = vnlb.swig.readVideoForFlow(noisy.shape,fmts.noisy)
-    noisyForVnlb = vnlb.swig.readVideoForVnlb(noisy.shape,fmts.noisy)
+    noisyForFlow = svnlb.swig.readVideoForFlow(noisy.shape,fmts.noisy)
+    noisyForVnlb = svnlb.swig.readVideoForVnlb(noisy.shape,fmts.noisy)
     if ioForFlow == "cv2":
-        flowImages = vnlb.utils.rgb2bw(noisy)
+        flowImages = svnlb.utils.rgb2bw(noisy)
         vnlbImages = noisy
     else:
         flowImages = noisyForFlow
@@ -76,7 +76,7 @@ def run_method(vnlb_dataset,ioForFlow):
     #  ---------------- TV-L1 Optical Flow ----------------
     #
 
-    fflow,bflow = vnlb.swig.runPyFlow(flowImages,std,flow_params)
+    fflow,bflow = svnlb.swig.runPyFlow(flowImages,std,flow_params)
 
     #
     #  ---------------- Video Non-Local Bayes ----------------
@@ -84,7 +84,7 @@ def run_method(vnlb_dataset,ioForFlow):
 
     tensors={'fflow':fflow,'bflow':bflow}
     vnlb_params={'verbose':False,'testing':True}
-    res_pyvnlb = vnlb.swig.runPyVnlb(noisy,std,tensors,vnlb_params)
+    res_pyvnlb = svnlb.swig.runPyVnlb(noisy,std,tensors,vnlb_params)
 
     #
     #  ---------------- Add Noisy Images to Show IO Changes ----------------

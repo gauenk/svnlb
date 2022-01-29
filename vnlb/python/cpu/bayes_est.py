@@ -2,10 +2,10 @@
 import scipy
 import numpy as np
 from einops import rearrange,repeat
-import vnlb
+import svnlb
 
 from .cov_mat import computeCovMat
-from vnlb.utils import groups2patches,patches2groups
+from svnlb.utils import groups2patches,patches2groups
 
 def check_steps(step1,step):
     is_step_1 = (step1 == True) and (step == 0)
@@ -264,7 +264,7 @@ def compute_eig_stuff(group,shape,rank):
 
     # -- exec --
     group = group.reshape(shape)
-    # results = vnlb.swig.computeCovMat(group,rank)
+    # results = svnlb.swig.computeCovMat(group,rank)
     results = computeCovMat(group,rank)
 
     # -- unpack --

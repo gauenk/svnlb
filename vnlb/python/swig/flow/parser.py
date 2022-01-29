@@ -9,12 +9,12 @@ from einops import rearrange
 from easydict import EasyDict as edict
 from collections.abc import Iterable
 
-import vnlb
+import svnlb
 
 # from .ptr_utils import py2swig
-from vnlb.utils import est_sigma
-from vnlb.utils import optional,optional_swig_ptr,ndarray_ctg_dtype,rgb2bw
-from vnlb.utils import check_none,assign_swig_args
+from svnlb.utils import est_sigma
+from svnlb.utils import optional,optional_swig_ptr,ndarray_ctg_dtype,rgb2bw
+from svnlb.utils import check_none,assign_swig_args
 
 
 #
@@ -94,11 +94,11 @@ def parse_args(burst,sigma,pyargs):
     set_tensors(tensors,pyargs,ztensors)
 
     # -- copy to swig --
-    sargs = vnlb.PyTvFlowParams()
+    sargs = svnlb.PyTvFlowParams()
     assign_swig_args(args,sargs)
 
     # -- copy to swig --
-    targs = vnlb.VnlbTensors()
+    targs = svnlb.VnlbTensors()
     assign_swig_args(tensors,targs)
 
     return args, sargs, tensors, targs
