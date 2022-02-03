@@ -3,7 +3,7 @@ import torch
 from einops import rearrange,repeat
 
 # -- package --
-from vnlb.gpu.patch_utils import yuv2rgb_patches
+from svnlb.gpu.patch_utils import yuv2rgb_patches
 
 # -- local --
 from .ksd_test import ksd_test,hotelling_t_test

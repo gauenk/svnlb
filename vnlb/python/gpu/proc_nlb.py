@@ -9,8 +9,8 @@ from easydict import EasyDict as edict
 
 # -- package --
 import hids
-import vnlb
-from vnlb.testing.file_io import save_images
+import svnlb
+from svnlb.testing.file_io import save_images
 
 # -- local imports --
 from .init_mask import initMask,mask2inds,update_mask,update_mask_inds
@@ -27,19 +27,19 @@ from .explore_gp import explore_gp
 from .wrapped import weightedAggregation,computeAgg
 from .wrapped import computeBayesEstimate,estimateSimPatches
 
-from vnlb.utils import idx2coords,coords2idx,patches2groups,groups2patches
-# from vnlb.utils import apply_color_xform_cpp,numpy_div0,yuv2rgb_cpp
+from svnlb.utils import idx2coords,coords2idx,patches2groups,groups2patches
+# from svnlb.utils import apply_color_xform_cpp,numpy_div0,yuv2rgb_cpp
 
 # -- project imports --
-from vnlb.utils.gpu_utils import apply_color_xform_cpp,yuv2rgb_cpp
+from svnlb.utils.gpu_utils import apply_color_xform_cpp,yuv2rgb_cpp
 
 # -- project imports --
-from vnlb.utils import groups2patches,patches2groups,optional,divUp
-from vnlb.testing import save_images
+from svnlb.utils import groups2patches,patches2groups,optional,divUp
+from svnlb.testing import save_images
 
 # -- streams
-from vnlb.gpu.streams import init_streams,wait_streams,get_hw_batches
-from vnlb.gpu.streams import view_batch,vprint,get_nbatches
+from svnlb.gpu.streams import init_streams,wait_streams,get_hw_batches
+from svnlb.gpu.streams import view_batch,vprint,get_nbatches
 
 def view_batch(tensor,bsize,bidx):
     index = slice(bsize*bidx,bsize*(bidx+1))
@@ -137,7 +137,7 @@ def exec_step(noisy,basic,clean,deno,mask,fflow,bflow,sigma2,sigmab2,rank,
               use_weights,clean_srch,nfilter):
 
     """
-    ** Our "simsearch" is not the same as "vnlb" **
+    ** Our "simsearch" is not the same as "svnlb" **
 
     1. the concurrency of using multiple cuda-streams creates io issues
        for using the mask

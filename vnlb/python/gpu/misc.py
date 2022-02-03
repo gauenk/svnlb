@@ -6,11 +6,11 @@ from einops import rearrange,repeat
 from easydict import EasyDict as edict
 
 # -- package --
-import vnlb
+import svnlb
 
 # -- local imports --
 from .init_mask import initMask,mask2inds,update_mask,update_mask_inds
-from .sim_search import sim_search_batch
+from .search import sim_search_batch
 from .bayes_est import compute_cov_mat,cov_to_psnrs
 from .patch_subset import exec_patch_subset
 
@@ -21,14 +21,14 @@ import scipy
 from scipy import linalg as scipy_linalg
 import numpy as np
 from einops import rearrange,repeat
-import vnlb
+import svnlb
 
 # -- project imports --
-from vnlb.utils.gpu_utils import apply_color_xform_cpp,yuv2rgb_cpp
+from svnlb.utils.gpu_utils import apply_color_xform_cpp,yuv2rgb_cpp
 
 # -- project imports --
-from vnlb.utils import groups2patches,patches2groups,optional,divUp
-from vnlb.testing import save_images
+from svnlb.utils import groups2patches,patches2groups,optional,divUp
+from svnlb.testing import save_images
 
 # -- plotting --
 import matplotlib

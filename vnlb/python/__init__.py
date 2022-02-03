@@ -17,6 +17,7 @@ _swig_enabled = False
 __version__ = "%d.%d.%d" % (0,0,0)
 from .utils import check_omp_num_threads
 import svnlb.swig as swig
+import svnlb.gpu as gpu
 import svnlb.cpu as cpu
 import svnlb.utils as utils
 from .loader import *

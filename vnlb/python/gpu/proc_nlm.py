@@ -6,12 +6,12 @@ from einops import rearrange,repeat
 from easydict import EasyDict as edict
 
 # -- package --
-import vnlb
+import svnlb
 
 # -- local imports --
 from .init_mask import initMask,mask2inds,update_mask,update_mask_inds
 from .flat_areas import run_flat_areas
-from .sim_search import sim_search_batch
+from .search import sim_search_batch
 from .bayes_est import bayes_estimate_batch
 from .comp_agg import compute_agg_batch
 from .qr_est import qr_estimate_batch
@@ -22,19 +22,19 @@ from .means_impl import means_estimate_batch
 from .wrapped import weightedAggregation,computeAgg
 from .wrapped import computeBayesEstimate,estimateSimPatches
 
-from vnlb.utils import idx2coords,coords2idx,patches2groups,groups2patches
-# from vnlb.utils import apply_color_xform_cpp,numpy_div0,yuv2rgb_cpp
+from svnlb.utils import idx2coords,coords2idx,patches2groups,groups2patches
+# from svnlb.utils import apply_color_xform_cpp,numpy_div0,yuv2rgb_cpp
 
 # -- project imports --
-from vnlb.utils.gpu_utils import apply_color_xform_cpp,yuv2rgb_cpp
+from svnlb.utils.gpu_utils import apply_color_xform_cpp,yuv2rgb_cpp
 
 # -- project imports --
-from vnlb.utils import groups2patches,patches2groups,optional,divUp
-from vnlb.testing import save_images
+from svnlb.utils import groups2patches,patches2groups,optional,divUp
+from svnlb.testing import save_images
 
 # -- streams
-from vnlb.gpu.sim_search.streams import init_streams,wait_streams,get_hw_batches
-from vnlb.gpu.sim_search.streams import view_batch,vprint,get_nbatches
+from svnlb.gpu.streams import init_streams,wait_streams,get_hw_batches
+from svnlb.gpu.streams import view_batch,vprint,get_nbatches
 
 
 def processNLMeans(noisy,basic,sigma,step,flows,params,gpuid=0,clean=None):

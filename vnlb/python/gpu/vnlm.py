@@ -6,15 +6,15 @@ import torch as th
 from easydict import EasyDict as edict
 
 # -- local imports --
-from .sim_search import runSimSearch
+from .search import runSimSearch
 from .bayes_est import runBayesEstimate
 from .comp_agg import computeAggregation
 # from .proc_nlb import processNLBayes
 from .proc_nlm import processNLMeans
 
 # -- project imports --
-from vnlb.utils import groups2patches,patches2groups
-from vnlb.utils import idx2coords,compute_psnrs
+from svnlb.utils import groups2patches,patches2groups
+from svnlb.utils import idx2coords,compute_psnrs
 
 def runNLMeans(noisy,clean,sigma,flows,params,gpuid=0):
     """

@@ -5,13 +5,13 @@ import scipy
 from scipy import linalg as scipy_linalg
 import numpy as np
 from einops import rearrange,repeat
-import vnlb
+import svnlb
 
 # from .cov_mat import computeCovMat
-from vnlb.utils import groups2patches,patches2groups
-from vnlb.utils.gpu_utils import apply_yuv2rgb
-# from vnlb.gpu.patch_subset import exec_patch_subset
-from vnlb.gpu.patch_utils import yuv2rgb_patches,patches_psnrs
+from svnlb.utils import groups2patches,patches2groups
+from svnlb.utils.gpu_utils import apply_yuv2rgb
+# from svnlb.gpu.patch_subset import exec_patch_subset
+from svnlb.gpu.patch_utils import yuv2rgb_patches,patches_psnrs
 
 
 def check_steps(step1,step):

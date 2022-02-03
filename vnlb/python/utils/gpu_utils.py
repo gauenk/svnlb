@@ -41,7 +41,15 @@ def rgb2yuv_cpp(burst):
     burst_yuv = []
     # burst = rearrange(burst,'t c h w -> t h w c')
     # t,h,w,c = burst.shape
-    c,t,h,w = burst.shape
+    # c,t,h,w = burst.shape
+
+    print("\n"*3)
+    print("-"*30)
+    print("CHECK ME!")
+    print("-"*30)
+    print("\n"*3)
+
+    t,c,h,w = burst.shape
     for ti in range(t):
 
         # -- init --

@@ -4,10 +4,10 @@ import scipy
 from scipy import linalg as scipy_linalg
 import numpy as np
 from einops import rearrange,repeat
-import vnlb
+import svnlb
 
 # from .cov_mat import computeCovMat
-from vnlb.utils import groups2patches,patches2groups
+from svnlb.utils import groups2patches,patches2groups
 
 def centering(patches,center=None):
     if center is None:

@@ -9,15 +9,15 @@ from einops import rearrange
 from easydict import EasyDict as edict
 
 # -- local imports --
-from .sim_search import runSimSearch
+from .search import runSimSearch
 from .bayes_est import runBayesEstimate
 from .comp_agg import computeAggregation
 from .proc_nlb import processNLBayes
 
 
 # -- project imports --
-from vnlb.utils import groups2patches,patches2groups,compute_psnrs
-from vnlb.testing.file_io import save_images,save_image
+from svnlb.utils import groups2patches,patches2groups,compute_psnrs
+from svnlb.testing.file_io import save_images,save_image
 
 def runPythonVnlb(noisy,sigma,flows,params,gpuid=0,clean=None):
     return runPythonVnlb_2step(noisy,sigma,flows,params,gpuid,clean)

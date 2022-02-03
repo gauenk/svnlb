@@ -8,10 +8,10 @@ def mask_parser(mask,vnlb_params,info=None):
     t,h,w = mask.shape
 
     # -- create swig --
-    params = vnlb.MaskParams()
+    params = svnlb.MaskParams()
 
     # -- create mask --
-    params.mask = vnlb.swig_ptr(mask)
+    params.mask = svnlb.swig_ptr(mask)
 
     # -- create shapes --
     params.nframes = t

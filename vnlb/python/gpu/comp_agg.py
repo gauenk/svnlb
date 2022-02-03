@@ -9,7 +9,7 @@ from einops import rearrange
 from numba import njit,cuda
 
 # -- package --
-from vnlb.utils import groups2patches
+from svnlb.utils import groups2patches
 
 def computeAggregation(deno,group,indices,weights,mask,nSimP,params=None,step=0):
 

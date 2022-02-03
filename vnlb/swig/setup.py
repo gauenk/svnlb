@@ -50,7 +50,7 @@ if found_swigvnlb_avx2:
     shutil.copyfile("swigvnlb_avx2.py", "svnlb/swigvnlb_avx2.py")
     shutil.copyfile(swigvnlb_avx2_lib, f"svnlb/_swigvnlb_avx2{ext}")
 
-long_description="""SVNLB (Python-Swig Vnlb) is a library for video denising."""
+long_description="""SVNLB (Python-Swig Vnlb) is a library for video denoising."""
 setup(
     name='svnlb',
     version='1.0.0',

@@ -7,8 +7,8 @@ from einops import rearrange,repeat
 import torchvision.utils as tv_utils
 
 # -- project --
-import vnlb
-from vnlb.utils.gpu_utils import apply_yuv2rgb
+import svnlb
+from svnlb.utils.gpu_utils import apply_yuv2rgb
 
 
 def save_patches(patches,postfix,c=3,pt=2,tindex=0,bindex=0):

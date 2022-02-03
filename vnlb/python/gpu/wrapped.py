@@ -5,12 +5,12 @@ import torch as th
 from easydict import EasyDict as edict
 
 # -- subroutines --
-from .sim_search import runSimSearch
+from .search import runSimSearch
 from .bayes_est import runBayesEstimate
 from .comp_agg import computeAggregation
 
 # -- project imports --
-from vnlb.utils import groups2patches,patches2groups,optional
+from svnlb.utils import groups2patches,patches2groups,optional
 
 def estimateSimPatches(noisy,basic,sigma,pidx,flows,params,step):
 
@@ -20,7 +20,7 @@ def estimateSimPatches(noisy,basic,sigma,pidx,flows,params,step):
     psT = params.sizePatchTime[step]
 
     # -- cpp exec --
-    # sim_results = vnlb.simPatchSearch(noisy,sigma,pidx,flows,params,step)
+    # sim_results = svnlb.simPatchSearch(noisy,sigma,pidx,flows,params,step)
     # sim_results = edict(sim_results)
     # groupsNoisy = sim_results.groupNoisy
     # groupsBasic = sim_results.groupBasic
@@ -64,7 +64,7 @@ def estimateSimPatches(noisy,basic,sigma,pidx,flows,params,step):
     #     assert False
 
 
-    # from vnlb.pylib.tests import save_images
+    # from svnlb.pylib.tests import save_images
     # print("patches.shape: ",patches.shape)
     # patches_rgb = yuv2rgb_cpp(patches)
     # save_images(patches_rgb,"output/patches.png",imax=255.)
@@ -77,7 +77,7 @@ def computeBayesEstimate(groupNoisy,groupBasic,nSimP,shape,params,step,flatPatch
     rank_var = 0.
 
     # -- exec --
-    # bayes_results = vnlb.computeBayesEstimate(groupNoisy.copy(),
+    # bayes_results = svnlb.computeBayesEstimate(groupNoisy.copy(),
     #                                             groupBasic.copy(),0.,
     #                                             nSimP,shape,params,step)
     bayes_results = runBayesEstimate(groupNoisy.copy(),groupBasic.copy(),
@@ -94,7 +94,7 @@ def computeAgg(deno,groupNoisy,indices,weights,mask,nSimP,params,step):
 
     # -- cpp version --
     # params.isFirstStep[step] = step == 0
-    # results = vnlb.computeAggregation(deno,groupNoisy,
+    # results = svnlb.computeAggregation(deno,groupNoisy,
     #                                     indices,weights,
     #                                     mask,nSimP,params)
     # deno = results['deno']

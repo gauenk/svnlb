@@ -6,10 +6,10 @@ from einops import rearrange,repeat
 from easydict import EasyDict as edict
 
 # -- package imports --
-from vnlb.utils import get_patch_shapes_from_params,optional,groups2patches,check_flows,check_and_expand_flows
-from vnlb.utils.gpu_utils import apply_color_xform_cpp
-from vnlb.testing import save_images
-from vnlb.gpu.patch_subset import exec_patch_subset_filter
+from svnlb.utils import get_patch_shapes_from_params,optional,groups2patches,check_flows,check_and_expand_flows
+from svnlb.utils.gpu_utils import apply_color_xform_cpp
+from svnlb.testing import save_images
+from svnlb.gpu.patch_subset import exec_patch_subset_filter
 
 # -- import hids subsetting --
 import hids
@@ -21,7 +21,7 @@ from .streams import init_streams,wait_streams,get_hw_batches,view_batch,vprint
 # from .subave_impl import compute_subset_ave
 # from .l2norm_impl import compute_l2norm_cuda
 # from .fill_patches import fill_patches,fill_patches_img
-from vnlb.gpu.patch_utils import yuv2rgb_patches,save_patches
+from svnlb.gpu.patch_utils import yuv2rgb_patches,save_patches
 
 #
 # -- exec across concurrent streams --

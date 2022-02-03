@@ -5,14 +5,14 @@ import torch as th
 from easydict import EasyDict as edict
 
 # -- local imports --
-from .sim_search import runSimSearch
+from .search import runSimSearch
 from .bayes_est import runBayesEstimate
 from .comp_agg import computeAggregation
 from .proc_nlb import processNLBayes
 
 
 # -- project imports --
-from vnlb.utils import groups2patches,patches2groups
+from svnlb.utils import groups2patches,patches2groups
 
 def runPyAlign(noisy,sigma,flows,params,gpuid=0,clean=None):
 

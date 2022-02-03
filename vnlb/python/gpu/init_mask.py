@@ -10,7 +10,7 @@ from easydict import EasyDict as edict
 from numba import jit,njit,prange,cuda
 
 # -- parser for cpp --
-from vnlb.swig.vnlb.mask_parser import mask_parser
+from svnlb.swig.vnlb.mask_parser import mask_parser
 
 def mask2inds(mask,bsize,rand=True,order=None):
     index = torch.nonzero(mask)
