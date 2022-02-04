@@ -7,8 +7,8 @@ Install
 -------
 
 ```
-$ git clone https://github.com/gauenk/pyvnlb/
-$ cd pyvnlb
+$ git clone https://github.com/gauenk/svnlb/
+$ cd svnlb
 $ python -m pip install -r requirements.txt --user
 $ ./install.sh
 ```
@@ -20,8 +20,11 @@ We expect the images to be shaped `(nframes,channels,height,width)` with
 pixel values in range `[0,...,255.]`. The color channels are ordered RGB. Common examples of noise levels are 10, 20 and 50. See [scripts/example.py](https://github.com/gauenk/pyvnlb/blob/master/scripts/example.py) for more details.
 
 ```python
-import pyvnlb
+import svnlb
 import numpy as np
+
+# -- use enough threads --
+svnlb.check_omp_num_threads()
 
 # -- get data --
 clean = 255.*np.random.rand(5,3,64,64)
@@ -32,14 +35,14 @@ std = 20.
 noisy = np.random.normal(clean,scale=std)
 
 # -- TV-L1 Optical Flow --
-fflow,bflow = pyvnlb.runPyFlow(noisy,std)
+fflow,bflow = svnlb.swig.runPyFlow(noisy,std)
 
 # -- Video Non-Local Bayes --
-result = pyvnlb.runPyVnlb(noisy,std,{'fflow':fflow,'bflow':bflow})
+result = svnlb.swig.runPyVnlb(noisy,std,{'fflow':fflow,'bflow':bflow})
 denoised = result['denoised']
 
 # -- compute denoising quality --
-psnrs = pyvnlb.compute_psnrs(clean,denoised)
+psnrs = svnlb.utils.compute_psnrs(clean,denoised)
 print("PSNRs:")
 print(psnrs)
 
