@@ -25,7 +25,7 @@ def runPythonVnlb(noisy,sigma,flows,params=None,clean=None):
 
     # -- create params --
     if params is None:
-        params = vnlb.swig.setVnlbParams(noisy.shape,sigma,None)
+        params = svnlb.swig.setVnlbParams(noisy.shape,sigma,None)
         # print(list(params.keys()))
         # print(params.aggreBoost)
         # params.aggreBoost = [False,False]

@@ -5,18 +5,18 @@ import numpy as np
 from pathlib import Path
 
 # -- this package --
-import vnlb
+import svnlb
 
 # -- helper imports --
-from vnlb.testing.data_loader import load_dataset
-from vnlb.testing.file_io import save_images
+from svnlb.testing.data_loader import load_dataset
+from svnlb.testing.file_io import save_images
 
 #
 # -- load & denoise a video --
 #
 
 print("Running example script.")
-vnlb.check_omp_num_threads()
+svnlb.check_omp_num_threads()
 
 # -- get data --
 clean = load_dataset("davis_64x64",vnlb=False)[0]['clean'].copy()[:3]
@@ -27,26 +27,27 @@ std = 20.
 noisy = np.random.normal(clean.copy(),scale=std)
 
 # -- TV-L1 Optical Flow --
-fflow,bflow = vnlb.swig.runPyFlow(noisy,std)
+fflow,bflow = svnlb.swig.runPyFlow(noisy,std)
 
 # -- Video Non-Local Bayes --
-# result = vnlb.swig.runPyVnlb(noisy,std,{'fflow':fflow,'bflow':bflow,'nThreads':4})
+result = svnlb.swig.runPyVnlb(noisy,std,{'fflow':fflow,'bflow':bflow,'nThreads':4})
+basic = result['basic']
+denoised = result['denoised']
+
+# -- Video Non-Local Bayes [very slow] --
+# result = svnlb.cpu.runPythonVnlb(noisy,std,{},
+#                                 #{'fflow':fflow,'bflow':bflow,'nThreads':4},
+#                                 None,
+#                                 clean)
+# basic = result['basic']
 # denoised = result['denoised']
 
-# -- Video Non-Local Bayes --
-result = vnlb.cpu.runPythonVnlb(noisy,std,{},
-                                #{'fflow':fflow,'bflow':bflow,'nThreads':4},
-                                None,
-                                clean)
-denoised = result['denoised']
-basic = result['basic']
-
 # -- compute denoising quality --
-psnrs = vnlb.utils.compute_psnrs(clean,denoised)
-psnrs_basic = vnlb.utils.compute_psnrs(clean,basic)
+psnrs = svnlb.utils.compute_psnrs(clean,denoised)
+psnrs_basic = svnlb.utils.compute_psnrs(clean,basic)
 
 # -- compare with original  --
-noisy_psnrs = vnlb.utils.compute_psnrs(clean,noisy)
+noisy_psnrs = svnlb.utils.compute_psnrs(clean,noisy)
 
 #
 # -- report outputs --
@@ -68,20 +69,21 @@ if print_report:
     # -- save images --
     output = Path("./output/")
     if not output.exists(): output.mkdir()
+    print(f"\nSaving Example Images at directory [{str(output)}]")
     save_images(clean,output/"clean.png",imax=255.)
     save_images(noisy,output/"noisy.png",imax=255.)
     save_images(denoised,output/"denoised.png",imax=255.)
-    save_images(vnlb.utils.flow2burst(fflow),"output/fflow.png")
-    save_images(vnlb.utils.flow2burst(bflow),"output/bflow.png")
+    save_images(svnlb.utils.flow2burst(fflow),"output/fflow.png")
+    save_images(svnlb.utils.flow2burst(bflow),"output/bflow.png")
 
 #
-# -- show vnlb's timing --
+# -- show svnlb's timing --
 #
 
-show_cpp_timing = False
+show_cpp_timing = True
 if show_cpp_timing:
-    print("The decrease in speed seems to be due to slower C++ functions.")
-    vnlb.runPyVnlbTimed(noisy,std,{'fflow':fflow,'bflow':bflow})
+    print("\nExecuting a timed VNLB.")
+    svnlb.swig.runPyVnlbTimed(noisy,std,{'fflow':fflow,'bflow':bflow})
     msg = "In the original C++ Code, the elapsed time "
     msg += "is ~2.5 and ~3.1 seconds, respectively."
     print(msg)

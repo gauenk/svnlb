@@ -19,6 +19,7 @@ def apply_yuv2rgb(burst):
     """
     #t,h,w,c = burst.shape
     t,c,h,w = burst.shape
+    print("burst.shape: ",burst.shape)
 
     # -- weights --
     weights = [1./np.sqrt(3),1./np.sqrt(2),np.sqrt(2.)/np.sqrt(3)]

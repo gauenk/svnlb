@@ -210,9 +210,9 @@ FlatAreaParams():
 void runVnlb(VideoNLB::nlbParams& params1,
              VideoNLB::nlbParams& params2,
              const VnlbTensors& tensors);
-/* void runVnlbTimed(VideoNLB::nlbParams& params1, */
-/*              VideoNLB::nlbParams& params2, */
-/*              const VnlbTensors& tensors); */
+/* void runVnlbTimed(const PyVnlbParams& args, const VnlbTensors& tensors); */
+void runVnlbTimed(VideoNLB::nlbParams& params1,VideoNLB::nlbParams& params2,
+                  const VnlbTensors& tensors);
 void setVnlbParamsCpp(VideoNLB::nlbParams& params, const VnlbTensors& tensors,int step);
 void runSimSearch(VideoNLB::nlbParams& params,
                   const VnlbTensors& tensors,

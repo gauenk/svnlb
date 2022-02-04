@@ -23,7 +23,8 @@ extern "C" {
 #include <vnlb/cpp/video_io/iio.h>
 }
 
-void runVnlbTimed(VideoNLB::nlbParams& params, const VnlbTensors& tensors) {
+void runVnlbTimed(VideoNLB::nlbParams& params1, VideoNLB::nlbParams& params2,
+                  const VnlbTensors& tensors) {
 
   // Declarations
   Video<float> oracle, noisy, basic, final;
@@ -46,11 +47,6 @@ void runVnlbTimed(VideoNLB::nlbParams& params, const VnlbTensors& tensors) {
     oracle.loadVideoFromPtr(tensors.oracle,w,h,c,t);
   }
 
-  // update params
-  VideoNLB::nlbParams params1, params2;
-  setVnlbParamsCpp(args,tensors,params1,1);
-  setVnlbParamsCpp(args,tensors,params2,2);
-
   // Percentage or processed groups of patches over total number of pixels
   std::vector<float> groupsRatio;
 
@@ -72,10 +68,10 @@ void runVnlbTimed(VideoNLB::nlbParams& params, const VnlbTensors& tensors) {
   	    << "elapsed time: " << elapsed_seconds.count() << "s\n";
 
 
-  if (args.testing){
+  if (params1.testing){
     basic.saveVideoToPtr(tensors.basic);
   }
-  if (args.verbose)
+  if (params1.verbose)
     printf("Done. Processed %5.2f%% of possible patch groups in 1st step, and\n"
 		       "%5.2f%% in 2nd step.\n", groupsRatio[0], groupsRatio[1]);
 
@@ -94,7 +90,7 @@ void runVnlbTimed(VideoNLB::nlbParams& params, const VnlbTensors& tensors) {
   std::cout << "finished computation at " << std::ctime(&end_time)
   	    << "elapsed time: " << elapsed_seconds.count() << "s\n";
 
-  if (args.verbose)
+  if (params1.verbose)
     printf("Done. Processed %5.2f%% of possible patch groups in 1st step, and\n"
 		       "%5.2f%% in 2nd step.\n", groupsRatio[0], groupsRatio[1]);
 

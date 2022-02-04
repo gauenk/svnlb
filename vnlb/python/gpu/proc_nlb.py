@@ -386,6 +386,8 @@ def exec_step(noisy,basic,clean,deno,mask,fflow,bflow,sigma2,sigmab2,rank,
 
         # -- aggregate results --
         compute_agg_batch(deno,patchesNoisy_v,inds_v,weights,ps,ps_t,cs_ptr)
+        print("weight.sum: ",weights.sum().item())
+        print("deno.sum: ",deno.sum().item())
 
         # ----------------------------------
         #            MISC
@@ -410,10 +412,13 @@ def exec_step(noisy,basic,clean,deno,mask,fflow,bflow,sigma2,sigmab2,rank,
     # print(torch.histogram(weights,50))
 
     # -- yuv 2 rgb --
+    print(use_imread)
+    print(deno.shape)
+    print("deno.sum: ",deno.sum().item())
     if not(use_imread):
         yuv2rgb_cpp(deno)
+    print("deno.sum: ",deno.sum().item())
     torch.cuda.synchronize()
-
 
 def check_steps(step1,step):
     is_step_1 = (step1 == True) and (step == 0)

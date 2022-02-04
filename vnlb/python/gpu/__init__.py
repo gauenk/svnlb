@@ -1,5 +1,5 @@
 from .search import runSimSearch
-from .bayes_est import runBayesEstimate
+from .bayes_est import runBayesEstimate,bayes_estimate_batch
 from .comp_agg import computeAggregation,compute_agg_batch
 from .vnlb import runPythonVnlb
 from .vnlm import runNLMeans

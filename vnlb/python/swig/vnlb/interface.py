@@ -54,7 +54,7 @@ def runPyVnlbTimed(noisy,sigma,tensors=None,params=None):
     # -- extract info --
     t,c,h,w  = noisy.shape
     assert c in [1,3,4],"must have the color channel be 1, 3, or 4"
-    args,swig_args,tensors,swig_tensors = parse_args(noisy,sigma,params)
+    args,swig_args,tensors,swig_tensors = parse_args(noisy,sigma,tensors,params)
 
     # -- exec using numpy --
     svnlb.runVnlbTimed(swig_args[0],swig_args[1],swig_tensors)

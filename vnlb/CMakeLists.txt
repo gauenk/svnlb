@@ -27,7 +27,7 @@ set(VNLB_SRC
   cpp/pybind/vnlb/init_mask.cpp
   cpp/pybind/vnlb/cov_mat.cpp
   cpp/pybind/vnlb/flat_areas.cpp
-  # cpp/pybind/vnlb/vnlb_timed.cpp
+  cpp/pybind/vnlb/vnlb_timed.cpp
 )
 
 set(VNLB_HEADERS

@@ -494,31 +494,32 @@ def bayes_estimate_batch(in_patchesNoisy,patchesBasic,patchesClean,
 
     # -- group noisy --
     if use_weights:
+        print("USE WEIGHTS!")
         # patchesNoisy[...] = pInputSortedRs[...] # upate with sorted values
         centerNoisy = patchesNoisy.mean(dim=2,keepdim=True)
         centerBasic = patchesBasic.mean(dim=2,keepdim=True)
         patchesNoisy[...] -= centerNoisy
         patchesBasic[...] -= centerBasic
     else:
-        # centerNoisy,centerBasic = centering_patches(patchesNoisy,patchesBasic,
-        #                                             step2,flat_patch)
-        centerNoisy = patchesNoisy.mean(dim=2,keepdim=True)
-        centerBasic = patchesBasic.mean(dim=2,keepdim=True)
+        centerNoisy,centerBasic = centering_patches(patchesNoisy,patchesBasic,
+                                                    step2,flat_patch)
+        # centerNoisy = patchesNoisy.mean(dim=2,keepdim=True)
+        # centerBasic = patchesBasic.mean(dim=2,keepdim=True)
         # centerNoisy = torch.zeros_like(centerNoisy)
         # centerBasic = torch.zeros_like(centerNoisy)
 
         # centerNoisy2 = centerNoisy.mean(dim=3,keepdim=True)
         # centerBasic2 = centerNoisy.mean(dim=3,keepdim=True)
-        centerNoisy2 = (patchesNoisy - centerNoisy).mean(dim=3,keepdim=True)
-        centerBasic2 = (patchesBasic - centerBasic).mean(dim=3,keepdim=True)
-        centerNoisy2 = torch.zeros_like(centerNoisy2)
-        centerBasic2 = torch.zeros_like(centerBasic2)
+        # centerNoisy2 = (patchesNoisy - centerNoisy).mean(dim=3,keepdim=True)
+        # centerBasic2 = (patchesBasic - centerBasic).mean(dim=3,keepdim=True)
+        # centerNoisy2 = torch.zeros_like(centerNoisy2)
+        # centerBasic2 = torch.zeros_like(centerBasic2)
 
-        centerNoisy = centerNoisy + centerNoisy2
-        centerBasic = centerBasic + centerBasic2
+        # centerNoisy = centerNoisy + centerNoisy2
+        # centerBasic = centerBasic + centerBasic2
+        # patchesNoisy[...] -= centerNoisy
+        # patchesBasic[...] -= centerBasic
 
-        patchesNoisy[...] -= centerNoisy
-        patchesBasic[...] -= centerBasic
     # print("centerNoisy.shape: ",centerBasic.shape)
 
     # -- reshape for processing --
