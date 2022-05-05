@@ -299,6 +299,7 @@ def numba_cpp_sim_search(pidx,vals,indices,access,noisy,fflow,bflow,sigma,
     t,c,h,w = noisy.shape
     nframes,color,height,width = t,c,h,w
     chnls = 1 if step1 else color
+    print("[cpu] chnls = ",chnls)
 
     def coords2pix(hi,wi,ti):
         pix = ti * width * height * color
@@ -483,15 +484,15 @@ def numba_cpp_sim_search(pidx,vals,indices,access,noisy,fflow,bflow,sigma,
                 w_i = w_range[w_idx]
                 # pix_idx = coords2pix(h_i,w_i,t_i)
 
-                # c_ind = coords2pix(h_c,w_c,t_c)
-                # i_ind = coords2pix(h_i,w_i,t_i)
-                # if i_ind == 712:
-                #     print("[cpu] t: ",t_i,ps_t,nframes,t_i+ps_t-1,trange_s)
-                #     print("[cpu] h: ",h_idx,h_start,h_end,shift_h)
-                #     print("[cpu] w: ",w_idx,w_start,w_end,shift_w)
-                #     print("misc: ",c_ind,i_ind)
-                #     for iiii,iiiii in enumerate(trange):
-                #         print("trange[%d]: %d" % (iiii,iiiii))
+                c_ind = coords2pix(h_c,w_c,t_c)
+                i_ind = coords2pix(h_i,w_i,t_i)
+                if i_ind == 1620:
+                    print("[cpu] t: ",t_i,ps_t,nframes,t_i+ps_t-1,trange_s)
+                    print("[cpu] h: ",h_i,h_idx,h_start,h_end,shift_h)
+                    print("[cpu] w: ",w_i,w_idx,w_start,w_end,shift_w)
+                    print("misc: ",c_ind,i_ind)
+                    for iiii,iiiii in enumerate(trange):
+                        print("trange[%d]: %d" % (iiii,iiiii))
 
                 # -- valid check --
                 valid_t = (t_i + ps_t - 1) < nframes

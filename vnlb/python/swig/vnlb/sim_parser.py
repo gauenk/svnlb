@@ -103,7 +103,7 @@ def sim_parser(noisy,sigma,nParts,py_tensors,params):
     set_tensors(tensors,py_tensors,ztensors)
 
     # -- copy to swig --
-    swig_tensors = vnlb.VnlbTensors()
+    swig_tensors = svnlb.VnlbTensors()
     assign_swig_args(tensors,swig_tensors)
 
     return tensors, swig_tensors

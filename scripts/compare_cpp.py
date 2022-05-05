@@ -36,9 +36,9 @@ def run_comparison(vnlb_dataset):
         for field in ["noisyForFlow","noisyForVnlb","fflow","bflow","basic","denoised"]:
             cppField = res_vnlb[imageIO][field]
             pyField = res_pyvnlb[imageIO][field]
-            totalError = np.sum(np.abs(cppField - pyField)/(np.abs(cppField)+1e-12))
-            rkey = f"Total Error ({imageIO})"
-            results[field][rkey] = totalError
+            relError = np.sum(np.abs(cppField - pyField)/(np.abs(cppField)+1e-12))
+            rkey = f"Relative Error ({imageIO})"
+            results[field][rkey] = relError
     results = pd.DataFrame(results)
     print(results.to_markdown())
 

@@ -37,7 +37,7 @@ def parse_bayes_params(groupNoisy,groupBasic,nSimP,rank_var,shape,params):
     bayesParams.w = w
 
     # -- copy to swig --
-    swig_bayesParams = vnlb.PyBayesEstimateParams()
+    swig_bayesParams = svnlb.PyBayesEstimateParams()
     assign_swig_args(bayesParams,swig_bayesParams)
 
     return bayesParams,swig_bayesParams

@@ -17,7 +17,32 @@ _swig_enabled = False
 __version__ = "%d.%d.%d" % (0,0,0)
 from .utils import check_omp_num_threads
 import svnlb.swig as swig
-import svnlb.gpu as gpu
+# import svnlb.gpu as gpu
 import svnlb.cpu as cpu
 import svnlb.utils as utils
 from .loader import *
+
+
+# -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+#
+#       API Default Settings
+#
+# -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+
+import numpy as np
+from easydict import EasyDict as edict
+
+def compute_flow(noisy,sigma):
+    assert isinstance(noisy,np.ndarray)
+    flow_params = {"nproc":0,"tau":0.25,"lambda":0.2,"theta":0.3,"nscales":100,
+                   "fscale":1,"zfactor":0.5,"nwarps":5,"epsilon":0.01,
+                   "verbose":False,"testing":False,'bw':False}
+    flowImages = utils.rgb2bw(noisy)
+    fflow,bflow = swig.runPyFlow(flowImages,sigma,flow_params)
+    flows = edict()
+    flows.fflow = fflow
+    flows.bflow = bflow
+    return flows
+
+

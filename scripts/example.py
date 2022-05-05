@@ -35,10 +35,7 @@ basic = result['basic']
 denoised = result['denoised']
 
 # -- Video Non-Local Bayes [very slow] --
-# result = svnlb.cpu.runPythonVnlb(noisy,std,{},
-#                                 #{'fflow':fflow,'bflow':bflow,'nThreads':4},
-#                                 None,
-#                                 clean)
+# result = svnlb.cpu.runPythonVnlb(noisy,std,{})
 # basic = result['basic']
 # denoised = result['denoised']
 

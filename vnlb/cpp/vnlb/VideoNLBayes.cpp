@@ -650,7 +650,6 @@ unsigned processNLBayes(
 			bool flatPatch = false;
 			if (params.flatAreas)
 				flatPatch = computeFlatArea(groupNoisy, groupBasic, params, nSimP, sz.channels);
-
             // fprintf(stdout,"[pre] groupNoisy(0): %2.3f\n",groupNoisy[0]);
             // fprintf(stdout,"[pre] groupNoisy(1): %2.3f\n",groupNoisy[1]);
 
@@ -849,7 +848,7 @@ unsigned estimateSimilarPatches(
             // print for debug
             // int pair_idx = sz.index(qx, qy, qt, 0);
             // std::fprintf(stdout,"pair_idx: %d\n",pair_idx);
-            // if (pair_idx == 26068){
+            // if (pair_idx == 1411){
             //   std::fprintf(stdout,"(qx,qy,qt): (%d,%d,%d)\n",qx, qy, qt);
             //   std::fprintf(stdout,"dist: %2.2f\n",dist);
             //   for (int ht = 0; ht < sPt; ht++){
